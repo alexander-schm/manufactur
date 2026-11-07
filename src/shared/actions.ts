@@ -1,5 +1,6 @@
 import { advance } from './advance';
-import { getStationDef, MATERIALS, STATIONS } from './content';
+import { EFFECTS, getStationDef, MATERIALS, STATIONS } from './content';
+import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { validateDesign } from './design';
 import { newId } from './ids';
 import { pieceValue } from './market';
@@ -30,7 +31,7 @@ export type ActionType = Action['type'];
 export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'saveDesign',
   'deliverOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'ackAway', 'ackMilestone'];
 
-export type GameEvent = { kind: 'discovery' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
+export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
 export type ActionResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: string };
 
 export const HAND_TOUCH_COOLDOWN_MS = 10 * 60_000;
@@ -42,11 +43,6 @@ class Reject extends Error {}
 const fail = (msg: string): never => { throw new Reject(msg); };
 const isInt = (n: unknown, lo: number, hi: number) => typeof n === 'number' && Number.isInteger(n) && n >= lo && n <= hi;
 
-/** Systems (discovery, progression) plug in here so actions.ts stays the single entry point. */
-export type Handler = (s: GameState, a: Action, now: number, events: GameEvent[]) => void;
-export const extraHandlers: Partial<Record<ActionType, Handler>> = {};
-export type AfterHook = (s: GameState, now: number, events: GameEvent[]) => void;
-export const afterHooks: AfterHook[] = [];
 
 export function applyAction(state: GameState, action: Action, now: number): ActionResult {
   try {
@@ -54,7 +50,6 @@ export function applyAction(state: GameState, action: Action, now: number): Acti
     const s = structuredClone(advance(state, now));
     const events: GameEvent[] = [];
     run(s, action, now, events);
-    for (const h of afterHooks) h(s, now, events);
     s.version += 1;
     return { ok: true, state: s, events };
   } catch (e) {
@@ -208,11 +203,22 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'ackAway':
       s.away = null;
       return;
-    default: {
-      const h = extraHandlers[a.type];
-      if (!h) fail('Noch nicht verfügbar');
-      h!(s, a, now, events);
+    case 'experiment': {
+      needUnlock(s, 'studio', 'Glasurversuche gibt es ab dem Entwurfsstudio');
+      const err = validateRecipe(a.recipe);
+      if (err) fail(err);
+      const need: Record<string, number> = { glasurbasis: EXPERIMENT_COST.glasurbasis };
+      if (a.recipe.colorant) need[a.recipe.colorant] = EXPERIMENT_COST.colorant;
+      for (const [m, n] of Object.entries(need)) if ((s.materials[m] ?? 0) < n) fail(`Für den Versuch fehlt ${MATERIALS[m].name}`);
+      for (const [m, n] of Object.entries(need)) s.materials[m] -= n;
+      const out = runExperiment(s, a.recipe);
+      if (out.newEffect) events.push({ kind: 'discovery', id: out.newEffect, text: `Entdeckt: ${EFFECTS[out.newEffect].name}! ${EFFECTS[out.newEffect].description}` });
+      else if (out.isNew) events.push({ kind: 'glaze', id: out.glaze.id, text: `Neue Glasur: ${out.glaze.name}` });
+      if (out.hint) events.push({ kind: 'hint', id: out.glaze.id, text: out.hint });
+      return;
     }
+    default:
+      fail('Noch nicht verfügbar');
   }
 }
 
