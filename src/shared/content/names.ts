@@ -1,0 +1,32 @@
+export const NAMES: readonly string[] = [
+  'Greta', 'Ottokar', 'Frieda', 'Hilde', 'Bruno', 'Lotte', 'Anton', 'Mathilda', 'Konrad', 'Ida',
+  'Emil', 'Rosa', 'Theodor', 'Paula', 'Fritz', 'Henriette', 'Gustav', 'Klara', 'Wilhelm', 'Erna',
+  'Jonas', 'Mia', 'Finn', 'Lea', 'Ben', 'Emma', 'Luca', 'Sophie', 'Noah', 'Lina',
+  'Mehmet', 'Aylin', 'Piotr', 'Zofia', 'Luigi', 'Chiara', 'Kofi', 'Amara', 'Kim', 'Alex',
+  'Ulla', 'Hans', 'Gertrud', 'Kalle', 'Resi', 'Sepp', 'Wiebke', 'Hinnerk', 'Toni', 'Charly',
+];
+
+export const PERSONALITIES: readonly string[] = [
+  'Summt bei der Arbeit immer dasselbe Lied.',
+  'Hat für jedes Problem ein Sprichwort parat.',
+  'Bringt montags Kuchen mit.',
+  'Redet mit dem Ton, als würde er zuhören.',
+  'Ist überzeugt, dass die Werkstattkatze Glück bringt.',
+  'Sammelt Scherben „für später“.',
+  'Lacht so laut, dass die Regale wackeln.',
+  'Trinkt Tee aus einem selbstgemachten, sehr schiefen Becher.',
+  'Kennt jedes Klatschgerücht im Dorf.',
+  'Möchte irgendwann eine Teekanne in Form einer Ente töpfern.',
+  'Ist morgens wortkarg, nachmittags unaufhaltsam.',
+  'Hat immer Ton unter den Fingernägeln – und ist stolz darauf.',
+  'Schreibt heimlich Gedichte auf Glasurzettel.',
+  'Pfeift falsch, aber mit Hingabe.',
+  'Behauptet, schon mal einen Drachen gesehen zu haben.',
+  'Ordnet die Pinsel nach Regenbogenfarben.',
+  'Erzählt gern von früher, als alles besser war.',
+  'Probiert ständig neue Frisuren aus.',
+  'Kann Ofentemperaturen am Geräusch erkennen – sagt zumindest.',
+  'Gibt jedem Werkstück einen Namen.',
+  'Ist heimlich die beste Tänzerin bzw. der beste Tänzer im Dorf.',
+  'Füttert die Spatzen vor dem Fenster.',
+];
