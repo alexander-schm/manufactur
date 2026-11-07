@@ -3,7 +3,10 @@ import { view } from '../store';
 import { T } from '../strings';
 import { Icon } from '../ui/Icons';
 import { Sheet } from '../ui/Sheet';
+import { DesignStudio } from './DesignStudio';
+import { MarketPanel } from './MarketPanel';
 import { OrdersPanel } from './OrdersPanel';
+import { RecipeBook } from './RecipeBook';
 import { ShopPanel } from './ShopPanel';
 import { StationPanel, WorkshopPanel } from './StationPanel';
 import { WorkersPanel } from './WorkersPanel';
@@ -14,8 +17,6 @@ export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 
 const UNLOCK: Partial<Record<PanelId, string>> = { orders: 'orders', studio: 'studio', recipes: 'recipes' };
 export const panelUnlock = (id: PanelId) => UNLOCK[id];
 
-/** Late-bound panels (Task 16 adds studio + recipes). */
-export const extraPanels: Partial<Record<PanelId, (p: { arg?: string; onOpen: (id: PanelId, arg?: string) => void }) => preact.JSX.Element>> = {};
 
 export function LockedNote({ unlock }: { unlock: string }) {
   return (
@@ -47,9 +48,8 @@ export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: str
   else if (id === 'shop') body = <ShopPanel s={s} />;
   else if (id === 'workshop') body = <WorkshopPanel s={s} onOpen={onOpen} />;
   else if (id === 'station') body = <StationPanel s={s} stationId={arg ?? ''} onOpen={onOpen} />;
-  else {
-    const P = extraPanels[id];
-    body = P ? <P arg={arg} onOpen={onOpen} /> : <p class="muted">Kommt gleich …</p>;
-  }
+  else if (id === 'studio') body = <DesignStudio s={s} tab={arg} />;
+  else if (id === 'recipes') body = <RecipeBook s={s} />;
+  else body = <MarketPanel s={s} />;
   return <Sheet title={title} onClose={onClose}>{body}</Sheet>;
 }
