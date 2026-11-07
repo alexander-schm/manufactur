@@ -1,6 +1,7 @@
 import { getStationDef, getTrait } from './content';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { addOrder, nextOrderTime } from './orders';
+import { checkMilestones } from './progression';
 import { kilnCapacity, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
 import { nextRandom } from './rng';
 import { newId } from './state';
@@ -36,7 +37,7 @@ export function advance(state: GameState, now: number): GameState {
     completeDue(s, t);
   }
   s.lastTick = now;
-  return s;
+  return checkMilestones(s).state;
 }
 
 

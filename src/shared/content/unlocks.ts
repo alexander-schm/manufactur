@@ -17,5 +17,10 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   vase: { id: 'vase', kind: 'form', title: 'Vasen', text: 'Hoch hinaus! Vasen bringen gutes Geld.' },
   krug: { id: 'krug', kind: 'form', title: 'Krüge', text: 'Mit Henkel und Tülle – für Wasser, Wein und Most.' },
   patterns2: { id: 'patterns2', kind: 'pattern', title: 'Wellen & Blätter', text: 'Zwei neue Muster für deine Entwürfe.' },
+  farbkoerper: { id: 'farbkoerper', kind: 'feature', title: 'Farbkörper', text: 'Der Händler bringt Eisen- und Kupferoxid. Jetzt wird es bunt!' },
+  formdetails: { id: 'formdetails', kind: 'feature', title: 'Henkel & Ränder', text: 'Ohrhenkel, Schlaufen, gerollte und ausgestellte Ränder.' },
+  reduktion: { id: 'reduktion', kind: 'feature', title: 'Reduktionsbrand', text: 'Drossle die Luft im Ofen – und staune, was mit den Farben passiert.' },
+  kobalt: { id: 'kobalt', kind: 'feature', title: 'Kobalt', text: 'Teuer, aber nichts ist so blau wie Kobaltblau.' },
+  zeichen: { id: 'zeichen', kind: 'feature', title: 'Meisterzeichen', text: 'Herz, Stern oder Blatt – gestalte dein eigenes Zeichen für den Boden jedes Stücks.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };

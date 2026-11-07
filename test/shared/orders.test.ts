@@ -6,14 +6,17 @@ import { plainGame, T0 } from './helpers';
 describe('orders', () => {
   it('new games start with open orders for unlocked forms only', () => {
     const s = advance(plainGame(), T0 + 1000);
-    expect(s.orders.length).toBeGreaterThanOrEqual(3);
+    expect(s.orders.length).toBeGreaterThanOrEqual(2);
     for (const o of s.orders) expect(s.unlocks).toContain(o.form);
   });
-  it('refills one order per 4 minutes up to 5', () => {
-    const s0 = advance(plainGame(), T0 + 1000);
-    const n0 = s0.orders.length;
-    const s1 = advance(s0, T0 + 1000 + 4 * 60_000 + 1);
-    expect(s1.orders.length).toBe(Math.min(5, n0 + 1));
+  it('refills every 2 min below 3 open orders, then every 4 min up to 5', () => {
+    const s0 = plainGame();
+    expect(s0.orders.length).toBe(2);
+    expect(advance(s0, T0 + 119_000).orders.length).toBe(2);
+    const s1 = advance(s0, T0 + 120_000);
+    expect(s1.orders.length).toBe(3);
+    expect(advance(s1, T0 + 120_000 + 4 * 60_000 - 1).orders.length).toBe(3);
+    expect(advance(s1, T0 + 120_000 + 4 * 60_000).orders.length).toBe(4);
     expect(advance(s0, T0 + 3 * 3_600_000).orders.length).toBe(5);
   });
   it('generateOrder is deterministic and has German customer text', () => {

@@ -88,16 +88,20 @@ const sameRecipe = (a: RecipeInput, b: RecipeInput) =>
 export type ExperimentOutcome = { glaze: GlazeRecipe; isNew: boolean; newEffect: string | null; hint: string | null };
 
 /** Validate input; returns a German error message or null. */
-export function validateRecipe(r: RecipeInput): string | null {
+export function validateRecipe(r: RecipeInput, state: GameState): string | null {
   if (!r || typeof r !== 'object') return 'Ungültiges Rezept';
   if (!['transparent', 'matt', 'opak'].includes(r.base)) return 'Unbekannte Glasurbasis';
   if (r.colorant !== null) {
     const m = MATERIALS[r.colorant];
     if (!m || m.kind !== 'colorant' || m.locked) return 'Das ist kein Farbkörper';
+    if (m.unlock && !state.unlocks.includes(m.unlock)) return `${m.name} hast du noch nicht`;
   }
   if (typeof r.colorantPct !== 'number' || !Number.isInteger(r.colorantPct) || r.colorantPct < 0 || r.colorantPct > 10) return 'Der Anteil muss zwischen 0 und 10 % liegen';
   const f = r.firing;
   if (!f || !['niedrig', 'mittel', 'hoch'].includes(f.temp) || !['oxidierend', 'reduzierend'].includes(f.atmosphere) || !['schnell', 'langsam'].includes(f.cooling)) return 'Ungültige Brenneinstellung';
+  if (f.atmosphere === 'reduzierend' && !state.unlocks.includes('reduktion')) return 'Den Reduktionsbrand beherrschst du noch nicht';
+  const kiln = state.stations.find((s) => s.kind === 'kiln');
+  if (f.temp === 'hoch' && (!kiln || kiln.level < 2)) return 'Für hohe Temperaturen braucht der Ofen Stufe 2';
   return null;
 }
 

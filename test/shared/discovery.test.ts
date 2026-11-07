@@ -10,7 +10,8 @@ const f = (temp: FiringSettings['temp'], atmosphere: FiringSettings['atmosphere'
 
 function game() {
   const s = plainGame();
-  s.unlocks.push('studio');
+  s.unlocks.push('studio', 'farbkoerper', 'reduktion');
+  s.stations.find((x) => x.kind === 'kiln')!.level = 2;
   s.materials.kupferoxid = 5;
   s.materials.eisenoxid = 5;
   s.materials.glasurbasis = 20;

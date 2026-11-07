@@ -71,6 +71,7 @@ export function validateDesign(d: Design, state: GameState): string | null {
   if (!['none', 'round', 'ear', 'loop'].includes(d.handle)) return 'Unbekannter Henkel';
   if (d.handle !== 'none' && !form.handleAllowed) return `${form.plural} haben keinen Henkel`;
   if (!['plain', 'rolled', 'flared'].includes(d.rim)) return 'Unbekannter Rand';
+  if ((d.handle === 'ear' || d.handle === 'loop' || d.rim !== 'plain') && !state.unlocks.includes('formdetails')) return 'Diese Henkel und Ränder sind noch nicht freigeschaltet';
   if (!state.glazes.some((g) => g.id === d.glazeId)) return 'Diese Glasur kennst du noch nicht';
   if (!['none', 'stripes', 'dots', 'waves', 'leaves'].includes(d.pattern)) return 'Unbekanntes Muster';
   if ((d.pattern === 'waves' || d.pattern === 'leaves') && !state.unlocks.includes('patterns2')) return 'Dieses Muster ist noch nicht freigeschaltet';

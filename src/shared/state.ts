@@ -32,7 +32,7 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
     schemaVersion: SCHEMA_VERSION, version: 0, playerId, createdAt: now, lastTick: now, rng: seed >>> 0,
     taler: 100, ruf: 0, materials: { ton: 30, glasurbasis: 10 },
     stations: [], workers: [], hirePool: [], batches: [], designs: [], glazes: [STARTER_GLAZE], goods: [],
-    standing: null, orders: [], stallDesignIds: [], unlocks: ['becher'], milestonesDone: [],
+    standing: null, orders: [], stallDesignIds: [], unlocks: ['becher'], milestonesDone: [], milestonesAcked: [],
     boostUntil: 0, lastSeen: now, away: null, cooldowns: {}, avatarSeed: seed >>> 0,
     makerMark: { shape: 'circle', letter: 'M', color: '#b44c36' }, nextId: 1,
     stats: { made: 0, sold: 0, ordersDone: 0, experiments: 0, designsSaved: 0, effectsFound: 0 },

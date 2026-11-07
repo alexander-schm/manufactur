@@ -6,6 +6,7 @@ import { newId } from './ids';
 import { pieceValue } from './market';
 import { orderReward } from './orders';
 import { kilnCapacity, startNewBatch } from './production';
+import { checkMilestones, touchSeen } from './progression';
 import { rollWorker } from './state';
 import type { Design, GameState, GlazeRecipe, MakerMark } from './types';
 
@@ -50,8 +51,12 @@ export function applyAction(state: GameState, action: Action, now: number): Acti
     const s = structuredClone(advance(state, now));
     const events: GameEvent[] = [];
     run(s, action, now, events);
-    s.version += 1;
-    return { ok: true, state: s, events };
+    const seen = touchSeen(s, now);
+    const checked = checkMilestones(seen);
+    events.push(...checked.events);
+    const out = checked.state;
+    out.version += 1;
+    return { ok: true, state: out, events };
   } catch (e) {
     if (e instanceof Reject) return { ok: false, error: e.message };
     throw e;
@@ -67,7 +72,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'buyMaterial': {
       const m = MATERIALS[a.material];
       if (!m) fail('Unbekanntes Material');
-      if (m.locked) fail(`${m.name} gibt es hier noch nicht zu kaufen`);
+      if (m.locked || (m.unlock && !s.unlocks.includes(m.unlock))) fail(`${m.name} gibt es hier noch nicht zu kaufen`);
       if (!isInt(a.amount, 1, 1000)) fail('Ungültige Menge');
       const cost = m.price * a.amount;
       if (cost > s.taler) fail('Nicht genug Taler');
@@ -197,15 +202,19 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'setMakerMark': {
       const m = a.mark;
       if (!m || !['circle', 'heart', 'star', 'leaf'].includes(m.shape) || !/^[A-ZÄÖÜ]$/.test(m.letter) || !/^#[0-9a-f]{6}$/i.test(m.color)) fail('Ungültige Signatur');
+      if (m.shape !== 'circle' && !s.unlocks.includes('zeichen')) fail('Diese Zeichenform ist noch nicht freigeschaltet');
       s.makerMark = { shape: m.shape, letter: m.letter, color: m.color };
       return;
     }
     case 'ackAway':
       s.away = null;
       return;
+    case 'ackMilestone':
+      if (s.milestonesDone.includes(a.id) && !s.milestonesAcked.includes(a.id)) s.milestonesAcked.push(a.id);
+      return;
     case 'experiment': {
       needUnlock(s, 'studio', 'Glasurversuche gibt es ab dem Entwurfsstudio');
-      const err = validateRecipe(a.recipe);
+      const err = validateRecipe(a.recipe, s);
       if (err) fail(err);
       const need: Record<string, number> = { glasurbasis: EXPERIMENT_COST.glasurbasis };
       if (a.recipe.colorant) need[a.recipe.colorant] = EXPERIMENT_COST.colorant;

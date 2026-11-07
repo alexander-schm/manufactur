@@ -105,6 +105,8 @@ export interface GameState {
   stallDesignIds: string[];
   unlocks: string[];
   milestonesDone: string[];
+  /** milestones whose celebration card the player has dismissed */
+  milestonesAcked: string[];
   boostUntil: number;
   lastSeen: number;
   away: AwayLog | null;

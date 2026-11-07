@@ -5,6 +5,8 @@ import { nextRandom, pick, randInt } from './rng';
 import type { Design, GameState, GlazeRecipe, GoodsStack, Order, Taste } from './types';
 
 export const ORDER_REFILL_MS = 4 * 60_000;
+/** faster refill while fewer than MIN_ORDERS are open */
+export const ORDER_REFILL_LOW_MS = 2 * 60_000;
 export const MIN_ORDERS = 3;
 export const MAX_ORDERS = 5;
 export const TIER_MUL: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.4, 3: 2 };
@@ -57,6 +59,6 @@ export function orderReward(order: Order, stack: GoodsStack, design: Design, gla
 
 export function nextOrderTime(state: GameState, t: number): number | null {
   if (state.orders.length >= MAX_ORDERS) return null;
-  if (state.orders.length < MIN_ORDERS) return t;
+  if (state.orders.length < MIN_ORDERS) return Math.max(t, state.lastOrderAt + ORDER_REFILL_LOW_MS);
   return Math.max(t, state.lastOrderAt + ORDER_REFILL_MS);
 }
