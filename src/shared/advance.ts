@@ -1,5 +1,6 @@
 import { getStationDef, getTrait } from './content';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
+import { addOrder, nextOrderTime } from './orders';
 import { kilnCapacity, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
 import { nextRandom } from './rng';
 import { newId } from './state';
@@ -38,9 +39,6 @@ export function advance(state: GameState, now: number): GameState {
   return s;
 }
 
-/** Hook for systems that schedule their own events (orders refill etc.). */
-export type EventSource = { next(s: GameState, t: number): number | null; run(s: GameState, t: number): void };
-export const extraEvents: EventSource[] = [];
 
 function stationsOfKind(s: GameState, kind: Station['kind']): Station[] {
   return s.stations.filter((x) => x.kind === kind);
@@ -93,7 +91,7 @@ export function nextEventTime(s: GameState, t: number): number | null {
     const rate = stallRate(s);
     if (rate > 0 && stallStock(s) > 0) consider(t + Math.max(1, Math.ceil(((need - s.stallCarry) / rate) * MIN)));
   }
-  for (const src of extraEvents) consider(src.next(s, t));
+  consider(nextOrderTime(s, t));
   return next;
 }
 
@@ -144,5 +142,6 @@ export function completeDue(s: GameState, t: number): void {
     }
   }
   tryUnblock(s);
-  for (const src of extraEvents) if (src.next(s, t) !== null && src.next(s, t)! <= t) src.run(s, t);
+  const due2 = nextOrderTime(s, t);
+  if (due2 !== null && due2 <= t) addOrder(s, t);
 }

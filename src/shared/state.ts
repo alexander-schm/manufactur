@@ -1,14 +1,12 @@
 import { FORMS, NAMES, TRAITS } from './content';
+import { newId } from './ids';
+import { addOrder } from './orders';
 import { nextRandom, pick } from './rng';
 import type { Design, GameState, GlazeRecipe, Station, StationKind, Worker } from './types';
 
 export const SCHEMA_VERSION = 1;
 
-export function newId(state: GameState, prefix: string): string {
-  const id = `${prefix}${state.nextId}`;
-  state.nextId += 1;
-  return id;
-}
+export { newId };
 
 const TRAIT_IDS = Object.keys(TRAITS);
 
@@ -51,6 +49,8 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
   };
   s.designs.push(design);
   s.stallDesignIds = [design.id];
+  addOrder(s, now);
+  addOrder(s, now);
   return s;
 }
 
