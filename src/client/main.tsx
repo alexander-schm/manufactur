@@ -7,6 +7,7 @@ import { ToastStack } from './ui/Toast';
 
 const devPages: Record<string, () => Promise<{ default: () => preact.JSX.Element }>> = {
   '#kit': () => import('./dev/KitPage').then((m) => ({ default: m.KitPage })),
+  '#pots': () => import('./dev/PotsPage').then((m) => ({ default: m.PotsPage })),
 };
 
 function useHash() {
