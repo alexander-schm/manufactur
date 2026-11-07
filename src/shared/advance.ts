@@ -97,6 +97,7 @@ export function nextEventTime(s: GameState, t: number): number | null {
 }
 
 function sell(s: GameState, from: number, to: number): void {
+  if (to <= from) return;
   const r = stallSalesBetween(s, from, to);
   if (s.away) { s.away.sold += r.sold; s.away.talerEarned = Math.round((s.away.talerEarned + r.taler) * 100) / 100; }
   if (r.sold > 0) tryUnblock(s);

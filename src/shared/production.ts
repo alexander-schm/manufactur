@@ -36,11 +36,13 @@ export function stationSpeed(state: GameState, station: Station, stage: Stage, n
     speed *= factor;
   }
   // chatty neighbours
-  for (const other of state.stations) {
-    if (Math.abs(other.slot - station.slot) !== 1) continue;
-    for (const w of workersAt(state, other.id)) {
-      for (const t of w.traits) speed *= getTrait(t).neighbourSpeedMul ?? 1;
-    }
+  for (const w of state.workers) {
+    if (!w.stationId || w.stationId === station.id) continue;
+    let mul = 1;
+    for (const t of w.traits) mul *= getTrait(t).neighbourSpeedMul ?? 1;
+    if (mul === 1) continue;
+    const other = state.stations.find((x) => x.id === w.stationId);
+    if (other && Math.abs(other.slot - station.slot) === 1) speed *= mul;
   }
   if (now < state.boostUntil) speed *= 2;
   return speed;

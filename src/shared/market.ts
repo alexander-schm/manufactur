@@ -49,9 +49,8 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
   if (n >= stock) { n = stock; state.stallCarry = 0; }
   let sold = 0;
   let taler = 0;
-  const order = state.goods
-    .filter((g) => state.stallDesignIds.includes(g.designId))
-    .sort((a, b) => a.quality - b.quality);
+  const order = state.goods.filter((g) => state.stallDesignIds.includes(g.designId));
+  if (order.length > 1) order.sort((a, b) => a.quality - b.quality);
   for (const g of order) {
     if (sold >= n) break;
     const k = Math.min(g.count, n - sold);
@@ -59,7 +58,7 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
     sold += k;
     taler += k * pieceValue(state, g) * STALL_PRICE_FACTOR;
   }
-  state.goods = state.goods.filter((g) => g.count > 0);
+  if (state.goods.some((g) => g.count === 0)) state.goods = state.goods.filter((g) => g.count > 0);
   taler = Math.round(taler * 100) / 100;
   state.taler = Math.round((state.taler + taler) * 100) / 100;
   state.stats.sold += sold;

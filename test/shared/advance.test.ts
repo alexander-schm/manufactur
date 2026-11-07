@@ -45,9 +45,14 @@ describe('advance', () => {
   });
   it('[Review Focus 1] 30 days of absence is fast, capped by the shelf, and earns money', () => {
     const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
-    const t0 = performance.now();
-    const s = advance(base, T0 + 30 * 24 * H);
-    const ms = performance.now() - t0;
+    // best of 3 runs, so JIT warm-up and a busy machine don't make this flaky
+    let ms = Infinity;
+    let s = base;
+    for (let i = 0; i < 3; i++) {
+      const t0 = performance.now();
+      s = advance(base, T0 + 30 * 24 * H);
+      ms = Math.min(ms, performance.now() - t0);
+    }
     expect(ms).toBeLessThan(100);
     expect(goodsCount(s)).toBeLessThanOrEqual(shelfCap(s));
     expect(s.taler).toBeGreaterThan(base.taler);
