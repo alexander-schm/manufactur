@@ -46,6 +46,8 @@ export function makeCharacter(seed: number): CharacterLook {
   if (look.facial === 'none' && look.quirk === 'none') {
     look.quirk = p(['headscarf', 'bigHat', 'flower', 'earring', 'pencilEar', 'bandana', 'scarf'] as const);
   }
+  // headwear quirks hide caps and mohawks badly
+  if ((look.quirk === 'bigHat' || look.quirk === 'headscarf' || look.quirk === 'bandana') && (look.hairStyle === 'cap' || look.hairStyle === 'mohawk')) look.hairStyle = 'short';
   return look;
 }
 

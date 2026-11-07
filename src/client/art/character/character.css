@@ -1,0 +1,7 @@
+.character .ch-body { transform-box: fill-box; transform-origin: 50% 100%; animation: breathe 3.2s ease-in-out infinite; }
+.character .ch-body.ch-work { animation: bob 0.9s ease-in-out infinite; }
+.character .ch-body.ch-sleep { animation-duration: 4.5s; }
+.character .ch-eyes { transform-box: fill-box; transform-origin: 50% 50%; animation: blink 5.3s infinite; }
+.character .ch-z text { animation: float-up 3s ease-in infinite; }
+.character .ch-z text:nth-child(2) { animation-delay: 1s; }
+.character .ch-z text:nth-child(3) { animation-delay: 2s; }
