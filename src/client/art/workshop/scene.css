@@ -1,0 +1,32 @@
+.scene-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.scene { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; user-select: none; }
+@media (max-width: 899px) {
+  .scene { width: auto; height: min(64vh, 560px); }
+}
+.scene .station { cursor: pointer; outline: none; }
+.scene .station:hover > *, .scene .station:focus-visible > * { filter: drop-shadow(0 0 0.5px var(--line)) brightness(1.04); }
+.scene .person { cursor: pointer; }
+.scene .name-tag { opacity: 0; transition: opacity .2s; }
+.scene .person:hover .name-tag { opacity: 0.85; }
+.scene .spinning { animation: spin-wobble 0.5s ease-in-out infinite; }
+@keyframes spin-wobble { 0%,100% { transform: scaleX(1) } 50% { transform: scaleX(0.94) } }
+.scene .flame { animation: flicker 0.7s ease-in-out infinite; }
+.scene .glow { animation: breathe 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.scene .smoke { animation: puff 2.7s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.scene .bulb { animation: twinkle 3s ease-in-out infinite; }
+@keyframes twinkle { 0%,100% { opacity: 1 } 50% { opacity: .75 } }
+.scene .hanging { animation: sway 6s ease-in-out infinite; transform-origin: 340px 20px; }
+.scene .cat-body { animation: breathe 3.6s ease-in-out infinite; }
+.scene .cat-tail { animation: sway 4s ease-in-out infinite; }
+.scene .zzz text { animation: float-up 3s ease-in infinite; }
+.scene .zzz text:nth-child(2) { animation-delay: 1s; }
+.scene .zzz text:nth-child(3) { animation-delay: 2s; }
+.scene .cloud { animation: drift 30s linear infinite alternate; }
+@keyframes drift { to { transform: translateX(40px) } }
+.scene .knead { animation: squish 0.8s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes squish { 0%,100% { transform: scale(1,1) } 50% { transform: scale(1.08,0.9) } }
+.scene .dip { animation: bob 1.2s ease-in-out infinite; }
+.scene .coin-pop { animation: float-up 2.4s ease-out infinite; }
+.scene .whoosh { animation: twinkle 0.5s infinite; }
+.scene .steam { animation: float-up 3s ease-out infinite; }
+.scene .boost-banner { animation: pop-in .5s ease-out; }

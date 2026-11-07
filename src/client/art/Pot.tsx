@@ -16,6 +16,10 @@ type Props = {
   wobble?: boolean;
   /** crop the view to the piece (for big previews) instead of a uniform scale */
   fit?: boolean;
+  /** placement when nested inside another SVG */
+  x?: number;
+  y?: number;
+  height?: number;
   class?: string;
   title?: string;
 };
@@ -161,7 +165,8 @@ function Plate({ design, glazeColor, effect, seed, uid, mark, quality }: { desig
   );
 }
 
-export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobble = true, fit = false, class: cls, title }: Props) {
+export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobble = true, fit = false, x, y, height, class: cls, title }: Props) {
+  const box = { x, y, width: size, height: height ?? size };
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const s = potShape(design.form, design.profile, design.rim, design.handle);
   const seed = hashSeed((design.id ?? design.form).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, 3);
@@ -177,7 +182,7 @@ export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobb
   }
   if (design.form === 'teller') {
     return (
-      <svg viewBox={viewBox} width={size} height={size} class={cls} role="img" aria-label={title ?? 'Teller'} data-pot data-path={s.body}>
+      <svg viewBox={viewBox} {...box} class={cls} role="img" aria-label={title ?? 'Teller'} data-pot data-path={s.body}>
         {title && <title>{title}</title>}
         <g filter={wobble ? 'url(#wobble-soft)' : undefined}>
           <Plate design={design} glazeColor={glazeColor} effect={effect} seed={seed} uid={uid} mark={mark} quality={quality} />
@@ -186,7 +191,7 @@ export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobb
     );
   }
   return (
-    <svg viewBox={viewBox} width={size} height={size} class={cls} role="img" aria-label={title ?? 'Keramik'} data-pot data-path={s.body}>
+    <svg viewBox={viewBox} {...box} class={cls} role="img" aria-label={title ?? 'Keramik'} data-pot data-path={s.body}>
       {title && <title>{title}</title>}
       <defs>
         <clipPath id={clip}><path d={s.body} /></clipPath>
