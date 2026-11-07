@@ -1,4 +1,5 @@
 import { handleFound, handleJoin, handleLogin, handleLogout, handleMe } from './auth';
+import { handleAction, handleGetState } from './game';
 import { error, json } from './http';
 
 export interface Env {
@@ -26,6 +27,10 @@ export default {
           return await handleLogout(req, env);
         case 'GET /api/me':
           return await handleMe(req, env);
+        case 'GET /api/state':
+          return await handleGetState(req, env);
+        case 'POST /api/action':
+          return await handleAction(req, env);
         default:
           return error(404, 'Nicht gefunden');
       }

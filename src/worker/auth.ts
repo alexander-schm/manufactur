@@ -37,15 +37,20 @@ function sessionCookie(token: string, maxAge = SESSION_TTL_S): string {
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 }
 
-export async function readJson<T>(req: Request): Promise<T | null> {
+export const MAX_BODY = 32 * 1024;
+
+/** Parse a JSON body; returns an error Response for oversized or malformed bodies. */
+export async function readBody<T>(req: Request): Promise<{ value: T } | { error: Response }> {
   const len = Number(req.headers.get('content-length') ?? '0');
-  if (len > 32 * 1024) return null;
+  if (len > MAX_BODY) return { error: error(413, 'Anfrage zu groß') };
+  const text = await req.text();
+  if (text.length > MAX_BODY) return { error: error(413, 'Anfrage zu groß') };
   try {
-    const text = await req.text();
-    if (text.length > 32 * 1024) return null;
-    return JSON.parse(text) as T;
+    const v = JSON.parse(text) as T;
+    if (!v || typeof v !== 'object') return { error: error(400, 'Ungültige Anfrage') };
+    return { value: v };
   } catch {
-    return null;
+    return { error: error(400, 'Ungültige Anfrage') };
   }
 }
 
@@ -92,8 +97,9 @@ async function createPlayer(env: Env, villageId: string, name: string, password:
 }
 
 export async function handleFound(req: Request, env: Env): Promise<Response> {
-  const body = await readJson<Creds & { villageName?: unknown }>(req);
-  if (!body) return error(400, 'Ungültige Anfrage');
+  const parsed = await readBody<Creds & { villageName?: unknown }>(req);
+  if ('error' in parsed) return parsed.error;
+  const body = parsed.value;
   const bad = validateCreds(body);
   if (bad) return error(400, bad);
   const villageName = typeof body.villageName === 'string' ? body.villageName.trim() : '';
@@ -112,8 +118,9 @@ export async function handleFound(req: Request, env: Env): Promise<Response> {
 }
 
 export async function handleJoin(req: Request, env: Env): Promise<Response> {
-  const body = await readJson<Creds & { inviteCode?: unknown }>(req);
-  if (!body) return error(400, 'Ungültige Anfrage');
+  const parsed = await readBody<Creds & { inviteCode?: unknown }>(req);
+  if ('error' in parsed) return parsed.error;
+  const body = parsed.value;
   const bad = validateCreds(body);
   if (bad) return error(400, bad);
   const code = typeof body.inviteCode === 'string' ? body.inviteCode.trim().toUpperCase() : '';
@@ -126,8 +133,10 @@ export async function handleJoin(req: Request, env: Env): Promise<Response> {
 }
 
 export async function handleLogin(req: Request, env: Env): Promise<Response> {
-  const body = await readJson<Creds>(req);
-  if (!body || typeof body.name !== 'string' || typeof body.password !== 'string') return error(400, 'Ungültige Anfrage');
+  const parsed = await readBody<Creds>(req);
+  if ('error' in parsed) return parsed.error;
+  const body = parsed.value;
+  if (typeof body.name !== 'string' || typeof body.password !== 'string') return error(400, 'Ungültige Anfrage');
   const row = await env.DB.prepare('SELECT id, pw_hash, pw_salt FROM players WHERE name_key = ?')
     .bind(body.name.trim().toLowerCase()).first<{ id: string; pw_hash: string; pw_salt: string }>();
   // hash anyway so timing doesn't reveal whether the name exists
