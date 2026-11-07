@@ -71,3 +71,5 @@
 .field input:focus { outline: 3px dashed var(--g1); outline-offset: 2px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.locked-note { text-align: center; padding: 24px 8px; }
+.locked-note h3 { margin-top: 8px; }
