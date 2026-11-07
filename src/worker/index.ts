@@ -1,3 +1,4 @@
+import { handleFound, handleJoin, handleLogin, handleLogout, handleMe } from './auth';
 import { error, json } from './http';
 
 export interface Env {
@@ -15,6 +16,16 @@ export default {
       switch (route) {
         case 'GET /api/health':
           return json({ ok: true });
+        case 'POST /api/found':
+          return await handleFound(req, env);
+        case 'POST /api/join':
+          return await handleJoin(req, env);
+        case 'POST /api/login':
+          return await handleLogin(req, env);
+        case 'POST /api/logout':
+          return await handleLogout(req, env);
+        case 'GET /api/me':
+          return await handleMe(req, env);
         default:
           return error(404, 'Nicht gefunden');
       }
