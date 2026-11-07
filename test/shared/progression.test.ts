@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
 import { advance } from '../../src/shared/advance';
 import { getForm } from '../../src/shared/content';
+import { shelfCapacity } from '../../src/shared/market';
 import { checkMilestones, MILESTONES, touchSeen } from '../../src/shared/progression';
 import type { GameState } from '../../src/shared/types';
 import { plainGame, T0 } from './helpers';
@@ -56,6 +57,8 @@ export function playthrough(minutes: number) {
   let t = T0;
   const unlockTimes: number[] = [];
   const log: string[] = [];
+  const rufLog: string[] = [];
+  const firstSeen = new Map<string, number>();
   const act = (a: Action) => { const r = applyAction(s, a, t); if (r.ok) s = r.state; return r.ok; };
   act({ type: 'setStanding', designId: s.designs[0].id, batchSize: 6, autoBuy: true });
   let hintRecipe: Extract<Action, { type: 'experiment' }>['recipe'] | null = { base: 'opak', colorant: null, colorantPct: 0, firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' } };
@@ -90,13 +93,29 @@ export function playthrough(minutes: number) {
         act({ type: 'saveDesign', design: { ...s.designs[0], id: 'n' + f, name: f, form: f, handle: getForm(f).handleAllowed ? 'round' : 'none', pattern: 'none', profile: { ...getForm(f).profileDefaults } } });
       }
     }
+    // a casual player taps "sell all" when the shelf is nearly full, and upgrades the stall/shelf when rich
+    const onShelf = s.goods.reduce((n, g) => n + g.count, 0);
+    if (onShelf >= shelfCapacity(s) - 6) {
+      const big = [...s.goods].sort((x, y) => y.count - x.count)[0];
+      if (big) act({ type: 'sellNow', designId: big.designId, quality: big.quality, effect: big.effect, count: big.count });
+    }
+    if (s.unlocks.includes('upgrades')) for (const k of ['marketStall', 'shelf'] as const) {
+      const st = s.stations.find((x) => x.kind === k)!;
+      if (s.taler > 400) act({ type: 'upgradeStation', stationId: st.id });
+    }
+    // a casual player declines orders that have been impossible for a while
+    for (const o of s.orders) {
+      firstSeen.set(o.id, firstSeen.get(o.id) ?? t);
+      if (t - firstSeen.get(o.id)! > 6 * MIN) act({ type: 'declineOrder', orderId: o.id });
+    }
     // a casual player produces whatever the oldest open order asks for
     const want = s.orders[0]?.form;
     const d = want && s.designs.find((x) => x.form === want);
     if (d && s.standing?.designId !== d.id) act({ type: 'setStanding', designId: d.id, batchSize: 6, autoBuy: true });
+    if ((t - T0) % (150_000) === 0) rufLog.push(`${(t - T0) / MIN}:${s.ruf}`);
     for (let i = before; i < s.unlocks.length; i++) { unlockTimes.push(t); log.push(`${s.unlocks[i]}@${((t - T0) / MIN).toFixed(1)}`); }
   }
-  return { s, unlockTimes, log };
+  return { s, unlockTimes, log, rufLog };
 }
 
 describe('pacing playthrough', () => {

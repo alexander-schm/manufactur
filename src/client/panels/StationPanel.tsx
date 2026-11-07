@@ -137,7 +137,7 @@ export function WorkshopPanel({ s, onOpen }: { s: GameState; onOpen: (id: PanelI
       </div>
       <section class="panel-section" style={{ marginTop: '16px' }}>
         <h3>Zweiter Raum</h3>
-        {!s.unlocks.includes('room2') ? <p class="muted">Ab 50 Ruf wächst deine Werkstatt um einen Raum.</p> : (
+        {!s.unlocks.includes('room2') ? <p class="muted">Ab 60 Ruf wächst deine Werkstatt um einen Raum.</p> : (
           <div class="cards">
             {(Object.keys(BUILD_COST) as StationKind[]).map((k) => (
               <div class="card-row">

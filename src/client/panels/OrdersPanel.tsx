@@ -8,7 +8,7 @@ import { CoinIcon, StarIcon } from '../ui/Counter';
 import { DesignPot, Stars } from './common';
 import { bestDesignForOrder, deliverActionFor, describeTaste } from './logic';
 
-export function OrderCard({ state: s, order: o, onDeliver, onProduce }: { state: GameState; order: Order; onDeliver: (a: Action) => void; onProduce: (designId: string) => void }) {
+export function OrderCard({ state: s, order: o, onDeliver, onProduce, onDecline }: { state: GameState; order: Order; onDeliver: (a: Action) => void; onProduce: (designId: string) => void; onDecline?: (id: string) => void }) {
   const deliver = deliverActionFor(s, o);
   const best = bestDesignForOrder(s, o);
   const producing = best && s.standing?.designId === best.id;
@@ -32,6 +32,7 @@ export function OrderCard({ state: s, order: o, onDeliver, onProduce }: { state:
         {best && !deliver && <Button small variant="quiet" disabled={!!producing} onClick={() => onProduce(best.id)}>{producing ? 'Läuft' : 'Herstellen'}</Button>}
         <Button small variant="good" disabled={!deliver} onClick={() => deliver && onDeliver(deliver)}>Liefern</Button>
       </div>
+      {!deliver && onDecline && <button class="link decline" onClick={() => onDecline(o.id)}>Ablehnen – kein Problem, es kommt ein neuer Auftrag</button>}
     </article>
   );
 }
@@ -41,7 +42,7 @@ export function OrdersPanel({ s }: { s: GameState }) {
     <div class="cards">
       {s.orders.length === 0 && <p class="muted">Gerade keine Bestellungen – gleich klopft bestimmt jemand.</p>}
       {s.orders.map((o) => (
-        <OrderCard state={s} order={o} onDeliver={(a) => dispatch(a)} onProduce={(designId) => dispatch({ type: 'setStanding', designId, batchSize: s.standing?.batchSize ?? 6, autoBuy: s.standing?.autoBuy ?? true })} />
+        <OrderCard state={s} order={o} onDeliver={(a) => dispatch(a)} onProduce={(designId) => dispatch({ type: 'setStanding', designId, batchSize: s.standing?.batchSize ?? 6, autoBuy: s.standing?.autoBuy ?? true })} onDecline={(orderId) => dispatch({ type: 'declineOrder', orderId })} />
       ))}
       <p class="muted" style={{ fontSize: '.9em' }}>Neue Bestellungen kommen alle paar Minuten – auch wenn du nicht da bist. Keine hat eine Frist.</p>
     </div>

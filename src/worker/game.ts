@@ -24,8 +24,8 @@ async function save(env: Env, playerId: string, expectedVersion: number, state: 
   return r.meta.changes === 1;
 }
 
-/** The server clock, optionally sped up in dev for end-to-end tests. */
-export function serverNow(env: Env, req?: Request): number {
+/** The server clock. (Dev time travel happens via /api/dev/warp, not here.) */
+export function serverNow(_env: Env, _req?: Request): number {
   return Date.now();
 }
 

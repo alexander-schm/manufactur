@@ -84,3 +84,25 @@ describe('advance', () => {
     expect(s.stats.made).toBe(30); // 30 Ton, 1 per cup
   });
 });
+
+describe('market stall reserve', () => {
+  it('keeps enough pieces on the shelf for open orders of that form', () => {
+    const s = plainGame();
+    s.stallDesignIds = [s.designs[0].id];
+    s.orders = s.orders.map((o) => ({ ...o, form: 'becher', count: 5 }));
+    const reserved = s.orders.length * 5;
+    s.goods = [{ designId: s.designs[0].id, quality: 2, effect: null, count: reserved + 3 }];
+    const after = advance(s, T0 + 60 * MIN);
+    const left = after.goods.reduce((n, g) => n + g.count, 0);
+    expect(left).toBeGreaterThanOrEqual(Math.min(reserved, after.orders.filter((o) => o.form === 'becher').reduce((n, o) => n + o.count, 0)));
+    expect(after.stats.sold).toBeLessThanOrEqual(3);
+  });
+  it('does not spin when everything is reserved and the shelf is full', () => {
+    const s = withStanding();
+    s.stallDesignIds = [s.designs[0].id];
+    s.orders = s.orders.map((o) => ({ ...o, form: 'becher', count: 30 }));
+    const t = performance.now();
+    advance(s, T0 + 24 * H);
+    expect(performance.now() - t).toBeLessThan(500);
+  });
+});

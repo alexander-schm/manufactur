@@ -7,7 +7,7 @@ export default defineConfig({
       main: './src/worker/index.ts',
       wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
-        bindings: { TEST_MIGRATIONS: await readD1Migrations('./migrations') },
+        bindings: { TEST_MIGRATIONS: await readD1Migrations('./migrations'), DEV_FAST: '0' },
       },
     })),
   ],

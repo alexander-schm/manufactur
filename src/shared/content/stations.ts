@@ -39,5 +39,5 @@ export const STATIONS: Record<StationKind, StationDef> = {
     capacity: [60, 100, 160, 260, 400], maxWorkers: 0 },
   marketStall: { kind: 'marketStall', name: 'Marktstand', description: 'Verkauft ausgewählte Ware ganz von allein – auch wenn du nicht da bist.',
     stage: null, usesWorkers: false, piecesPerMinute: [0, 0, 0, 0, 0], upgradeCost: [60, 180, 500, 1400], rufRequired: [5, 25, 70, 180],
-    capacity: [0.5, 0.8, 1.2, 1.8, 2.6], maxWorkers: 0 },
+    capacity: [1, 1.6, 2.4, 3.6, 5.2], maxWorkers: 0 },
 };

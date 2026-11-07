@@ -104,3 +104,25 @@ describe('buildStation', () => {
     expect(advance(two, T0 + 3_600_000).stats.made).toBeGreaterThanOrEqual(one);
   });
 });
+
+describe('saveDesign defaults', () => {
+  it('a new design is offered at the market stall automatically', () => {
+    const s = plainGame();
+    s.unlocks.push('studio');
+    const r = ok(s, { type: 'saveDesign', design: { ...s.designs[0], id: 'neu', name: 'Streifen', pattern: 'stripes' } });
+    const added = r.state.designs[r.state.designs.length - 1];
+    expect(r.state.stallDesignIds).toContain(added.id);
+  });
+});
+
+describe('declineOrder', () => {
+  it('removes the order without any penalty, and a new one arrives later', () => {
+    const s = advance(plainGame(), T0 + 1000);
+    const o = s.orders[0];
+    const r = ok(s, { type: 'declineOrder', orderId: o.id }, T0 + 2000);
+    expect(r.state.orders.find((x) => x.id === o.id)).toBeUndefined();
+    expect(r.state.taler).toBe(s.taler);
+    expect(r.state.ruf).toBe(s.ruf);
+    expect(advance(r.state, T0 + 10 * 60_000).orders.length).toBeGreaterThanOrEqual(s.orders.length);
+  });
+});

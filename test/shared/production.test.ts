@@ -48,3 +48,12 @@ describe('production', () => {
     expect(qualityTier(75)).toBe(3);
   });
 });
+
+describe('quality for harder forms', () => {
+  it('a plain default jug from an untrained owner reaches "good" quality', async () => {
+    const { FORMS } = await import('../../src/shared/content');
+    const s = plainGame();
+    const jug = { ...s.designs[0], form: 'krug', profile: { ...FORMS.krug.profileDefaults }, handle: 'round' as const };
+    expect(qualityTier(batchQuality(s, jug, []))).toBe(2);
+  });
+});

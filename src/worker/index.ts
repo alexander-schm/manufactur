@@ -1,4 +1,5 @@
 import { handleFound, handleJoin, handleLogin, handleLogout, handleMe } from './auth';
+import { handleWarp } from './dev';
 import { handleAction, handleGetState } from './game';
 import { error, json } from './http';
 
@@ -31,6 +32,8 @@ export default {
           return await handleGetState(req, env);
         case 'POST /api/action':
           return await handleAction(req, env);
+        case 'POST /api/dev/warp':
+          return await handleWarp(req, env);
         default:
           return error(404, 'Nicht gefunden');
       }

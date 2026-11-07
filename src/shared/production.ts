@@ -62,7 +62,7 @@ export function designDifficultyOf(design: Design): number {
 }
 
 export function batchQuality(state: GameState, design: Design, workers: Worker[]): number {
-  let q = 55 - (designDifficultyOf(design) - 1) * 30;
+  let q = 62 - (designDifficultyOf(design) - 1) * 22;
   for (const w of workers) {
     for (const t of w.traits) q += getTrait(t).qualityAdd;
     q += Math.min(10, w.xp / 30);

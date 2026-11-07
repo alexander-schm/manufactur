@@ -17,11 +17,11 @@ export const MILESTONES: Milestone[] = [
   { id: 'orders5', text: 'Fünf Aufträge erledigt – der Händler kommt vorbei!', unlocks: ['farbkoerper'], done: (s) => s.stats.ordersDone >= 5 },
   { id: 'firstEffect', text: 'Dein erster Glasureffekt!', unlocks: ['vase'], done: (s) => s.stats.effectsFound >= 1 },
   { id: 'ruf20', text: 'Deine Ware ist gefragt (20 Ruf)!', unlocks: ['formdetails'], done: (s) => s.ruf >= 20 },
-    { id: 'ruf35', text: 'Bekannt im ganzen Tal (35 Ruf)!', unlocks: ['krug', 'patterns2'], done: (s) => s.ruf >= 35 },
-  { id: 'orders15', text: 'Fünfzehn zufriedene Kundschaften!', unlocks: ['kobalt'], done: (s) => s.stats.ordersDone >= 15 },
-  { id: 'ruf42', text: 'Die alte Brennmeisterin verrät dir ein Geheimnis (42 Ruf)!', unlocks: ['reduktion'], done: (s) => s.ruf >= 42 },
-  { id: 'ruf50', text: 'Eine richtige Manufaktur (50 Ruf)!', unlocks: ['room2'], done: (s) => s.ruf >= 50 },
-  { id: 'ruf60', text: 'Man erkennt deine Stücke schon von Weitem (60 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 60 },
+    { id: 'ruf30', text: 'Bekannt im ganzen Tal (30 Ruf)!', unlocks: ['krug', 'patterns2'], done: (s) => s.ruf >= 30 },
+  { id: 'orders10', text: 'Zehn zufriedene Kundschaften!', unlocks: ['kobalt'], done: (s) => s.stats.ordersDone >= 10 },
+  { id: 'ruf45', text: 'Die alte Brennmeisterin verrät dir ein Geheimnis (45 Ruf)!', unlocks: ['reduktion'], done: (s) => s.ruf >= 45 },
+  { id: 'ruf60', text: 'Eine richtige Manufaktur (60 Ruf)!', unlocks: ['room2'], done: (s) => s.ruf >= 60 },
+  { id: 'ruf80', text: 'Man erkennt deine Stücke schon von Weitem (80 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 80 },
 ];
 
 export const BOOST_AFTER_MS = 24 * 3_600_000;

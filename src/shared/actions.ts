@@ -20,6 +20,7 @@ export type Action =
   | { type: 'buildStation'; kind: StationKind }
   | { type: 'saveDesign'; design: Design }
   | { type: 'deliverOrder'; orderId: string; designId: string; quality: 1 | 2 | 3; effect: string | null }
+  | { type: 'declineOrder'; orderId: string }
   | { type: 'setStall'; designIds: string[] }
   | { type: 'sellNow'; designId: string; quality: 1 | 2 | 3; effect: string | null; count: number }
   | { type: 'experiment'; recipe: Omit<GlazeRecipe, 'id' | 'color' | 'effect' | 'name'> }
@@ -31,7 +32,7 @@ export type Action =
 
 export type ActionType = Action['type'];
 export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'buildStation', 'saveDesign',
-  'deliverOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'ackAway', 'ackMilestone'];
+  'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'ackAway', 'ackMilestone'];
 
 export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
 export type ActionResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: string };
@@ -162,7 +163,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       };
       const idx = s.designs.findIndex((x) => x.id === d.id);
       if (idx >= 0) s.designs[idx] = clean;
-      else { clean.id = newId(s, 'd'); s.designs.push(clean); }
+      else { clean.id = newId(s, 'd'); s.designs.push(clean); s.stallDesignIds.push(clean.id); }
       s.stats.designsSaved += 1;
       return;
     }
@@ -183,6 +184,11 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       s.stats.ordersDone += 1;
       s.stats.sold += order.count;
       events.push({ kind: 'orderDone', id: order.id, text: `${order.customerName} ist begeistert! +${reward.taler} Taler, +${reward.ruf} Ruf` });
+      return;
+    }
+    case 'declineOrder': {
+      if (!s.orders.some((o) => o.id === a.orderId)) fail('Diesen Auftrag gibt es nicht mehr');
+      s.orders = s.orders.filter((o) => o.id !== a.orderId);
       return;
     }
     case 'setStall': {

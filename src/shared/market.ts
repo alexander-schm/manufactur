@@ -17,9 +17,35 @@ export function stallRate(state: GameState): number {
   return getStationDef('marketStall').capacity![st.level - 1];
 }
 
+function formOf(state: GameState, designId: string): string | undefined {
+  return state.designs.find((d) => d.id === designId)?.form;
+}
+
+/** Pieces per form the stall may sell: everything above what open orders of that form need. */
+function sellableByForm(state: GameState): Map<string, number> {
+  const stock = new Map<string, number>();
+  for (const g of state.goods) {
+    const f = formOf(state, g.designId);
+    if (f) stock.set(f, (stock.get(f) ?? 0) + g.count);
+  }
+  const reserved = new Map<string, number>();
+  for (const o of state.orders) reserved.set(o.form, (reserved.get(o.form) ?? 0) + o.count);
+  const out = new Map<string, number>();
+  for (const [f, n] of stock) out.set(f, Math.max(0, n - (reserved.get(f) ?? 0)));
+  return out;
+}
+
+/** How many pieces the stall can sell right now (offered designs, minus the order reserve). */
 export function stallStock(state: GameState): number {
+  const budget = sellableByForm(state);
+  const offered = new Map<string, number>();
+  for (const g of state.goods) {
+    if (!state.stallDesignIds.includes(g.designId)) continue;
+    const f = formOf(state, g.designId)!;
+    offered.set(f, (offered.get(f) ?? 0) + g.count);
+  }
   let n = 0;
-  for (const g of state.goods) if (state.stallDesignIds.includes(g.designId)) n += g.count;
+  for (const [f, k] of offered) n += Math.min(k, budget.get(f) ?? 0);
   return n;
 }
 
@@ -49,11 +75,15 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
   if (n >= stock) { n = stock; state.stallCarry = 0; }
   let sold = 0;
   let taler = 0;
+  const budget = sellableByForm(state);
   const order = state.goods.filter((g) => state.stallDesignIds.includes(g.designId));
   if (order.length > 1) order.sort((a, b) => a.quality - b.quality);
   for (const g of order) {
     if (sold >= n) break;
-    const k = Math.min(g.count, n - sold);
+    const f = formOf(state, g.designId)!;
+    const k = Math.min(g.count, n - sold, budget.get(f) ?? 0);
+    if (k <= 0) continue;
+    budget.set(f, (budget.get(f) ?? 0) - k);
     g.count -= k;
     sold += k;
     taler += k * pieceValue(state, g) * STALL_PRICE_FACTOR;
