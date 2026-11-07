@@ -8,7 +8,7 @@ import { orderReward } from './orders';
 import { kilnCapacity, startNewBatch } from './production';
 import { checkMilestones, touchSeen } from './progression';
 import { rollWorker } from './state';
-import type { Design, GameState, GlazeRecipe, MakerMark } from './types';
+import type { Design, GameState, GlazeRecipe, MakerMark, StationKind } from './types';
 
 export type Action =
   | { type: 'buyMaterial'; material: string; amount: number }
@@ -17,6 +17,7 @@ export type Action =
   | { type: 'hire'; workerId: string }
   | { type: 'assign'; workerId: string; stationId: string | null }
   | { type: 'upgradeStation'; stationId: string }
+  | { type: 'buildStation'; kind: StationKind }
   | { type: 'saveDesign'; design: Design }
   | { type: 'deliverOrder'; orderId: string; designId: string; quality: 1 | 2 | 3; effect: string | null }
   | { type: 'setStall'; designIds: string[] }
@@ -29,7 +30,7 @@ export type Action =
   | { type: 'ackMilestone'; id: string };
 
 export type ActionType = Action['type'];
-export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'saveDesign',
+export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'buildStation', 'saveDesign',
   'deliverOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'ackAway', 'ackMilestone'];
 
 export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
@@ -39,6 +40,10 @@ export const HAND_TOUCH_COOLDOWN_MS = 10 * 60_000;
 export const HAND_TOUCH_SPEED = 1.15;
 export const SELL_NOW_FACTOR = 0.6;
 export const HIRE_COST_PER_WORKER = 30;
+/** Stations that can be built a second time in the second room, and their price. */
+export const BUILD_COST: Partial<Record<StationKind, number>> = { prepBench: 100, wheel: 150, dryingRack: 80, glazeTable: 120, kiln: 300 };
+export const ROOM2_FIRST_SLOT = 7;
+export const ROOM2_SLOTS = 5;
 
 class Reject extends Error {}
 const fail = (msg: string): never => { throw new Reject(msg); };
@@ -130,6 +135,20 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       s.taler -= cost;
       st.level += 1;
       events.push({ kind: 'levelUp', id: st.id, text: `${def.name} ist jetzt Stufe ${st.level}!` });
+      return;
+    }
+    case 'buildStation': {
+      needUnlock(s, 'room2', 'Dafür brauchst du den zweiten Raum');
+      const cost = BUILD_COST[a.kind];
+      if (cost === undefined) fail('Diese Station gibt es nur einmal');
+      const used = new Set(s.stations.map((x) => x.slot));
+      let slot = -1;
+      for (let i = ROOM2_FIRST_SLOT; i < ROOM2_FIRST_SLOT + ROOM2_SLOTS; i++) if (!used.has(i)) { slot = i; break; }
+      if (slot < 0) fail('Im zweiten Raum ist kein Platz mehr');
+      if (cost! > s.taler) fail('Nicht genug Taler');
+      s.taler -= cost!;
+      s.stations.push({ id: newId(s, 's'), kind: a.kind, level: 1, slot });
+      events.push({ kind: 'levelUp', id: a.kind, text: `Neu gebaut: ${STATIONS[a.kind].name}!` });
       return;
     }
     case 'saveDesign': {

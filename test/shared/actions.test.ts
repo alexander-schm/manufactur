@@ -78,3 +78,29 @@ describe('actions', () => {
     expectRejected(s, { type: 'assign', workerId: s.workers[0].id, stationId: rack.id });
   });
 });
+
+describe('buildStation', () => {
+  it('needs the second room, costs Taler and uses the next free slot', () => {
+    const s = plainGame();
+    s.taler = 1000;
+    expectRejected(s, { type: 'buildStation', kind: 'wheel' });
+    s.unlocks.push('room2');
+    const r = ok(s, { type: 'buildStation', kind: 'wheel' });
+    const added = r.state.stations[r.state.stations.length - 1];
+    expect(added.kind).toBe('wheel');
+    expect(added.slot).toBe(7);
+    expect(r.state.taler).toBeLessThan(1000);
+    expectRejected(r.state, { type: 'buildStation', kind: 'shelf' });
+  });
+  it('a second wheel speeds the pipeline up', () => {
+    const s = plainGame();
+    s.taler = 5000; s.unlocks.push('room2');
+    s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
+    const one = advance(s, T0 + 3_600_000).stats.made;
+    let two = ok(s, { type: 'buildStation', kind: 'wheel' }, T0).state;
+    two = ok(two, { type: 'buildStation', kind: 'prepBench' }, T0).state;
+    two = ok(two, { type: 'buildStation', kind: 'glazeTable' }, T0).state;
+    two = ok(two, { type: 'buildStation', kind: 'kiln' }, T0).state;
+    expect(advance(two, T0 + 3_600_000).stats.made).toBeGreaterThanOrEqual(one);
+  });
+});
