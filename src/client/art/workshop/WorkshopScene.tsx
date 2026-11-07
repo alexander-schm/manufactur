@@ -31,7 +31,7 @@ const WORKER_SPOT: Partial<Record<StationKind, { dx: number; dy: number; behind:
 };
 const IDLE_SPOTS = [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }];
 
-type Props = { state: GameState; now: number; onStation: (id: string) => void; onWorker: (id: string) => void };
+type Props = { state: GameState; now: number; onStation: (id: string) => void; onWorker: (id: string) => void; highlight?: StationKind };
 
 function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: number; pose: Pose; onWorker: (id: string) => void; i: number }) {
   const size = 100;
@@ -43,7 +43,7 @@ function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: numbe
   );
 }
 
-export function WorkshopScene({ state, now, onStation, onWorker }: Props) {
+export function WorkshopScene({ state, now, onStation, onWorker, highlight }: Props) {
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
   const pins = state.designs.slice(-4).reverse().map((design) => ({ design, glaze: state.glazes.find((g) => g.id === design.glazeId) }));
@@ -76,6 +76,19 @@ export function WorkshopScene({ state, now, onStation, onWorker }: Props) {
           );
         })}
         {idle.map((w, i) => <Person w={w} i={i} x={IDLE_SPOTS[i % 3].x + Math.floor(i / 3) * 40} y={IDLE_SPOTS[i % 3].y} pose="sleep" onWorker={onWorker} />)}
+        {highlight && (() => {
+          const st = state.stations.find((x) => x.kind === highlight);
+          if (!st) return null;
+          const p = SLOTS[st.slot];
+          const top = { kiln: 230, shelf: 300, dryingRack: 220, marketStall: 220, wheel: 190, prepBench: 120, glazeTable: 120 }[highlight];
+          const x = p.x, y = p.y - top;
+          return (
+            <g class="hint-arrow">
+              <path d={`M${x} ${y - 70} C${x - 16} ${y - 50} ${x + 14} ${y - 30} ${x} ${y - 8}`} fill="none" stroke="var(--kiln)" stroke-width="7" stroke-linecap="round" />
+              <path d={`M${x - 14} ${y - 22} L${x} ${y - 2} L${x + 14} ${y - 22}`} fill="none" stroke="var(--kiln)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+            </g>
+          );
+        })()}
         {now < state.boostUntil && (
           <g class="boost-banner">
             <rect x={width / 2 - 170} y="34" width="340" height="44" rx="10" fill="var(--sun)" stroke="var(--line)" stroke-width="2.2" />

@@ -60,3 +60,22 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
   .sheet:has(.studio) { width: 760px; }
   .studio { grid-template-columns: 300px 1fr; }
 }
+.mentor { position: fixed; right: 14px; bottom: 14px; z-index: 35; display: flex; align-items: flex-end; gap: 4px; max-width: min(350px, calc(100vw - 28px)); flex-direction: row-reverse; animation: pop-in .4s ease-out; }
+.mentor-bubble { background: var(--card); border: 2.2px solid var(--line); box-shadow: var(--shadow); border-radius: 16px 16px 4px 16px; padding: 8px 12px; }
+.mentor-bubble p { margin: 4px 0 8px; }
+.mentor-head { display: flex; justify-content: space-between; gap: 8px; }
+.link { background: none; border: none; text-decoration: underline; cursor: pointer; color: var(--ink-soft); font-size: .9em; }
+@media (max-width: 899px) { .mentor { bottom: 86px; left: 8px; right: 8px; } .mentor-bubble { font-size: .92em; } }
+.modal-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(43,36,32,.35); display: grid; place-items: center; padding: 16px; animation: fade .2s; }
+.modal-card { width: min(440px, 100%); animation: pop-in .45s ease-out; }
+.away-list { list-style: none; padding: 0; margin: 10px 0; font-size: 1.1em; }
+.away-list li { margin: 6px 0; }
+.inline-icon svg { width: 22px; height: 22px; vertical-align: middle; }
+.boost-note { background: var(--sun); border: 2px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.celebrate { text-align: center; }
+.kicker { font-size: 1.4em; color: var(--kiln); margin: 0; transform: rotate(-3deg); }
+.unlock-line { background: #fff; border: 2px dashed rgba(43,36,32,.3); border-radius: 12px; padding: 8px; margin: 8px 0 14px; }
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -20px; width: 10px; height: 8px; border-radius: 40% 60% 50% 50%; border: 1.4px solid var(--line); animation: crumb 2.4s ease-in forwards; }
+@keyframes crumb { to { transform: translateY(105vh) rotate(540deg); } }
+.scene .hint-arrow { animation: bob 0.9s ease-in-out infinite; pointer-events: none; }

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
 import { api } from '../api';
-import { me, now, view } from '../store';
+import { dispatch, me, now, serverState, view } from '../store';
 import { T } from '../strings';
 import { Counter } from '../ui/Counter';
 import { Icon } from '../ui/Icons';
@@ -10,6 +10,9 @@ import { Sheet } from '../ui/Sheet';
 import { Button } from '../ui/Button';
 import { inviteLink } from './AuthScreen';
 import { PanelHost, type PanelId, panelUnlock } from '../panels/PanelHost';
+import { AwaySummary } from '../panels/AwaySummary';
+import { Celebration } from '../panels/Celebration';
+import { ONBOARDING, OnboardingCard, onboardingStep } from '../panels/Onboarding';
 import './screens.css';
 
 const TOOLS: { id: PanelId; icon: Parameters<typeof Icon>[0]['name'] }[] = [
@@ -21,7 +24,12 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
   const s = view.value;
   const [panel, setPanel] = useState<{ id: PanelId; arg?: string } | null>(initialPanel());
   const [menu, setMenu] = useState(false);
+  const [awayAtLoad, setAwayAtLoad] = useState(() => serverState.value?.away ?? null);
+  const [skipTutorial, setSkipTutorial] = useState(() => { try { return localStorage.getItem('mf_skip_tutorial') === '1'; } catch { return false; } });
   if (!s) return <div class="loading">{T.loading}</div>;
+  const pendingMilestone = s.milestonesDone.find((m) => !s.milestonesAcked.includes(m));
+  const step = onboardingStep(s);
+  const highlight = !skipTutorial && step < ONBOARDING.length && !panel ? ONBOARDING[step].target : undefined;
   const open = (id: PanelId, arg?: string) => setPanel({ id, arg });
   return (
     <div class="game">
@@ -36,7 +44,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
       </header>
       <div class="scene-frame">
         <Paper seed={21}>
-          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} />
+          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} highlight={highlight} />
         </Paper>
       </div>
       <nav class="toolbar" aria-label="Werkzeuge">
@@ -54,6 +62,11 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
         })}
       </nav>
       {panel && <PanelHost id={panel.id} arg={panel.arg} onClose={() => setPanel(null)} onOpen={open} />}
+      {!skipTutorial && !panel && !awayAtLoad && !pendingMilestone && (
+        <OnboardingCard s={s} onOpen={open} onSkip={() => { try { localStorage.setItem('mf_skip_tutorial', '1'); } catch { /* ignore */ } setSkipTutorial(true); }} />
+      )}
+      {awayAtLoad && <AwaySummary away={awayAtLoad} boosted={now.value < s.boostUntil} now={s.lastTick} onClose={() => { setAwayAtLoad(null); if (s.away) dispatch({ type: 'ackAway' }); }} />}
+      {!awayAtLoad && pendingMilestone && <Celebration milestoneId={pendingMilestone} onClose={() => dispatch({ type: 'ackMilestone', id: pendingMilestone })} />}
       {menu && (
         <Sheet title={T.village} onClose={() => setMenu(false)}>
           <p>Einladungscode für <strong>{me.value?.villageName}</strong>:</p>
