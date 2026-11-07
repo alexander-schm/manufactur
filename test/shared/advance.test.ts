@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest';
+import { advance } from '../../src/shared/advance';
+import { getStationDef } from '../../src/shared/content';
+import type { GameState } from '../../src/shared/types';
+import { plainGame, T0 } from './helpers';
+
+const MIN = 60_000;
+const H = 60 * MIN;
+const goodsCount = (s: GameState) => s.goods.reduce((a, g) => a + g.count, 0);
+const shelfCap = (s: GameState) => { const sh = s.stations.find((x) => x.kind === 'shelf')!; return getStationDef('shelf').capacity![sh.level - 1]; };
+
+function withStanding(seed = 1): GameState {
+  const s = plainGame(seed);
+  s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
+  s.stallDesignIds = [];
+  return s;
+}
+
+describe('advance', () => {
+  it('produces the first batch of 6 cups after 150–210 s', () => {
+    expect(goodsCount(advance(withStanding(), T0 + 150_000))).toBe(0);
+    expect(goodsCount(advance(withStanding(), T0 + 210_000))).toBeGreaterThanOrEqual(6);
+  });
+  it('does not mutate the input', () => {
+    const s = withStanding();
+    const copy = structuredClone(s);
+    advance(s, T0 + H);
+    expect(s).toEqual(copy);
+  });
+  it('is deterministic', () => {
+    expect(advance(withStanding(3), T0 + 2 * H)).toEqual(advance(withStanding(3), T0 + 2 * H));
+  });
+  it('advancing twice to the same time equals once', () => {
+    const once = advance(withStanding(), T0 + H);
+    expect(advance(once, T0 + H)).toEqual(once);
+  });
+  it('is split-invariant within ±1 piece over 1 h', () => {
+    const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
+    const direct = advance(base, T0 + H);
+    let stepped = base;
+    for (let t = T0 + 7 * MIN; t <= T0 + H; t += 7 * MIN + 13_000) stepped = advance(stepped, t);
+    stepped = advance(stepped, T0 + H);
+    expect(Math.abs(stepped.stats.made - direct.stats.made)).toBeLessThanOrEqual(6);
+    expect(Math.abs(stepped.stats.sold - direct.stats.sold)).toBeLessThanOrEqual(1);
+  });
+  it('[Review Focus 1] 30 days of absence is fast, capped by the shelf, and earns money', () => {
+    const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
+    const t0 = performance.now();
+    const s = advance(base, T0 + 30 * 24 * H);
+    const ms = performance.now() - t0;
+    expect(ms).toBeLessThan(100);
+    expect(goodsCount(s)).toBeLessThanOrEqual(shelfCap(s));
+    expect(s.taler).toBeGreaterThan(base.taler);
+  });
+  it('[Review Focus 1] without a stall, a full shelf blocks production but loses nothing', () => {
+    const s = advance(withStanding(), T0 + 24 * H);
+    expect(goodsCount(s)).toBeLessThanOrEqual(shelfCap(s));
+    expect(goodsCount(s)).toBeGreaterThan(shelfCap(s) - 6);
+    const blocked = s.batches.filter((b) => b.blocked);
+    expect(blocked.length).toBeGreaterThan(0);
+  });
+  it('[Review Focus 2] time going backwards changes nothing', () => {
+    const s = advance(withStanding(), T0 + H);
+    expect(advance(s, s.lastTick - 5000)).toEqual(s);
+  });
+  it('24 h offline: the stall keeps selling the whole time', () => {
+    const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
+    base.lastSeen = T0;
+    const s = advance(base, T0 + 24 * H);
+    const st = s.stations.find((x) => x.kind === 'marketStall')!;
+    const rate = getStationDef('marketStall').capacity![st.level - 1];
+    expect(s.away).not.toBeNull();
+    expect(s.away!.sold).toBeGreaterThanOrEqual(Math.floor(rate * 24 * 60 * 0.95));
+    expect(s.away!.made).toBeGreaterThan(0);
+  });
+  it('runs out of clay without autoBuy and simply stops', () => {
+    const base = withStanding(); base.standing!.autoBuy = false;
+    const s = advance(base, T0 + 6 * H);
+    expect(s.stats.made).toBe(30); // 30 Ton, 1 per cup
+  });
+});

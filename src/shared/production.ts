@@ -1,4 +1,4 @@
-import { getForm, getStationDef, getTrait } from './content';
+import { getForm, getStationDef, getTrait, MATERIALS } from './content';
 import type { Batch, Design, GameState, Stage, Station, StationKind, Worker } from './types';
 
 const STAGE_STATION: Record<Stage, StationKind> = {
@@ -75,3 +75,52 @@ export function qualityTier(q: number): 1 | 2 | 3 {
   if (q < 75) return 2;
   return 3;
 }
+
+/** Materials needed to start a batch. */
+export function batchMaterials(state: GameState, design: Design, count: number): Record<string, number> {
+  const form = getForm(design.form);
+  const need: Record<string, number> = { ton: Math.ceil(count * form.clayPerPiece), glasurbasis: Math.ceil(count / 4) };
+  const glaze = state.glazes.find((g) => g.id === design.glazeId);
+  if (glaze?.colorant) need[glaze.colorant] = (need[glaze.colorant] ?? 0) + Math.ceil(count / 5);
+  return need;
+}
+
+export function kilnCapacity(state: GameState): number {
+  const kiln = state.stations.find((s) => s.kind === 'kiln')!;
+  return getStationDef('kiln').capacity![kiln.level - 1];
+}
+
+/**
+ * Create a batch at the prepare stage, paying materials (optionally buying what's missing).
+ * Mutates state. Returns an error message (German) or null.
+ */
+export function startNewBatch(state: GameState, design: Design, count: number, autoBuy: boolean, newIdFn: (p: string) => string): string | null {
+  if (!Number.isInteger(count) || count < 1) return 'Ungültige Stückzahl';
+  if (count > kilnCapacity(state)) return `Höchstens ${kilnCapacity(state)} Stück pro Charge (Ofengröße)`;
+  const need = batchMaterials(state, design, count);
+  let cost = 0;
+  for (const [m, n] of Object.entries(need)) {
+    const missing = n - (state.materials[m] ?? 0);
+    if (missing > 0) {
+      if (!autoBuy) return 'Nicht genug Material';
+      cost += missing * MATERIAL_PRICE(m);
+    }
+  }
+  if (cost > state.taler) return 'Nicht genug Taler für das Material';
+  state.taler -= cost;
+  for (const [m, n] of Object.entries(need)) {
+    const have = state.materials[m] ?? 0;
+    state.materials[m] = Math.max(0, have - n);
+  }
+  const workers = state.workers.filter((w) => {
+    const st = state.stations.find((s) => s.id === w.stationId);
+    return st && (st.kind === 'prepBench' || st.kind === 'wheel' || st.kind === 'glazeTable');
+  });
+  state.batches.push({
+    id: newIdFn('b'), designId: design.id, count, stage: 'prepare', stationId: null, startedAt: null, durationMs: 0,
+    quality: batchQuality(state, design, workers),
+  });
+  return null;
+}
+
+const MATERIAL_PRICE = (id: string) => MATERIALS[id]?.price ?? 1;

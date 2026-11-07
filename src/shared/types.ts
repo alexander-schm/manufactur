@@ -50,6 +50,8 @@ export interface Batch {
   quality: number;
   /** speed multiplier from a hand-touch for the current stage */
   touch?: number;
+  /** finished firing but the shelf is full; waits in the kiln */
+  blocked?: boolean;
 }
 
 export interface Station { id: string; kind: StationKind; level: number; slot: number }
@@ -75,7 +77,7 @@ export interface Order {
 }
 
 /** Auto-requeue a batch whenever the prepare stage is free. */
-export interface StandingOrder { designId: string; batchSize: number }
+export interface StandingOrder { designId: string; batchSize: number; /** buy missing materials from the shop automatically */ autoBuy: boolean }
 
 export interface AwayLog { since: number; made: number; sold: number; talerEarned: number; discoveries: string[] }
 
