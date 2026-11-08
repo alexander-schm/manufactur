@@ -50,7 +50,13 @@ export function stationSpeed(state: GameState, station: Station, stage: Stage, n
 
 export function stageDurationMs(state: GameState, batch: Batch, station: Station, now: number): number {
   const speed = stationSpeed(state, station, batch.stage, now) * (batch.touch ?? 1);
-  return Math.round((batch.count / speed) * 60_000);
+  // harder designs take longer at the wheel and the glaze table (spec §4.3)
+  let difficulty = 1;
+  if (batch.stage === 'form' || batch.stage === 'glaze') {
+    const d = state.designs.find((x) => x.id === batch.designId);
+    if (d) difficulty = designDifficultyOf(d);
+  }
+  return Math.round(((batch.count * difficulty) / speed) * 60_000);
 }
 
 export function designDifficultyOf(design: Design): number {

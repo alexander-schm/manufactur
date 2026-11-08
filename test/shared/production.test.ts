@@ -57,3 +57,15 @@ describe('quality for harder forms', () => {
     expect(qualityTier(batchQuality(s, jug, []))).toBe(2);
   });
 });
+
+describe('[Final review minor #2 → fixed] difficulty affects time at the wheel (spec §4.3)', () => {
+  it('a vase takes longer to throw than a cup of the same count', async () => {
+    const { FORMS } = await import('../../src/shared/content');
+    const s = plainGame();
+    s.designs.push({ ...s.designs[0], id: 'dv', form: 'vase', handle: 'none', profile: { ...FORMS.vase.profileDefaults } });
+    const wheel = s.stations.find((x) => x.kind === 'wheel')!;
+    const cup = stageDurationMs(s, { ...batchAt('form'), designId: s.designs[0].id }, wheel, T0);
+    const vase = stageDurationMs(s, { ...batchAt('form'), designId: 'dv' }, wheel, T0);
+    expect(vase).toBeGreaterThan(cup * 1.2);
+  });
+});

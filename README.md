@@ -58,7 +58,9 @@ npm run deploy
 node test/e2e/smoke.mjs https://<deine-url> --no-fast
 ```
 
-Hinweis: Wer sehr lange (mehrere Wochen) nicht spielt, löst beim nächsten Besuch eine längere Nachberechnung aus (etwa 30 ms bei 30 Tagen). Der kostenlose Workers-Plan erlaubt 10 ms CPU pro Anfrage. Für eine kleine Runde reicht er meistens, mit dem Paid-Plan ist man auf der sicheren Seite.
+Hinweis: Nach langer Abwesenheit rechnet der Server die verpasste Zeit in kleinen Häppchen nach, höchstens 3000 Ereignisse (ein paar Millisekunden) pro Anfrage. Der Browser lädt dabei einfach so lange nach, bis alles aufgeholt ist. So bleibt jede Anfrage unter den CPU-Grenzen des kostenlosen Workers-Plans.
+
+Datenbank-Migrationen nach einem Update: `npx wrangler d1 migrations apply manufaktur --remote`.
 
 ## Freunde einladen
 
