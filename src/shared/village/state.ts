@@ -7,6 +7,9 @@ export const DESIGN_MEMBERS = 6;
 export const MAX_MEMBERS = 10;
 export const MAX_OFFERS = 30;
 export const MAX_REQUESTS = 20;
+/** per person, so nobody's absence can block the board for everyone */
+export const MAX_OFFERS_PER_MEMBER = 5;
+export const MAX_REQUESTS_PER_MEMBER = 3;
 export const MAX_NEWS = 100;
 export const MAX_GUESTBOOK = 50;
 export const MAX_COUNT = 10_000;
@@ -69,6 +72,7 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
   switch (a.type) {
     case 'postOffer': {
       if (v.offers.length >= MAX_OFFERS) return 'Das Tauschbrett ist voll';
+      if (v.offers.filter((o) => o.from === actorId).length >= MAX_OFFERS_PER_MEMBER) return `Du hast schon ${MAX_OFFERS_PER_MEMBER} Angebote am Brett – höchstens ${MAX_OFFERS_PER_MEMBER} gehen gleichzeitig`;
       return checkGive(a.give, true) ?? (a.want?.kind === 'material' || a.want?.kind === 'taler' ? checkGive(a.want, false) : 'Was möchtest du dafür?');
     }
     case 'cancelOffer':
@@ -80,6 +84,7 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
       return checkGive(a.give, true);
     case 'postRequest':
       if (v.requests.length >= MAX_REQUESTS) return 'Das Brett ist voll';
+      if (v.requests.filter((r) => r.from === actorId).length >= MAX_REQUESTS_PER_MEMBER) return `Du hast schon ${MAX_REQUESTS_PER_MEMBER} Wünsche am Brett – höchstens ${MAX_REQUESTS_PER_MEMBER} gehen gleichzeitig`;
       return checkGive({ kind: 'material', material: a.material, count: a.count }, false);
     case 'removeRequest':
       return typeof a.requestId === 'string' ? null : 'Unbekannter Wunsch';

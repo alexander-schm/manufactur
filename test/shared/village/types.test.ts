@@ -46,3 +46,17 @@ describe('village state', () => {
     expect(validateVillageAction(v, 'stranger', { type: 'postRequest', material: 'ton', count: 3 })).toMatch(/.{4,}/);
   });
 });
+
+describe('[Final review #7] one absent player cannot fill the board', () => {
+  it(`allows at most ${'MAX_OFFERS_PER_MEMBER'} offers and requests per member`, async () => {
+    const { MAX_OFFERS_PER_MEMBER, MAX_REQUESTS_PER_MEMBER } = await import('../../../src/shared/village/state');
+    let v = newVillage('v1', 'Tonhausen', 7);
+    v = addMember(v, member(1)) as typeof v;
+    v = addMember(v, member(2)) as typeof v;
+    for (let i = 0; i < MAX_OFFERS_PER_MEMBER; i++) v.offers.push({ id: `o${i}`, from: 'p1', give: { kind: 'taler', amount: 1 }, want: { kind: 'taler', amount: 1 }, createdAt: T0 });
+    for (let i = 0; i < MAX_REQUESTS_PER_MEMBER; i++) v.requests.push({ id: `r${i}`, from: 'p1', material: 'ton', count: 1, createdAt: T0 });
+    expect(validateVillageAction(v, 'p1', { type: 'postOffer', give: { kind: 'taler', amount: 1 }, want: { kind: 'taler', amount: 2 } })).toMatch(/höchstens/);
+    expect(validateVillageAction(v, 'p1', { type: 'postRequest', material: 'ton', count: 2 })).toMatch(/höchstens/);
+    expect(validateVillageAction(v, 'p2', { type: 'postOffer', give: { kind: 'taler', amount: 1 }, want: { kind: 'taler', amount: 2 } })).toBeNull();
+  });
+});
