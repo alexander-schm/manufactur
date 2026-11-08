@@ -72,6 +72,8 @@ export interface VillageState {
   guestbooks: Record<string, GuestbookEntry[]>;
   /** key `${helper}>${target}@${day}` → count */
   helpsGiven: Record<string, number>;
+  /** current helping-hand boost end per player */
+  helpBoostUntil: Record<string, number>;
 }
 
 export type VillageAction =

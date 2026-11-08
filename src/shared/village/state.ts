@@ -14,7 +14,7 @@ export const MAX_COUNT = 10_000;
 export function newVillage(villageId: string, name: string, seed: number): VillageState {
   return {
     schemaVersion: 1, version: 0, villageId, name, nextId: 1, rng: seed >>> 0,
-    members: [], offers: [], requests: [], jointOrders: [], completedJoint: 0, buildings: [], news: [], guestbooks: {}, helpsGiven: {},
+    members: [], offers: [], requests: [], jointOrders: [], completedJoint: 0, buildings: [], news: [], guestbooks: {}, helpsGiven: {}, helpBoostUntil: {},
   };
 }
 

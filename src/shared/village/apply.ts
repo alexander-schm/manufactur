@@ -1,6 +1,7 @@
 import { MATERIALS, own } from '../content';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
+import { lendAHand } from './help';
 import { completeJointOrder, contributeTo, ensureJointOrders, isComplete } from './joint';
 import { addNews, validateVillageAction, vid } from './state';
 import type { Delivery, Give, GiveRef, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
@@ -160,6 +161,13 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
         deliveries.push(...completeJointOrder(v, o, now));
         events.push(`Großauftrag „${o.title}“ geschafft! 🎉`);
       }
+      break;
+    }
+    case 'help': {
+      const out = lendAHand(v, actorId, a.target, a.sticker, now);
+      if (typeof out === 'string') return out;
+      deliveries.push(...out);
+      events.push(`Du hast bei ${name(a.target)} mit angepackt – das geht jetzt schneller!`);
       break;
     }
     default:
