@@ -1,28 +1,14 @@
 import { applyAction, type Action } from '../shared/actions';
 import { advance } from '../shared/advance';
 import { touchSeen } from '../shared/progression';
-import { migrateState } from '../shared/state';
 import type { GameState } from '../shared/types';
 import { readBody, requirePlayer } from './auth';
 import { error, json } from './http';
 import type { Env } from './index';
+import { loadWorkshop, saveWorkshop } from './workshops';
 
-type Row = { version: number; state: string };
-
-async function load(env: Env, playerId: string): Promise<GameState | null> {
-  const row = await env.DB.prepare('SELECT version, state FROM workshops WHERE player_id = ?').bind(playerId).first<Row>();
-  if (!row) return null;
-  const s = migrateState(JSON.parse(row.state));
-  s.version = row.version;
-  return s;
-}
-
-/** Conditional save; returns false if someone else saved in between. */
-async function save(env: Env, playerId: string, expectedVersion: number, state: GameState): Promise<boolean> {
-  const r = await env.DB.prepare('UPDATE workshops SET version = ?, state = ?, updated_at = ? WHERE player_id = ? AND version = ?')
-    .bind(state.version, JSON.stringify(state), Date.now(), playerId, expectedVersion).run();
-  return r.meta.changes === 1;
-}
+const load = loadWorkshop;
+const save = saveWorkshop;
 
 /** The server clock. (Dev time travel happens via /api/dev/warp, not here.) */
 export function serverNow(_env: Env, _req?: Request): number {
@@ -33,7 +19,7 @@ export function serverNow(_env: Env, _req?: Request): number {
 export const CATCHUP_EVENTS = 3000;
 
 /** Catch up as far as the budget allows; only mark the player present once fully caught up. */
-function catchUp(stored: GameState, now: number): { state: GameState; catchingUp: boolean } {
+export function catchUp(stored: GameState, now: number): { state: GameState; catchingUp: boolean } {
   const s = advance(stored, now, CATCHUP_EVENTS);
   if (s.lastTick < now) return { state: s, catchingUp: true };
   return { state: touchSeen(s, now), catchingUp: false };

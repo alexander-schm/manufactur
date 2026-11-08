@@ -1,5 +1,7 @@
 import { newGame } from '../shared/state';
 import { error, json } from './http';
+import { MAX_MEMBERS } from '../shared/village/state';
+import { joinVillage } from './village';
 import { clearFailures, clientIp, isBlocked, JOIN_FAILS_PER_IP, LOGIN_FAILS_PER_NAME, recordFailure, TOO_MANY } from './ratelimit';
 import type { Env } from './index';
 
@@ -114,6 +116,7 @@ export async function handleFound(req: Request, env: Env): Promise<Response> {
   await env.DB.prepare('INSERT INTO villages (id, name, invite_code, created_at) VALUES (?, ?, ?, ?)').bind(villageId, villageName, code, Date.now()).run();
   const p = await createPlayer(env, villageId, name, body.password as string);
   if (p instanceof Response) return p;
+  await joinVillage(env, villageId, p.playerId);
   const token = await createSession(env, p.playerId);
   return json({ inviteCode: code }, 201, { 'set-cookie': sessionCookie(token) });
 }
@@ -132,8 +135,11 @@ export async function handleJoin(req: Request, env: Env): Promise<Response> {
     await recordFailure(env, ipKey);
     return error(404, 'Einladungscode unbekannt');
   }
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM players WHERE village_id = ?').bind(village.id).first<{ n: number }>();
+  if ((count?.n ?? 0) >= MAX_MEMBERS) return error(409, `Das Dorf ist voll (höchstens ${MAX_MEMBERS})`);
   const p = await createPlayer(env, village.id, (body.name as string).trim(), body.password as string);
   if (p instanceof Response) return p;
+  await joinVillage(env, village.id, p.playerId);
   const token = await createSession(env, p.playerId);
   return json({ inviteCode: code, villageName: village.name }, 201, { 'set-cookie': sessionCookie(token) });
 }

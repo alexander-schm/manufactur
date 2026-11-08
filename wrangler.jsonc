@@ -15,5 +15,7 @@
       "migrations_dir": "migrations"
     }
   ],
+  "durable_objects": { "bindings": [{ "name": "VILLAGE", "class_name": "VillageDO" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VillageDO"] }],
   "observability": { "enabled": true }
 }

@@ -1,10 +1,13 @@
 import { handleFound, handleJoin, handleLogin, handleLogout, handleMe } from './auth';
 import { handleWarp } from './dev';
+import { handleVillageAction, handleVillageView, handleVisit } from './village';
+export { VillageDO } from './village';
 import { handleAction, handleGetState } from './game';
 import { error, json } from './http';
 
 export interface Env {
   DB: D1Database;
+  VILLAGE: DurableObjectNamespace<import('./village').VillageDO>;
   ASSETS: Fetcher;
   DEV_FAST?: string;
 }
@@ -34,8 +37,15 @@ export default {
           return await handleAction(req, env);
         case 'POST /api/dev/warp':
           return await handleWarp(req, env);
-        default:
+        case 'GET /api/village':
+          return await handleVillageView(req, env);
+        case 'POST /api/village/action':
+          return await handleVillageAction(req, env);
+        default: {
+          const visit = /^GET \/api\/village\/visit\/([\w-]{1,64})$/.exec(route);
+          if (visit) return await handleVisit(req, env, visit[1]);
           return error(404, 'Nicht gefunden');
+        }
       }
     } catch (e) {
       console.error(e);
