@@ -8,7 +8,7 @@ import { me, now } from '../../store';
 import { Button } from '../../ui/Button';
 import { Tabs } from '../../ui/Tabs';
 import { toast } from '../../ui/Toast';
-import { loadVillage, markNewsSeen, newsSeenAt, village, villageDispatch } from '../../villageStore';
+import { loadVillage, markNewsSeen, markVillageOpened, newsSeenAt, village, villageDispatch } from '../../villageStore';
 import { inviteLink } from '../../screens/AuthScreen';
 import { NewsList, Guestbook } from './GuestbookPanel';
 import { VisitView } from './VisitView';
@@ -19,7 +19,7 @@ export type VillageTab = 'joint' | 'trade' | 'gift' | 'guestbook' | 'news';
 export function VillagePanel({ tab: initial }: { tab?: string }) {
   const [tab, setTab] = useState<VillageTab>((initial as VillageTab) ?? 'joint');
   const [visit, setVisit] = useState<{ state: GameState; member: Member } | null>(null);
-  useEffect(() => { void loadVillage(); }, []);
+  useEffect(() => { void loadVillage(); markVillageOpened(); }, []);
   useEffect(() => { if (tab === 'news') markNewsSeen(); }, [tab, village.value]);
   const v = village.value, meId = me.value?.playerId ?? '';
   if (!v) return <p class="muted">Das Dorf wird geladen …</p>;

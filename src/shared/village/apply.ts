@@ -1,4 +1,5 @@
 import { MATERIALS, own } from '../content';
+import { MAX_DECOR_PLACED } from './decor';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
 import { lendAHand } from './help';
@@ -72,7 +73,11 @@ export function applyDelta(state: GameState, d: WorkshopDelta): GameState {
   if (d.ruf) s.ruf += d.ruf;
   for (const [m, n] of Object.entries(d.materials ?? {})) s.materials[m] = (s.materials[m] ?? 0) + n;
   for (const t of d.goods ?? []) importStack(s, t);
-  for (const id of d.decor ?? []) if (!s.decor.includes(id)) s.decor.push(id);
+  for (const id of d.decor ?? []) {
+    if (s.decor.includes(id)) continue;
+    s.decor.push(id);
+    if (s.decorPlaced.length < MAX_DECOR_PLACED) s.decorPlaced.push(id); // show it off right away
+  }
   if (d.helpBoostUntil !== undefined || d.village) {
     s.village ??= { villageId: d.village?.villageId ?? '', specialty: null, buildings: [], helpBoostUntil: 0, trickleCarry: 0, members: 1 };
     if (d.helpBoostUntil !== undefined) s.village.helpBoostUntil = Math.max(s.village.helpBoostUntil, d.helpBoostUntil);

@@ -45,6 +45,7 @@ npm test               # Spiellogik + Oberfläche
 npm run test:worker    # API im Workers-Runtime
 npm run check          # TypeScript
 node test/e2e/smoke.mjs http://localhost:5173   # Ende-zu-Ende (Dev-Server mit DEV_FAST=1)
+node test/e2e/village-smoke.mjs http://localhost:5173   # zwei Spieler im Dorf: schenken, tauschen, helfen, Großauftrag
 npm run shot -- "http://localhost:5173/#scene" scene   # Bildschirmfotos nach docs/screens/
 ```
 
@@ -61,6 +62,15 @@ node test/e2e/smoke.mjs https://<deine-url> --no-fast
 Hinweis: Nach langer Abwesenheit rechnet der Server die verpasste Zeit in kleinen Häppchen nach, höchstens 3000 Ereignisse (ein paar Millisekunden) pro Anfrage. Der Browser lädt dabei einfach so lange nach, bis alles aufgeholt ist. So bleibt jede Anfrage unter den CPU-Grenzen des kostenlosen Workers-Plans.
 
 Datenbank-Migrationen nach einem Update: `npx wrangler d1 migrations apply manufaktur --remote`.
+
+## Das Dorf
+
+- Bis zu 10 Leute pro Dorf, ausgelegt auf etwa 6.
+- Jede Person hat eine Spezialität (Tongrube, Eisenerz, Kupfermine, Kobaltader oder Buchenwald). Die eigene ist günstig und wächst von allein nach, fremde Farbkörper und Holz kosten im Laden das Doppelte.
+- Tauschbrett, Geschenke, Wünsche, Mit-anpacken (bis zu 3× am Tag pro Freund) und ein Gästebuch.
+- Großaufträge gehen nur gemeinsam (mindestens zwei Leute). Alle bekommen einen Anteil, auch wer gerade nicht da ist. Material, das niemand hat, gibt es im Dorfladen zum dreifachen Preis.
+- Alle zwei Großaufträge entsteht ein Dorfgebäude: Tongrube, Markthalle, Glasurbibliothek, Gildenhaus.
+- Technisch: ein Durable Object pro Dorf (`VillageDO`), das alle Dorf-Aktionen nacheinander abarbeitet. Die Werkstätten bleiben in D1.
 
 ## Freunde einladen
 

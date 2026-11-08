@@ -112,3 +112,15 @@ describe('trades and gifts', () => {
     expect(totals(v, ws)).toEqual(start);
   });
 });
+
+describe('decor rewards', () => {
+  it('new decor is set up in the workshop automatically while there is room', () => {
+    const { ws } = village(2);
+    let s = applyDelta(ws.p1, { decor: ['laterne'] });
+    expect(s.decorPlaced).toEqual(['laterne']);
+    s = { ...s, decorPlaced: ['a', 'b', 'c', 'd'] };
+    s = applyDelta(s, { decor: ['vogelhaus'] });
+    expect(s.decor).toContain('vogelhaus');
+    expect(s.decorPlaced).not.toContain('vogelhaus');
+  });
+});

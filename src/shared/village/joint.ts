@@ -8,10 +8,19 @@ import { DESIGN_MEMBERS, addNews, vid } from './state';
 import { villageStorePrice } from './specialties';
 import type { Delivery, JointOrder, JointPart, VillageState } from './types';
 
-export interface JointTemplate { id: string; title: string; client: string; parts: JointPart[]; reward: { taler: number; ruf: number; decor: string } }
+export interface JointTemplate { id: string; title: string; client: string; parts: JointPart[]; reward: { taler: number; ruf: number; decor: string }; /** 1 = doable by brand-new players (cups + raw materials) */ tier?: 1 }
 
 /** Base sizes are for a village of ~3; scaled by member count (balanced up to 6). */
 export const JOINT_TEMPLATES: JointTemplate[] = [
+  { id: 'dorffest', title: 'Becher fürs erste Dorffest', client: 'Der Dorfrat', tier: 1,
+    parts: [{ kind: 'goods', form: 'becher', count: 20, minQuality: 1 }, { kind: 'material', material: 'ton', count: 60 }, { kind: 'material', material: 'holz', count: 40 }],
+    reward: { taler: 500, ruf: 35, decor: 'wimpelkette' } },
+  { id: 'feuerwehr', title: 'Kaffeebecher für die Feuerwehr', client: 'Hauptmann Brandt', tier: 1,
+    parts: [{ kind: 'goods', form: 'becher', count: 24, minQuality: 1 }, { kind: 'material', material: 'holz', count: 50 }, { kind: 'material', material: 'eisenoxid', count: 8 }],
+    reward: { taler: 550, ruf: 35, decor: 'laterne' } },
+  { id: 'schule', title: 'Trinkbecher für die Dorfschule', client: 'Lehrer Brösel', tier: 1,
+    parts: [{ kind: 'goods', form: 'becher', count: 18, minQuality: 1 }, { kind: 'material', material: 'ton', count: 80 }, { kind: 'material', material: 'kupferoxid', count: 6 }],
+    reward: { taler: 500, ruf: 30, decor: 'blumenkasten' } },
   { id: 'hochzeit', title: 'Hochzeitsgeschirr für die Müllerstochter', client: 'Familie Mahlzahn',
     parts: [{ kind: 'goods', form: 'teller', count: 18, minQuality: 2, colorFamily: 'blau' }, { kind: 'goods', form: 'becher', count: 18, minQuality: 1 }, { kind: 'material', material: 'kobalt', count: 30 }, { kind: 'material', material: 'holz', count: 60 }],
     reward: { taler: 900, ruf: 60, decor: 'wandteller' } },
@@ -46,9 +55,11 @@ const scale = (members: number) => 0.6 + 0.2 * Math.min(members, DESIGN_MEMBERS)
 
 export function generateJointOrder(v: VillageState, now: number): JointOrder {
   const open = v.jointOrders.map((o) => o.templateId);
-  const choices = JOINT_TEMPLATES.filter((t) => !open.includes(t.id));
+  // the first ones must be doable right after founding: cups and raw materials only
+  const pool = v.completedJoint < COMPLETIONS_PER_BUILDING ? JOINT_TEMPLATES.filter((t) => t.tier === 1) : JOINT_TEMPLATES.filter((t) => !t.tier);
+  const choices = pool.filter((t) => !open.includes(t.id));
   let r = v.rng;
-  let t: JointTemplate; [t, r] = pick(r, choices.length ? choices : JOINT_TEMPLATES);
+  let t: JointTemplate; [t, r] = pick(r, choices.length ? choices : pool);
   let seedV; [seedV, r] = nextRandom(r);
   v.rng = r;
   const f = scale(v.members.length);

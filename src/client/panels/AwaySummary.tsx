@@ -1,4 +1,5 @@
 import type { AwayLog } from '../../shared/types';
+import type { NewsItem } from '../../shared/village/types';
 import { EFFECTS } from '../../shared/content';
 import { Button } from '../ui/Button';
 import { CoinIcon } from '../ui/Counter';
@@ -7,7 +8,7 @@ import { GRETA } from './Onboarding';
 import { Character } from '../art/character/Character';
 import { formatDuration } from './logic';
 
-export function AwaySummary({ away, boosted, onClose, now }: { away: AwayLog; boosted: boolean; onClose: () => void; now?: number }) {
+export function AwaySummary({ away, boosted, onClose, now, news = [] }: { away: AwayLog; boosted: boolean; onClose: () => void; now?: number; news?: NewsItem[] }) {
   return (
     <div class="modal-backdrop">
       <Paper tape seed={31} class="modal-card">
@@ -24,6 +25,7 @@ export function AwaySummary({ away, boosted, onClose, now }: { away: AwayLog; bo
           <li><span class="inline-icon"><CoinIcon /></span> <strong>{Math.round(away.talerEarned)}</strong> Taler verdient</li>
           {away.discoveries.map((d) => <li>✦ Entdeckt: {EFFECTS[d]?.name ?? d}</li>)}
         </ul>
+        {news.length > 0 && <><h3>Im Dorf</h3><ul class="away-list">{news.slice(-6).map((n) => <li>🏡 {n.text}</li>)}</ul></>}
         {boosted && <p class="boost-note">Willkommen zurück – doppeltes Tempo für 30 Minuten!</p>}
         <Button variant="primary" onClick={onClose}>Weiter töpfern</Button>
       </Paper>

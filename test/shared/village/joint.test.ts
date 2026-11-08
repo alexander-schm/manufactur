@@ -116,3 +116,18 @@ describe('joint orders', () => {
     expect(r.error).toBeTruthy();
   });
 });
+
+describe('first joint orders fit a brand-new village', () => {
+  it('until two are done, joint orders only ask for cups and raw materials', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      let { v } = village(2);
+      v.rng = seed * 7919 + 1;
+      v = ensureJointOrders(v, T0);
+      for (const o of v.jointOrders) for (const p of o.parts) if (p.kind === 'goods') {
+        expect(p.form).toBe('becher');
+        expect(p.colorFamily).toBeUndefined();
+        expect(p.minQuality).toBe(1);
+      }
+    }
+  });
+});

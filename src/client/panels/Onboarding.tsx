@@ -6,7 +6,8 @@ import type { PanelId } from './PanelHost';
 
 export const GRETA: CharacterLook = { ...makeCharacter(1902), quirk: 'bigHat', eyes: 'glasses', hairStyle: 'bun', hairColor: '#d9d4cc', facial: 'freckles', mouth: 'grin', body: 'round', heightMul: 0.95, outfit: '#9a7ccf' };
 
-type Step = { text: string; done: (s: GameState) => boolean; target?: StationKind; panel?: PanelId; panelArg?: (s: GameState) => string | undefined; button?: string };
+export type OnboardingCtx = { villageOpened: boolean; gaveOrHelped: boolean };
+type Step = { text: string; done: (s: GameState, c: OnboardingCtx) => boolean; target?: StationKind; panel?: PanelId; panelArg?: (s: GameState) => string | undefined; button?: string };
 
 const anyBatchAt = (s: GameState, stages: string[]) => s.batches.some((b) => stages.includes(b.stage));
 
@@ -27,16 +28,20 @@ export const ONBOARDING: Step[] = [
     done: (s) => s.stats.designsSaved > 0 },
   { text: 'Zum Schluss ein Geheimnis: Probier eine eigene Glasur! Brenne eine Probekachel im Studio.', panel: 'studio', panelArg: () => 'glaze', button: 'Glasurversuch',
     done: (s) => s.stats.experiments > 0 },
+  { text: 'Du bist nicht allein! Schau ins Dorf – wer wohnt schon da? (Allein? Dann lade Freunde ein!)', panel: 'village', button: 'Ins Dorf',
+    done: (_s, c) => c.villageOpened },
+  { text: 'Freunde helfen sich: Schenk jemandem etwas oder pack in einer Nachbarwerkstatt mit an.', panel: 'village', panelArg: () => 'gift', button: 'Schenken',
+    done: (s, c) => c.gaveOrHelped || (s.village?.members ?? 1) < 2 },
 ];
 
 /** Index of the first unfinished step (ONBOARDING.length when done). */
-export function onboardingStep(s: GameState): number {
-  const i = ONBOARDING.findIndex((st) => !st.done(s));
+export function onboardingStep(s: GameState, c: OnboardingCtx = { villageOpened: false, gaveOrHelped: false }): number {
+  const i = ONBOARDING.findIndex((st) => !st.done(s, c));
   return i < 0 ? ONBOARDING.length : i;
 }
 
-export function OnboardingCard({ s, onOpen, onSkip }: { s: GameState; onOpen: (id: PanelId, arg?: string) => void; onSkip: () => void }) {
-  const i = onboardingStep(s);
+export function OnboardingCard({ s, ctx, onOpen, onSkip }: { s: GameState; ctx: OnboardingCtx; onOpen: (id: PanelId, arg?: string) => void; onSkip: () => void }) {
+  const i = onboardingStep(s, ctx);
   if (i >= ONBOARDING.length) return null;
   const step = ONBOARDING[i];
   return (

@@ -24,6 +24,17 @@ export const unreadNews = computed(() => {
   return v.news.filter((n) => n.at > newsSeenAt.value && (n.for === null || n.for === id)).length;
 });
 
+function flag(key: string) {
+  const s = signal(false);
+  try { s.value = localStorage.getItem(key) === '1'; } catch { /* ignore */ }
+  return { s, set: () => { s.value = true; try { localStorage.setItem(key, '1'); } catch { /* ignore */ } } };
+}
+const opened = flag('mf_village_opened');
+const gave = flag('mf_gave_or_helped');
+export const villageOpened = opened.s;
+export const gaveOrHelped = gave.s;
+export const markVillageOpened = opened.set;
+
 export async function loadVillage(): Promise<void> {
   try {
     village.value = (await api.village()).village;
@@ -39,6 +50,7 @@ export async function villageDispatch(a: VillageAction): Promise<string[]> {
       village.value = r.village;
       adoptServerState(r.state, r.serverNow);
       for (const e of r.events) toast(e, 'discovery');
+      if (a.type === 'gift' || a.type === 'help') gave.set();
       return r.events;
     } catch (e) {
       if (e instanceof ApiError && e.status === 409 && attempt === 0) { await loadState(); continue; }
