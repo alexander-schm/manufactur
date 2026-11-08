@@ -106,3 +106,24 @@ describe('market stall reserve', () => {
     expect(performance.now() - t).toBeLessThan(500);
   });
 });
+
+describe('[Final review #3] absence is never penalised: one long catch-up equals many short ones', () => {
+  it('6 h in one go vs in 10-minute steps: same money, same traits, same unlocks', () => {
+    const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
+    base.workers[0].traits = ['geduldig'];
+    const once = advance(base, T0 + 6 * H);
+    let stepped = base;
+    for (let t = T0 + 10 * MIN; t <= T0 + 6 * H; t += 10 * MIN) stepped = advance(stepped, t);
+    expect(Math.abs(once.taler - stepped.taler) / stepped.taler).toBeLessThan(0.01);
+    expect(once.workers.map((w) => w.traits)).toEqual(stepped.workers.map((w) => w.traits));
+    expect(once.unlocks).toEqual(stepped.unlocks);
+  });
+  it('a worker catches up on every trait earned while away', () => {
+    const s = withStanding();
+    s.stallDesignIds = [s.designs[0].id];
+    s.workers[0].traits = ['geduldig'];
+    const after = advance(s, T0 + 12 * H);
+    expect(after.workers[0].xp).toBeGreaterThanOrEqual(300);
+    expect(after.workers[0].traits.length).toBe(3);
+  });
+});

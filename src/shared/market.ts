@@ -18,35 +18,90 @@ export function stallRate(state: GameState): number {
 }
 
 function formOf(state: GameState, designId: string): string | undefined {
-  return state.designs.find((d) => d.id === designId)?.form;
+  const ds = state.designs;
+  for (let i = 0; i < ds.length; i++) if (ds[i].id === designId) return ds[i].form;
+  return undefined;
 }
 
-/** Pieces per form the stall may sell: everything above what open orders of that form need. */
-function sellableByForm(state: GameState): Map<string, number> {
-  const stock = new Map<string, number>();
+/**
+ * Pieces per form the stall may sell: everything above what open orders of that form need.
+ * Written with plain arrays — this runs inside the catch-up loop.
+ */
+function sellableByForm(state: GameState): { forms: string[]; left: number[] } {
+  const forms: string[] = [];
+  const left: number[] = [];
   for (const g of state.goods) {
     const f = formOf(state, g.designId);
-    if (f) stock.set(f, (stock.get(f) ?? 0) + g.count);
+    if (f === undefined) continue;
+    const i = forms.indexOf(f);
+    if (i < 0) { forms.push(f); left.push(g.count); } else left[i] += g.count;
   }
-  const reserved = new Map<string, number>();
-  for (const o of state.orders) reserved.set(o.form, (reserved.get(o.form) ?? 0) + o.count);
-  const out = new Map<string, number>();
-  for (const [f, n] of stock) out.set(f, Math.max(0, n - (reserved.get(f) ?? 0)));
-  return out;
+  for (const o of state.orders) {
+    const i = forms.indexOf(o.form);
+    if (i >= 0) left[i] = Math.max(0, left[i] - o.count);
+  }
+  return { forms, left };
+}
+
+/** Pieces offered at the stall at all (ignoring the order reserve) — cheap. */
+function offeredCount(state: GameState): number {
+  let n = 0;
+  for (const g of state.goods) if (state.stallDesignIds.includes(g.designId)) n += g.count;
+  return n;
 }
 
 /** How many pieces the stall can sell right now (offered designs, minus the order reserve). */
 export function stallStock(state: GameState): number {
-  const budget = sellableByForm(state);
-  const offered = new Map<string, number>();
+  if (offeredCount(state) === 0) return 0;
+  const b = sellableByForm(state);
+  const offered = b.forms.map(() => 0);
   for (const g of state.goods) {
     if (!state.stallDesignIds.includes(g.designId)) continue;
-    const f = formOf(state, g.designId)!;
-    offered.set(f, (offered.get(f) ?? 0) + g.count);
+    const i = b.forms.indexOf(formOf(state, g.designId)!);
+    if (i >= 0) offered[i] += g.count;
   }
   let n = 0;
-  for (const [f, k] of offered) n += Math.min(k, budget.get(f) ?? 0);
+  for (let i = 0; i < offered.length; i++) n += Math.min(offered[i], b.left[i]);
   return n;
+}
+
+/**
+ * Sell from the stall between two instants. Mutates state.
+ * Sells lowest-quality pieces first (best ones are kept for orders), and never touches
+ * the pieces open orders need.
+ */
+export function stallSalesBetween(state: GameState, from: number, to: number): { sold: number; taler: number } {
+  const rate = stallRate(state);
+  if (to <= from || rate <= 0) return { sold: 0, taler: 0 };
+  if (offeredCount(state) === 0) { state.stallCarry = 0; return { sold: 0, taler: 0 }; }
+  const exact = state.stallCarry + (rate * (to - from)) / 60_000;
+  let n = Math.floor(exact);
+  state.stallCarry = exact - n;
+  if (n === 0) return { sold: 0, taler: 0 };
+  const stock = stallStock(state);
+  if (stock === 0) { state.stallCarry = 0; return { sold: 0, taler: 0 }; }
+  if (n >= stock) { n = stock; state.stallCarry = 0; }
+  let sold = 0;
+  let taler = 0;
+  const budget = sellableByForm(state);
+  const order = state.goods.filter((g) => state.stallDesignIds.includes(g.designId));
+  if (order.length > 1) order.sort((a, b) => a.quality - b.quality);
+  for (const g of order) {
+    if (sold >= n) break;
+    const i = budget.forms.indexOf(formOf(state, g.designId)!);
+    if (i < 0) continue;
+    const k = Math.min(g.count, n - sold, budget.left[i]);
+    if (k <= 0) continue;
+    budget.left[i] -= k;
+    g.count -= k;
+    sold += k;
+    taler += k * pieceValue(state, g) * STALL_PRICE_FACTOR;
+  }
+  if (state.goods.some((g) => g.count === 0)) state.goods = state.goods.filter((g) => g.count > 0);
+  taler = Math.round(taler * 100) / 100;
+  state.taler = Math.round((state.taler + taler) * 100) / 100;
+  state.stats.sold += sold;
+  return { sold, taler };
 }
 
 export function goodsTotal(state: GameState): number {
@@ -58,42 +113,6 @@ export function goodsTotal(state: GameState): number {
 export function shelfCapacity(state: GameState): number {
   const sh = state.stations.find((s) => s.kind === 'shelf')!;
   return getStationDef('shelf').capacity![sh.level - 1];
-}
-
-/**
- * Sell from the stall between two instants. Mutates state.
- * Sells lowest-quality pieces first (best ones are kept for orders).
- */
-export function stallSalesBetween(state: GameState, from: number, to: number): { sold: number; taler: number } {
-  const rate = stallRate(state);
-  if (to <= from || rate <= 0) return { sold: 0, taler: 0 };
-  let stock = stallStock(state);
-  if (stock === 0) { state.stallCarry = 0; return { sold: 0, taler: 0 }; }
-  const exact = state.stallCarry + (rate * (to - from)) / 60_000;
-  let n = Math.floor(exact);
-  state.stallCarry = exact - n;
-  if (n >= stock) { n = stock; state.stallCarry = 0; }
-  let sold = 0;
-  let taler = 0;
-  const budget = sellableByForm(state);
-  const order = state.goods.filter((g) => state.stallDesignIds.includes(g.designId));
-  if (order.length > 1) order.sort((a, b) => a.quality - b.quality);
-  for (const g of order) {
-    if (sold >= n) break;
-    const f = formOf(state, g.designId)!;
-    const k = Math.min(g.count, n - sold, budget.get(f) ?? 0);
-    if (k <= 0) continue;
-    budget.set(f, (budget.get(f) ?? 0) - k);
-    g.count -= k;
-    sold += k;
-    taler += k * pieceValue(state, g) * STALL_PRICE_FACTOR;
-  }
-  if (state.goods.some((g) => g.count === 0)) state.goods = state.goods.filter((g) => g.count > 0);
-  taler = Math.round(taler * 100) / 100;
-  state.taler = Math.round((state.taler + taler) * 100) / 100;
-  state.stats.sold += sold;
-  stock -= sold;
-  return { sold, taler };
 }
 
 export function addGoods(state: GameState, stack: GoodsStack): void {

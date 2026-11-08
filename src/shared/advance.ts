@@ -1,7 +1,7 @@
 import { getStationDef, getTrait } from './content';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { addOrder, nextOrderTime } from './orders';
-import { checkMilestones } from './progression';
+import { applyMilestones } from './progression';
 import { kilnCapacity, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
 import { nextRandom } from './rng';
 import { newId } from './state';
@@ -33,11 +33,13 @@ export function advance(state: GameState, now: number): GameState {
     const until = next === null || next > now ? now : next;
     sell(s, t, until);
     t = until;
+    applyMilestones(s); // unlocks and worker growth take effect the moment they're earned
     if (next === null || next > now) break;
     completeDue(s, t);
+    applyMilestones(s);
   }
   s.lastTick = now;
-  return checkMilestones(s).state;
+  return s;
 }
 
 
@@ -61,6 +63,9 @@ export function startWork(s: GameState, t: number): void {
     if (design) startNewBatch(s, design, s.standing.batchSize, s.standing.autoBuy, (p) => newId(s, p));
     else s.standing = null;
   }
+  let waiting = false;
+  for (const b of s.batches) if (!isRunning(b) && !b.blocked) { waiting = true; break; }
+  if (!waiting) return;
   // later stages first so the pipeline drains
   for (let i = STAGES.length - 1; i >= 0; i--) {
     const stage = STAGES[i];

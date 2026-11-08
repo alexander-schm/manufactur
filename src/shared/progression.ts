@@ -21,7 +21,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'orders10', text: 'Zehn zufriedene Kundschaften!', unlocks: ['kobalt'], done: (s) => s.stats.ordersDone >= 10 },
   { id: 'ruf45', text: 'Die alte Brennmeisterin verrät dir ein Geheimnis (45 Ruf)!', unlocks: ['reduktion'], done: (s) => s.ruf >= 45 },
   { id: 'ruf60', text: 'Eine richtige Manufaktur (60 Ruf)!', unlocks: ['room2'], done: (s) => s.ruf >= 60 },
-  { id: 'ruf80', text: 'Man erkennt deine Stücke schon von Weitem (80 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 80 },
+  { id: 'ruf72', text: 'Man erkennt deine Stücke schon von Weitem (72 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 72 },
 ];
 
 export const BOOST_AFTER_MS = 24 * 3_600_000;
@@ -37,14 +37,26 @@ export function touchSeen(state: GameState, now: number): GameState {
   return s;
 }
 
-/** Apply milestone unlocks and worker growth. Mutates a copy; returns it with events. */
+/** Apply milestone unlocks and worker growth to a copy; returns it with events. */
 export function checkMilestones(state: GameState): { state: GameState; events: GameEvent[] } {
+  if (!needsMilestoneWork(state)) return { state, events: [] };
+  const s = structuredClone(state);
+  return { state: s, events: applyMilestones(s) };
+}
+
+function traitsDue(xp: number, have: number): boolean {
+  return have < MAX_TRAITS && have < 1 + Math.floor(xp / XP_PER_TRAIT);
+}
+
+function needsMilestoneWork(s: GameState): boolean {
+  return MILESTONES.some((m) => !s.milestonesDone.includes(m.id) && m.done(s)) || s.workers.some((w) => traitsDue(w.xp, w.traits.length));
+}
+
+/** Same as checkMilestones but mutates in place (used inside the catch-up loop). */
+export function applyMilestones(s: GameState): GameEvent[] {
   const events: GameEvent[] = [];
-  let s = state;
-  const copy = () => { if (s === state) s = structuredClone(state); };
-  for (const m of MILESTONES) {
-    if (state.milestonesDone.includes(m.id) || !m.done(state)) continue;
-    copy();
+  if (s.milestonesDone.length < MILESTONES.length) for (const m of MILESTONES) {
+    if (!m.done(s) || s.milestonesDone.includes(m.id)) continue;
     s.milestonesDone.push(m.id);
     events.push({ kind: 'milestone', id: m.id, text: m.text });
     for (const u of m.unlocks) {
@@ -54,16 +66,15 @@ export function checkMilestones(state: GameState): { state: GameState; events: G
       }
     }
   }
-  for (let i = 0; i < state.workers.length; i++) {
-    const w = state.workers[i];
-    if (w.traits.length >= MAX_TRAITS || w.traits.length >= 1 + Math.floor(w.xp / XP_PER_TRAIT)) continue;
-    const options = Object.keys(TRAITS).filter((t) => !w.traits.includes(t));
-    if (options.length === 0) continue;
-    copy();
-    const [trait, r] = pick(s.rng, options);
-    s.rng = r;
-    s.workers[i].traits.push(trait);
-    events.push({ kind: 'levelUp', id: w.id, text: `${w.name} hat dazugelernt: ${TRAITS[trait].name}!` });
+  for (const w of s.workers) {
+    while (traitsDue(w.xp, w.traits.length)) {
+      const options = Object.keys(TRAITS).filter((t) => !w.traits.includes(t));
+      if (options.length === 0) break;
+      const [trait, r] = pick(s.rng, options);
+      s.rng = r;
+      w.traits.push(trait);
+      events.push({ kind: 'levelUp', id: w.id, text: `${w.name} hat dazugelernt: ${TRAITS[trait].name}!` });
+    }
   }
-  return { state: s, events };
+  return events;
 }
