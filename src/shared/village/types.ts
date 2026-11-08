@@ -103,3 +103,6 @@ export interface WorkshopDelta {
 }
 
 export interface Delivery { to: string; delta: WorkshopDelta }
+
+/** What a member sees of the village. */
+export type VillageView = Omit<VillageState, 'helpsGiven' | 'rng' | 'nextId' | 'helpBoostUntil'> & { helpsLeft: Record<string, number> };

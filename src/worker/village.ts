@@ -5,15 +5,13 @@ import { applyDelta, applyVillageAction } from '../shared/village/apply';
 import { helpsLeft } from '../shared/village/help';
 import { ensureJointOrders } from '../shared/village/joint';
 import { addMember, MAX_MEMBERS, newVillage } from '../shared/village/state';
-import type { Delivery, Member, VillageAction, VillageState } from '../shared/village/types';
+import type { Delivery, Member, VillageAction, VillageState, VillageView } from '../shared/village/types';
 import { readBody, requirePlayer } from './auth';
 import { CATCHUP_EVENTS } from './game';
 import { error, json } from './http';
 import type { Env } from './index';
 import { loadWorkshop, saveWorkshop, updateWorkshop } from './workshops';
 
-/** What a member sees of the village. */
-export type VillageView = Omit<VillageState, 'helpsGiven' | 'rng' | 'nextId' | 'helpBoostUntil'> & { helpsLeft: Record<string, number> };
 
 type ActResult = { status: 200; village: VillageView; state: GameState; events: string[] } | { status: 400 | 404 | 409; error: string; catchingUp?: boolean; state?: GameState };
 
