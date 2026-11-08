@@ -1,6 +1,7 @@
 import { MATERIALS, own } from '../content';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
+import { completeJointOrder, contributeTo, ensureJointOrders, isComplete } from './joint';
 import { addNews, validateVillageAction, vid } from './state';
 import type { Delivery, Give, GiveRef, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
 
@@ -148,9 +149,23 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
       v.requests = v.requests.filter((x) => x !== r);
       break;
     }
+    case 'contribute': {
+      const o = v.jointOrders.find((x) => x.id === a.jointId);
+      if (!o) return 'Diesen Großauftrag gibt es nicht mehr';
+      const pts = contributeTo(o, a.part, actor, a.count, a.source, { designId: a.designId, quality: a.quality, effect: a.effect });
+      if (typeof pts === 'string') return pts;
+      o.contributions[actorId] = Math.round(((o.contributions[actorId] ?? 0) + pts) * 100) / 100;
+      events.push('Beigesteuert – danke!');
+      if (isComplete(o)) {
+        deliveries.push(...completeJointOrder(v, o, now));
+        events.push(`Großauftrag „${o.title}“ geschafft! 🎉`);
+      }
+      break;
+    }
     default:
       return 'Noch nicht verfügbar';
   }
+  ensureJointOrders(v, now);
   // deliveries to yourself (e.g. your own payout share) land directly
   let me2 = actor;
   for (const d of deliveries.filter((x) => x.to === actorId)) me2 = applyDelta(me2, d.delta);
