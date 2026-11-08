@@ -124,3 +124,15 @@ describe('decor rewards', () => {
     expect(s.decorPlaced).not.toContain('vogelhaus');
   });
 });
+
+describe('[Final review #6] gifted pieces are scored with their own glaze colour', () => {
+  it('a gifted blue cup pleases a customer who wants blue', async () => {
+    const { glazeForDesign } = await import('../../../src/shared/design');
+    const { ws } = village(2);
+    const b = ws.p2;
+    const foreign = { ...b.designs[0], id: 'f:blue', glazeId: 'g1', origin: { playerName: 'Anna', makerMark: { shape: 'heart' as const, letter: 'A', color: '#b44c36' }, glazeColor: '#3f6fb5' } };
+    b.designs.push(foreign);
+    b.glazes.push({ ...b.glazes[0], id: 'g1', color: '#c0392b' }); // an unrelated red glaze with the same id
+    expect(glazeForDesign(b, foreign)?.color).toBe('#3f6fb5');
+  });
+});

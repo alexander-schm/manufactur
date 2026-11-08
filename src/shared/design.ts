@@ -10,6 +10,12 @@ export const COLOR_FAMILY_NAMES: Record<ColorFamily, string> = {
 
 export const designDifficulty = designDifficultyOf;
 
+/** The glaze a design is made with — gifted designs carry their own colour (glaze ids are per workshop). */
+export function glazeForDesign(state: GameState, d: Design): GlazeRecipe | undefined {
+  if (d.origin) return { id: d.glazeId, name: '', base: 'opak', colorant: null, colorantPct: 0, firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: d.origin.glazeColor, effect: null };
+  return state.glazes.find((g) => g.id === d.glazeId);
+}
+
 function hexToHsl(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return [0, 0, 0.5];

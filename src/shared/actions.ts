@@ -1,7 +1,7 @@
 import { advance } from './advance';
 import { EFFECTS, getStationDef, MATERIALS, own, STATIONS } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
-import { validateDesign } from './design';
+import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
 import { pieceValue } from './market';
 import { orderReward } from './orders';
@@ -191,7 +191,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       if (a.quality < order.minQuality) fail('Die Qualität reicht nicht');
       const stack = s.goods.find((g) => g.designId === a.designId && g.quality === a.quality && g.effect === a.effect);
       if (!stack || stack.count < order.count) fail('Davon hast du nicht genug im Regal');
-      const glaze = s.glazes.find((g) => g.id === design.glazeId);
+      const glaze = glazeForDesign(s, design);
       const reward = orderReward(order, stack!, design, glaze);
       stack!.count -= order.count;
       s.goods = s.goods.filter((g) => g.count > 0);

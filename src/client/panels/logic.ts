@@ -1,5 +1,6 @@
 import type { Action } from '../../shared/actions';
-import { COLOR_FAMILY_NAMES, appeal, type ColorFamily } from '../../shared/design';
+import { COLOR_FAMILY_NAMES, appeal, glazeForDesign, type ColorFamily } from '../../shared/design';
+import { ownDesigns } from '../../shared/village/apply';
 import { FORMS, getStationDef, getTrait } from '../../shared/content';
 import { orderReward } from '../../shared/orders';
 import type { Design, GameState, GoodsStack, Order, Taste } from '../../shared/types';
@@ -15,7 +16,7 @@ export function describeTaste(taste: Taste, form: string, count: number): string
   return `Ich hätte gern ${parts.join(', ')}!`;
 }
 
-const glazeOf = (s: GameState, d: Design) => s.glazes.find((g) => g.id === d.glazeId);
+const glazeOf = (s: GameState, d: Design) => glazeForDesign(s, d);
 
 /** The stack that earns the most for this order, or null if nothing fits. */
 export function bestStackForOrder(s: GameState, o: Order): GoodsStack | null {
@@ -38,7 +39,7 @@ export function deliverActionFor(s: GameState, o: Order): Action | null {
 /** Your design that this customer would like most (same form). */
 export function bestDesignForOrder(s: GameState, o: Order): Design | null {
   let best: Design | null = null, score = -1;
-  for (const d of s.designs) {
+  for (const d of ownDesigns(s)) {
     if (d.form !== o.form) continue;
     const a = appeal(d, glazeOf(s, d), o.taste);
     if (a > score) { best = d; score = a; }

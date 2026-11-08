@@ -35,3 +35,21 @@ describe('village panels', () => {
     expect(html).toContain('data-decor="blumenkasten"');
   });
 });
+
+describe('[Final review #5] gifted designs stay out of production pickers', () => {
+  it('bestDesignForOrder never suggests a gifted design', async () => {
+    const { bestDesignForOrder } = await import('../../src/client/panels/logic');
+    const s = newGame('p1', 1, T0);
+    const foreign = { ...s.designs[0], id: 'f:x', name: 'Geschenkt', origin: { playerName: 'Ben', makerMark: s.makerMark, glazeColor: '#3f6fb5' } };
+    s.designs = [foreign];
+    expect(bestDesignForOrder(s, { ...s.orders[0], form: foreign.form })).toBeNull();
+  });
+  it('the wheel’s design picker lists only own designs', async () => {
+    const { StationPanel } = await import('../../src/client/panels/StationPanel');
+    const s = newGame('p1', 1, T0);
+    s.designs.push({ ...s.designs[0], id: 'f:x', name: 'GeschenktVonBen', origin: { playerName: 'Ben', makerMark: s.makerMark, glazeColor: '#3f6fb5' } });
+    const wheel = s.stations.find((x) => x.kind === 'wheel')!;
+    const html = render(<StationPanel s={s} stationId={wheel.id} onOpen={() => {}} />);
+    expect(html).not.toContain('GeschenktVonBen');
+  });
+});

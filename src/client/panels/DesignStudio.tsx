@@ -8,6 +8,7 @@ import { Pot } from '../art/Pot';
 import { dispatch, view } from '../store';
 import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
+import { ownDesigns } from '../../shared/village/apply';
 import { ExperimentPanel } from './ExperimentPanel';
 import { describeTaste } from './logic';
 import { difficultyLabel, PATTERN_COLORS, PRESETS, saveActionFor, topFans } from './studioLogic';
@@ -74,7 +75,7 @@ function Designer({ s }: { s: GameState }) {
         <h4>Deine Entwürfe</h4>
         <div class="chips">
           <button class="chip" aria-pressed={!editing} onClick={() => setDraft(newDraft(s))}>+ Neu</button>
-          {s.designs.map((d) => <button class="chip" aria-pressed={d.id === draft.id} onClick={() => setDraft({ ...d })}>{d.name}</button>)}
+          {ownDesigns(s).map((d) => <button class="chip" aria-pressed={d.id === draft.id} onClick={() => setDraft({ ...d })}>{d.name}</button>)}
         </div>
         <h4>Form</h4>
         <div class="chips">
