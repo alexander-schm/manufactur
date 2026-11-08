@@ -3,7 +3,7 @@ import { MAX_DECOR_PLACED } from './decor';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
 import { lendAHand } from './help';
-import { completeJointOrder, contributeTo, ensureJointOrders, isComplete } from './joint';
+import { completeJointOrder, contributeTo, ensureJointOrders, isComplete, maxContribution } from './joint';
 import { addNews, validateVillageAction, vid } from './state';
 import type { Delivery, Give, GiveRef, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
 
@@ -158,6 +158,10 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
     case 'contribute': {
       const o = v.jointOrders.find((x) => x.id === a.jointId);
       if (!o) return 'Diesen Großauftrag gibt es nicht mehr';
+      // a joint order is only possible together: the first person can't fill the very last unit
+      if (a.count > maxContribution(o, a.part, actorId) && o.parts[a.part] && a.count <= o.parts[a.part].count - o.parts[a.part].filled) {
+        return 'Lass den anderen etwas übrig – Großaufträge gehen nur gemeinsam!';
+      }
       const pts = contributeTo(o, a.part, actor, a.count, a.source, { designId: a.designId, quality: a.quality, effect: a.effect });
       if (typeof pts === 'string') return pts;
       o.contributions[actorId] = Math.round(((o.contributions[actorId] ?? 0) + pts) * 100) / 100;

@@ -3,6 +3,7 @@ import { makeCharacter } from '../../../shared/character';
 import { FORMS, MATERIALS } from '../../../shared/content';
 import { COLOR_FAMILY_NAMES, colorFamily, type ColorFamily } from '../../../shared/design';
 import type { GameState } from '../../../shared/types';
+import { maxContribution } from '../../../shared/village/joint';
 import { villageStorePrice } from '../../../shared/village/specialties';
 import type { JointOrder, VillageAction, VillageView } from '../../../shared/village/types';
 import { Character } from '../../art/character/Character';
@@ -39,7 +40,8 @@ export function JointOrderCard({ v, s, meId, order, onContribute }: { v: Village
       </div>
       <p class="together">🤝 Nur gemeinsam: mindestens zwei Leute müssen beitragen. Alle im Dorf bekommen einen Anteil – auch wer gerade nicht da ist.</p>
       {order.parts.map((p, i) => {
-        const left = p.count - p.filled;
+        const left = maxContribution(order, i, meId);
+        const open = p.count - p.filled;
         const stacks = p.kind === 'goods' ? fittingStacks(s, p) : [];
         const haveMat = p.kind === 'material' ? Math.floor(s.materials[p.material] ?? 0) : 0;
         return (
@@ -52,6 +54,7 @@ export function JointOrderCard({ v, s, meId, order, onContribute }: { v: Village
                 <span class="muted">{p.filled}/{p.count}</span>
               </div>
             </div>
+            {open > 0 && left === 0 && <p class="muted">Den letzten Rest lässt du jemand anderem – Großaufträge gehen nur gemeinsam.</p>}
             {left > 0 && (
               <div class="row joint-actions">
                 {p.kind === 'material' && haveMat > 0 && <Button small variant="good" onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.min(left, haveMat), source: 'own' })}>{Math.min(left, haveMat)} aus deinem Lager</Button>}

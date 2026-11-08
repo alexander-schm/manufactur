@@ -77,6 +77,17 @@ export function ensureJointOrders(v: VillageState, now: number): VillageState {
   return v;
 }
 
+/** How many units of this part the actor may give without finishing the whole order alone. */
+export function maxContribution(o: JointOrder, partIndex: number, actorId: string): number {
+  const p = o.parts[partIndex];
+  if (!p) return 0;
+  const left = p.count - p.filled;
+  const others = Object.keys(o.contributions).some((id) => id !== actorId);
+  if (others) return left;
+  const leftElsewhere = o.parts.reduce((n, q, i) => n + (i === partIndex ? 0 : q.count - q.filled), 0);
+  return leftElsewhere > 0 ? left : Math.max(0, left - 1);
+}
+
 export const isComplete = (o: JointOrder) => o.parts.every((p) => p.filled >= p.count) && Object.keys(o.contributions).length >= 2;
 
 /** Everyone gets the base share; the rest by contribution. Absent members are never left out. */

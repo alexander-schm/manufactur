@@ -39,6 +39,7 @@ function fill(v: VillageState, ws: Record<string, GameState>, actors: string[], 
         ? { type: 'contribute', jointId: o.id, part: i, count: n, source: 'own', designId: `d-${p.form}-${p.colorFamily ?? 'x'}`, quality: 3, effect: null }
         : { type: 'contribute', jointId: o.id, part: i, count: n, source: 'own' };
       const r = run(st.v, st.ws, actor, a);
+      if (r.error && /übrig/.test(r.error)) return; // a lone player has to leave the rest to someone else
       if (r.error) throw new Error(r.error);
       st = { v: r.v, ws: r.ws };
       left -= n;
@@ -129,5 +130,41 @@ describe('first joint orders fit a brand-new village', () => {
         expect(p.minQuality).toBe(1);
       }
     }
+  });
+});
+
+describe('[Final review #1] one player can never lock a joint order', () => {
+  it('a lone contributor must leave the last unit for someone else, who can then finish it', () => {
+    let { v, ws } = village(2);
+    v = ensureJointOrders(v, T0);
+    const o = v.jointOrders[0];
+    stock(ws.p1, o); stock(ws.p2, o);
+    // p1 tries to fill every part completely
+    let st = { v, ws };
+    o.parts.forEach((p, i) => {
+      const a: VillageAction = p.kind === 'goods'
+        ? { type: 'contribute', jointId: o.id, part: i, count: p.count, source: 'own', designId: `d-${p.form}-${p.colorFamily ?? 'x'}`, quality: 3, effect: null }
+        : { type: 'contribute', jointId: o.id, part: i, count: p.count, source: 'own' };
+      const r = run(st.v, st.ws, 'p1', a);
+      if (!r.error) st = { v: r.v, ws: r.ws };
+      else {
+        expect(r.error).toMatch(/übrig/);
+        const smaller = { ...a, count: p.count - 1 };
+        const r2 = run(st.v, st.ws, 'p1', smaller);
+        expect(r2.error).toBeNull();
+        st = { v: r2.v, ws: r2.ws };
+      }
+    });
+    const open = st.v.jointOrders.find((x) => x.id === o.id)!;
+    expect(open).toBeDefined();
+    const i = open.parts.findIndex((p) => p.filled < p.count);
+    expect(i).toBeGreaterThanOrEqual(0);
+    const p = open.parts[i];
+    const a: VillageAction = p.kind === 'goods'
+      ? { type: 'contribute', jointId: o.id, part: i, count: 1, source: 'own', designId: `d-${p.form}-${p.colorFamily ?? 'x'}`, quality: 3, effect: null }
+      : { type: 'contribute', jointId: o.id, part: i, count: 1, source: 'own' };
+    const fin = run(st.v, st.ws, 'p2', a);
+    expect(fin.error).toBeNull();
+    expect(fin.v.jointOrders.find((x) => x.id === o.id)).toBeUndefined();
   });
 });
