@@ -41,6 +41,7 @@ export const HAND_TOUCH_COOLDOWN_MS = 10 * 60_000;
 export const HAND_TOUCH_SPEED = 1.15;
 export const SELL_NOW_FACTOR = 0.6;
 export const HIRE_COST_PER_WORKER = 30;
+export const MAX_DESIGNS = 60;
 /** Stations that can be built a second time in the second room, and their price. */
 export const BUILD_COST: Partial<Record<StationKind, number>> = { prepBench: 100, wheel: 150, dryingRack: 80, glazeTable: 120, kiln: 300 };
 export const ROOM2_FIRST_SLOT = 7;
@@ -162,8 +163,17 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
         handle: d.handle, rim: d.rim, glazeId: d.glazeId, pattern: d.pattern, patternColor: d.patternColor,
       };
       const idx = s.designs.findIndex((x) => x.id === d.id);
-      if (idx >= 0) s.designs[idx] = clean;
-      else { clean.id = newId(s, 'd'); s.designs.push(clean); s.stallDesignIds.push(clean.id); }
+      // pieces on the shelf or in the pipeline keep the design they were made with
+      const inUse = idx >= 0 && (s.goods.some((g) => g.designId === d.id) || s.batches.some((b) => b.designId === d.id));
+      if (idx >= 0 && !inUse) s.designs[idx] = clean;
+      else {
+        if (s.designs.length >= MAX_DESIGNS) fail(`Höchstens ${MAX_DESIGNS} Entwürfe`);
+        const oldId = d.id;
+        clean.id = newId(s, 'd');
+        s.designs.push(clean);
+        s.stallDesignIds.push(clean.id);
+        if (inUse && s.standing?.designId === oldId) s.standing = { ...s.standing, designId: clean.id };
+      }
       s.stats.designsSaved += 1;
       return;
     }

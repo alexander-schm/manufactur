@@ -141,3 +141,29 @@ describe('[Final review #1] prototype keys never corrupt state', () => {
     });
   }
 });
+
+describe('[Final review #2] editing a used design never changes existing pieces', () => {
+  it('forks a new design when goods or batches use the old one, and moves the standing order', () => {
+    const s = plainGame();
+    s.unlocks.push('studio', 'krug');
+    const old = s.designs[0];
+    s.goods = [{ designId: old.id, quality: 3, effect: null, count: 20 }];
+    s.standing = { designId: old.id, batchSize: 6, autoBuy: true };
+    const r = ok(s, { type: 'saveDesign', design: { ...old, form: 'krug', name: 'Jetzt ein Krug' } });
+    const kept = r.state.designs.find((d) => d.id === old.id)!;
+    expect(kept.form).toBe('becher');
+    const fork = r.state.designs[r.state.designs.length - 1];
+    expect(fork.id).not.toBe(old.id);
+    expect(fork.form).toBe('krug');
+    expect(r.state.goods[0].designId).toBe(old.id);
+    expect(r.state.standing!.designId).toBe(fork.id);
+  });
+  it('edits in place when nothing uses the design yet', () => {
+    const s = plainGame();
+    s.unlocks.push('studio');
+    const old = s.designs[0];
+    const r = ok(s, { type: 'saveDesign', design: { ...old, name: 'Umbenannt' } });
+    expect(r.state.designs).toHaveLength(1);
+    expect(r.state.designs[0].name).toBe('Umbenannt');
+  });
+});
