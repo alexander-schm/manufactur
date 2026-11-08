@@ -1,5 +1,6 @@
 import { newGame } from '../shared/state';
 import { error, json } from './http';
+import { clearFailures, clientIp, isBlocked, JOIN_FAILS_PER_IP, LOGIN_FAILS_PER_NAME, recordFailure, TOO_MANY } from './ratelimit';
 import type { Env } from './index';
 
 export const SESSION_COOKIE = 'mf_session';
@@ -124,8 +125,13 @@ export async function handleJoin(req: Request, env: Env): Promise<Response> {
   const bad = validateCreds(body);
   if (bad) return error(400, bad);
   const code = typeof body.inviteCode === 'string' ? body.inviteCode.trim().toUpperCase() : '';
+  const ipKey = `ip:${clientIp(req)}`;
+  if (await isBlocked(env, ipKey, JOIN_FAILS_PER_IP)) return error(429, TOO_MANY);
   const village = await env.DB.prepare('SELECT id, name FROM villages WHERE invite_code = ?').bind(code).first<{ id: string; name: string }>();
-  if (!village) return error(404, 'Einladungscode unbekannt');
+  if (!village) {
+    await recordFailure(env, ipKey);
+    return error(404, 'Einladungscode unbekannt');
+  }
   const p = await createPlayer(env, village.id, (body.name as string).trim(), body.password as string);
   if (p instanceof Response) return p;
   const token = await createSession(env, p.playerId);
@@ -137,11 +143,18 @@ export async function handleLogin(req: Request, env: Env): Promise<Response> {
   if ('error' in parsed) return parsed.error;
   const body = parsed.value;
   if (typeof body.name !== 'string' || typeof body.password !== 'string') return error(400, 'Ungültige Anfrage');
+  const nameKey = body.name.trim().toLowerCase();
+  const limitKey = `name:${nameKey}`;
+  if (await isBlocked(env, limitKey, LOGIN_FAILS_PER_NAME)) return error(429, TOO_MANY);
   const row = await env.DB.prepare('SELECT id, pw_hash, pw_salt FROM players WHERE name_key = ?')
-    .bind(body.name.trim().toLowerCase()).first<{ id: string; pw_hash: string; pw_salt: string }>();
+    .bind(nameKey).first<{ id: string; pw_hash: string; pw_salt: string }>();
   // hash anyway so timing doesn't reveal whether the name exists
   const hash = await hashPassword(body.password, row ? fromB64(row.pw_salt) : new Uint8Array(16));
-  if (!row || !timingSafeEqual(hash, row.pw_hash)) return error(401, 'Name oder Passwort falsch');
+  if (!row || !timingSafeEqual(hash, row.pw_hash)) {
+    await recordFailure(env, limitKey);
+    return error(401, 'Name oder Passwort falsch');
+  }
+  await clearFailures(env, limitKey);
   const token = await createSession(env, row.id);
   return json({ ok: true }, 200, { 'set-cookie': sessionCookie(token) });
 }

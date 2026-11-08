@@ -58,3 +58,24 @@ describe('accounts', () => {
     expect((await call('POST', '/api/found', '{not json')).status).toBe(400);
   });
 });
+
+describe('[Final review #6] login rate limit', () => {
+  it('after 10 wrong passwords for a name, even the right one is refused for a while', async () => {
+    const f = await found();
+    for (let i = 0; i < 10; i++) expect((await call('POST', '/api/login', { name: f.name, password: `falsch${i}xx` })).status).toBe(401);
+    const blocked = await call('POST', '/api/login', { name: f.name, password: 'geheim123' });
+    expect(blocked.status).toBe(429);
+    expect(blocked.json.error).toMatch(/Zu viele Versuche/);
+  });
+  it('a successful login resets the counter', async () => {
+    const f = await found();
+    for (let i = 0; i < 5; i++) await call('POST', '/api/login', { name: f.name, password: `falsch${i}xx` });
+    expect((await call('POST', '/api/login', { name: f.name, password: 'geheim123' })).status).toBe(200);
+    for (let i = 0; i < 9; i++) expect((await call('POST', '/api/login', { name: f.name, password: `nope${i}xxx` })).status).toBe(401);
+  });
+  it('guessing invite codes from one address is limited', async () => {
+    let last = 0;
+    for (let i = 0; i < 31; i++) last = (await call('POST', '/api/join', { inviteCode: 'ZZZZZ' + 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[i], name: uniqueName(), password: 'geheim123' })).status;
+    expect(last).toBe(429);
+  });
+});
