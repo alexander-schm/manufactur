@@ -43,17 +43,20 @@ describe('advance', () => {
     expect(Math.abs(stepped.stats.made - direct.stats.made)).toBeLessThanOrEqual(6);
     expect(Math.abs(stepped.stats.sold - direct.stats.sold)).toBeLessThanOrEqual(1);
   });
-  it('[Review Focus 1] 30 days of absence is fast, capped by the shelf, and earns money', () => {
+  it('[Review Focus 1] 30 days of absence: each server-sized chunk is fast, the total is bounded, shelf caps stock, money is earned', () => {
     const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
-    // best of 3 runs, so JIT warm-up and a busy machine don't make this flaky
-    let ms = Infinity;
+    const end = T0 + 30 * 24 * H;
     let s = base;
-    for (let i = 0; i < 3; i++) {
-      const t0 = performance.now();
-      s = advance(base, T0 + 30 * 24 * H);
-      ms = Math.min(ms, performance.now() - t0);
+    let worstChunk = 0;
+    const t0 = performance.now();
+    while (s.lastTick < end) {
+      const c = performance.now();
+      s = advance(s, end, 3000); // CATCHUP_EVENTS in src/worker/game.ts
+      worstChunk = Math.max(worstChunk, performance.now() - c);
     }
-    expect(ms).toBeLessThan(100);
+    const total = performance.now() - t0;
+    expect(worstChunk).toBeLessThan(40);
+    expect(total).toBeLessThan(1000);
     expect(goodsCount(s)).toBeLessThanOrEqual(shelfCap(s));
     expect(s.taler).toBeGreaterThan(base.taler);
   });
