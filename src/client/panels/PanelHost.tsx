@@ -1,5 +1,6 @@
 import { getStationDef, getUnlock } from '../../shared/content';
-import { view } from '../store';
+import { me, view } from '../store';
+import { VillagePanel } from './village/VillagePanel';
 import { T } from '../strings';
 import { Icon } from '../ui/Icons';
 import { Sheet } from '../ui/Sheet';
@@ -12,7 +13,7 @@ import { StationPanel, WorkshopPanel } from './StationPanel';
 import { WorkersPanel } from './WorkersPanel';
 import './panels.css';
 
-export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market';
+export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market' | 'village';
 
 const UNLOCK: Partial<Record<PanelId, string>> = { orders: 'orders', studio: 'studio', recipes: 'recipes' };
 export const panelUnlock = (id: PanelId) => UNLOCK[id];
@@ -50,6 +51,7 @@ export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: str
   else if (id === 'station') body = <StationPanel s={s} stationId={arg ?? ''} onOpen={onOpen} />;
   else if (id === 'studio') body = <DesignStudio s={s} tab={arg} />;
   else if (id === 'recipes') body = <RecipeBook s={s} />;
+  else if (id === 'village') return <Sheet title={`Dorf ${me.value?.villageName ?? ''}`} onClose={onClose} wide><VillagePanel tab={arg} /></Sheet>;
   else body = <MarketPanel s={s} />;
   return <Sheet title={title} onClose={onClose}>{body}</Sheet>;
 }

@@ -35,6 +35,8 @@ export function startClock(ms = 250): void {
   timer = setInterval(tick, ms);
 }
 
+export const adoptServerState = (state: StateReply['state'], serverNow: number) => adopt({ state, serverNow });
+
 function adopt(r: StateReply): void {
   clockOffset.value = r.serverNow - Date.now();
   now.value = Date.now();

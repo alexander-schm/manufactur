@@ -80,3 +80,12 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 @keyframes crumb { to { transform: translateY(105vh) rotate(540deg); } }
 .scene .hint-arrow { animation: bob 0.9s ease-in-out infinite; pointer-events: none; }
 .decline { display: block; margin: 6px 0 0 auto; }
+.guestbook { display: grid; gap: 8px; }
+.gb-entry { display: flex; gap: 10px; align-items: center; background: #fff; border: 2px solid var(--line); border-radius: 12px 6px 12px 8px; padding: 6px 10px; }
+.gb-entry .muted { margin-left: auto; font-size: .85em; }
+.gb-sticker { font-size: 1.5em; }
+.news { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.news li { background: #fff; border: 1.6px solid rgba(43,36,32,.3); border-radius: 10px; padding: 6px 10px; }
+.news li.new { border-color: var(--line); background: #fff6d8; }
+.invite-hint { background: var(--card-2); border: 2px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.village-panel .tabs { margin-top: 10px; }

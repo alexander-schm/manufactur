@@ -73,3 +73,5 @@
 .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .locked-note { text-align: center; padding: 24px 8px; }
 .locked-note h3 { margin-top: 8px; }
+@media (min-width: 900px) { .sheet.wide { width: min(1120px, calc(100vw - 28px)); } }
+.scene-scroll.readonly .station { cursor: default; }

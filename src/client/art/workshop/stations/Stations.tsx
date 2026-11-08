@@ -15,7 +15,7 @@ const GREEN = '#dcc2a6';
 const BISQUE = '#efd6bc';
 
 export const designOf = (s: GameState, id: string): Design | undefined => s.designs.find((d) => d.id === id);
-export const glazeColorOf = (s: GameState, d?: Design) => (d && s.glazes.find((g) => g.id === d.glazeId)?.color) || '#e9c9a6';
+export const glazeColorOf = (s: GameState, d?: Design) => d?.origin?.glazeColor ?? ((d && s.glazes.find((g) => g.id === d.glazeId)?.color) || '#e9c9a6');
 
 /** A pot drawn inside the scene at (x, base y) with a given pixel height. */
 export function ScenePot({ x, y, size, design, color, effect, quality, cls }: { x: number; y: number; size: number; design: Design; color: string; effect?: string | null; quality?: 1 | 2 | 3; cls?: string }) {

@@ -19,7 +19,7 @@ export const T = {
   inviteText: 'Schick diesen Code (oder den Link) an deine Freunde und Familie:',
   logout: 'Abmelden',
   loading: 'Der Ofen heizt vor …',
-  tabs: { orders: 'Aufträge', workshop: 'Werkstatt', people: 'Leute', studio: 'Entwürfe', recipes: 'Rezeptbuch', shop: 'Laden' },
+  tabs: { orders: 'Aufträge', workshop: 'Werkstatt', people: 'Leute', studio: 'Entwürfe', recipes: 'Rezeptbuch', shop: 'Laden', village: 'Dorf' },
   locked: 'Noch verschlossen',
   village: 'Dorf',
   taler: 'Taler',

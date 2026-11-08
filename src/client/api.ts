@@ -1,5 +1,6 @@
 import type { Action, GameEvent } from '../shared/actions';
 import type { GameState } from '../shared/types';
+import type { Member, VillageAction, VillageView } from '../shared/village/types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public body: any) { super(message); }
@@ -35,4 +36,7 @@ export const api = {
   me: () => request<Me>('GET', '/api/me'),
   getState: () => request<StateReply>('GET', '/api/state'),
   postAction: (action: Action, version: number) => request<ActionReply>('POST', '/api/action', { action, version }),
+  village: () => request<{ village: VillageView; serverNow: number }>('GET', '/api/village'),
+  villageAction: (action: VillageAction) => request<{ village: VillageView; state: GameState; events: string[]; serverNow: number }>('POST', '/api/village/action', { action }),
+  visit: (playerId: string) => request<{ state: GameState; member: Member; serverNow: number }>('GET', `/api/village/visit/${encodeURIComponent(playerId)}`),
 };

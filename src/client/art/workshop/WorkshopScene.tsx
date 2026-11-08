@@ -31,7 +31,8 @@ const WORKER_SPOT: Partial<Record<StationKind, { dx: number; dy: number; behind:
 };
 const IDLE_SPOTS = [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }];
 
-type Props = { state: GameState; now: number; onStation: (id: string) => void; onWorker: (id: string) => void; highlight?: StationKind };
+/** Without onStation the scene is read-only (visiting a friend). */
+type Props = { state: GameState; now: number; onStation?: (id: string) => void; onWorker?: (id: string) => void; highlight?: StationKind };
 
 function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: number; pose: Pose; onWorker: (id: string) => void; i: number }) {
   const size = 100;
@@ -43,7 +44,8 @@ function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: numbe
   );
 }
 
-export function WorkshopScene({ state, now, onStation, onWorker, highlight }: Props) {
+export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, highlight }: Props) {
+  const readOnly = !onStation;
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
   const pins = state.designs.slice(-4).reverse().map((design) => ({ design, glaze: state.glazes.find((g) => g.id === design.glazeId) }));
@@ -55,7 +57,7 @@ export function WorkshopScene({ state, now, onStation, onWorker, highlight }: Pr
   const idle = state.workers.filter((w) => !w.stationId);
   const catAwake = state.batches.length === 0;
   return (
-    <div class="scene-scroll">
+    <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
         <Room pins={pins} room2={room2} />
         <Cat x={760} y={652} sleeping={!catAwake} />
@@ -67,8 +69,8 @@ export function WorkshopScene({ state, now, onStation, onWorker, highlight }: Pr
           const workers = state.workers.filter((w) => w.stationId === st.id);
           const people = spot ? workers.map((w, i) => <Person w={w} i={i} x={pos.x + spot.dx + i * 70} y={pos.y + spot.dy} pose={running.length ? 'work' : 'idle'} onWorker={onWorker} />) : null;
           return (
-            <g class="station" data-station={st.kind} onClick={() => onStation(st.id)} tabIndex={0} role="button" aria-label={st.kind}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onStation(st.id); }}>
+            <g class="station" data-station={st.kind} onClick={readOnly ? undefined : () => onStation(st.id)} tabIndex={readOnly ? undefined : 0} role={readOnly ? undefined : 'button'} aria-label={st.kind}
+              onKeyDown={readOnly ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') onStation(st.id); }}>
               {spot?.behind && people}
               <Draw x={pos.x} y={pos.y} state={state} station={st} now={now} running={running} waiting={waiting} />
               {!spot?.behind && people}

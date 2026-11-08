@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
 import { api } from '../api';
 import { dispatch, me, now, serverState, view } from '../store';
+import { loadVillage, startVillagePolling, unreadNews } from '../villageStore';
+import { useEffect } from 'preact/hooks';
 import { T } from '../strings';
 import { Counter } from '../ui/Counter';
 import { Icon } from '../ui/Icons';
@@ -17,13 +19,14 @@ import './screens.css';
 
 const TOOLS: { id: PanelId; icon: Parameters<typeof Icon>[0]['name'] }[] = [
   { id: 'orders', icon: 'orders' }, { id: 'workshop', icon: 'workshop' }, { id: 'people', icon: 'people' },
-  { id: 'studio', icon: 'studio' }, { id: 'recipes', icon: 'recipes' }, { id: 'shop', icon: 'shop' },
+  { id: 'village', icon: 'village' }, { id: 'studio', icon: 'studio' }, { id: 'recipes', icon: 'recipes' }, { id: 'shop', icon: 'shop' },
 ];
 
 export function GameScreen({ onLogout }: { onLogout: () => void }) {
   const s = view.value;
   const [panel, setPanel] = useState<{ id: PanelId; arg?: string } | null>(initialPanel());
   const [menu, setMenu] = useState(false);
+  useEffect(() => { void loadVillage(); startVillagePolling(); }, []);
   const [awayAtLoad, setAwayAtLoad] = useState(() => serverState.value?.away ?? null);
   const [skipTutorial, setSkipTutorial] = useState(() => { try { return localStorage.getItem('mf_skip_tutorial') === '1'; } catch { return false; } });
   if (!s) return <div class="loading">{T.loading}</div>;
@@ -51,7 +54,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
         {TOOLS.map((t) => {
           const lock = panelUnlock(t.id);
           const locked = !!lock && !s.unlocks.includes(lock);
-          const count = t.id === 'orders' && !locked ? s.orders.length : 0;
+          const count = t.id === 'orders' && !locked ? s.orders.length : t.id === 'village' ? unreadNews.value : 0;
           return (
             <button class="tool" onClick={() => open(t.id)} aria-label={T.tabs[t.id as keyof typeof T.tabs]} title={locked ? T.locked : undefined} style={{ borderRadius: '14px 9px 12px 8px' }}>
               <Icon name={locked ? 'lock' : t.icon} />

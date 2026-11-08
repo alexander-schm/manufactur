@@ -7,8 +7,13 @@ export function designGlaze(s: GameState, d: Design) {
   return s.glazes.find((g) => g.id === d.glazeId);
 }
 
+/** The colour a design is drawn in — gifted designs bring their own. */
+export function designColor(s: GameState, d: Design): string {
+  return d.origin?.glazeColor ?? designGlaze(s, d)?.color ?? '#e9c9a6';
+}
+
 export function DesignPot({ s, d, size = 64, effect, quality }: { s: GameState; d: Design; size?: number; effect?: string | null; quality?: 1 | 2 | 3 }) {
-  return <Pot design={d} glazeColor={designGlaze(s, d)?.color ?? '#e9c9a6'} effect={effect} quality={quality} size={size} fit wobble={false} mark={size >= 90 ? s.makerMark : null} />;
+  return <Pot design={d} glazeColor={designColor(s, d)} effect={effect} quality={quality} size={size} fit wobble={false} mark={size >= 90 ? d.origin?.makerMark ?? s.makerMark : null} />;
 }
 
 export function Stars({ n }: { n: 1 | 2 | 3 }) {

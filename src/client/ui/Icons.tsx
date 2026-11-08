@@ -1,7 +1,7 @@
 import { inkStyle } from '../art/ink';
 
 const S = inkStyle(2);
-type IconName = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'lock' | 'menu';
+type IconName = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'lock' | 'menu' | 'village';
 
 /** Small hand-drawn toolbar icons (32×32). */
 export function Icon({ name, size = 32 }: { name: IconName; size?: number }) {
@@ -14,6 +14,7 @@ export function Icon({ name, size = 32 }: { name: IconName; size?: number }) {
       {name === 'recipes' && <g><path d="M4 7 Q10 4 16 7 Q22 4 28 7 L28 27 Q22 24 16 27 Q10 24 4 27 Z" fill="#fff8ec" style={S} /><path d="M16 7 L16 27" style={inkStyle(1.6)} /><circle cx="10" cy="14" r="3" fill="var(--g1)" /><circle cx="22" cy="14" r="3" fill="var(--g3)" /></g>}
       {name === 'shop' && <g><path d="M6 11 L26 11 L24 29 L8 29 Z" fill="var(--g5)" style={S} /><path d="M11 13 Q11 3 16 3 Q21 3 21 13" fill="none" style={S} /></g>}
       {name === 'lock' && <g><rect x="7" y="14" width="18" height="14" rx="3" fill="var(--g5)" style={S} /><path d="M11 14 V10 Q11 5 16 5 Q21 5 21 10 V14" fill="none" style={S} /><circle cx="16" cy="21" r="2" fill="var(--line)" /></g>}
+      {name === 'village' && <g><path d="M3 28 L3 16 L10 9 L17 16 L17 28 Z" fill="#fbf0dc" style={S} /><path d="M1 17 L10 7 L19 17" fill="none" stroke="var(--kiln)" stroke-width="3" stroke-linecap="round" /><path d="M17 28 L17 19 L23 13 L30 19 L30 28 Z" fill="#fbf0dc" style={S} /><path d="M15 20 L23 11 L31 20" fill="none" stroke="var(--g1)" stroke-width="3" stroke-linecap="round" /><path d="M8 28 L8 22 L12 22 L12 28" fill="var(--woodDark)" /></g>}
       {name === 'menu' && <g><path d="M6 9 L26 9 M6 16 L26 16 M6 23 L26 23" style={inkStyle(2.6)} /></g>}
     </svg>
   );

@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
 
-export function Sheet({ title, onClose, children, icon }: { title: string; onClose: () => void; children: ComponentChildren; icon?: ComponentChildren }) {
+export function Sheet({ title, onClose, children, icon, wide }: { title: string; onClose: () => void; children: ComponentChildren; icon?: ComponentChildren; wide?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -10,7 +10,7 @@ export function Sheet({ title, onClose, children, icon }: { title: string; onClo
   return (
     <>
       <div class="sheet-backdrop" onClick={onClose} />
-      <section class="sheet" role="dialog" aria-label={title}>
+      <section class={`sheet ${wide ? 'wide' : ''}`} role="dialog" aria-label={title}>
         <header class="sheet-head">
           {icon}
           <h2>{title}</h2>
