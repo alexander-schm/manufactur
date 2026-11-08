@@ -6,6 +6,7 @@ import { memo } from 'preact/compat';
 import type { Design, GlazeRecipe } from '../../../shared/types';
 import { inkStyle } from '../ink';
 import { Pot } from '../Pot';
+import { DecorLayer } from './Decor';
 
 export const WALL_H = 470;
 const S = inkStyle(2.2);
@@ -217,7 +218,7 @@ function Walls({ x0, width }: { x0: number; width: number }) {
 }
 
 /** Room 1 decor. Memoised: only redraws when the pinned designs change. */
-export const Room = memo(function Room({ pins, room2 }: { pins: Pin[]; room2: boolean }) {
+export const Room = memo(function Room({ pins, room2, decor = [] }: { pins: Pin[]; room2: boolean; decor?: string[] }) {
   return (
     <g>
       <g filter="url(#wobble)">
@@ -237,6 +238,7 @@ export const Room = memo(function Room({ pins, room2 }: { pins: Pin[]; room2: bo
           </g>
         )}
       </g>
+      <DecorLayer placed={decor} />
       <StringLights x0={0} x1={room2 ? 1800 : 1200} />
       <HangingPlant x={340} />
       {room2 && <HangingPlant x={1680} />}

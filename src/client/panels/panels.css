@@ -89,3 +89,18 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .news li.new { border-color: var(--line); background: #fff6d8; }
 .invite-hint { background: var(--card-2); border: 2px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
 .village-panel .tabs { margin-top: 10px; }
+.give-chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1.6px solid var(--line); border-radius: 999px; padding: 1px 10px 1px 4px; }
+.give-chip svg { vertical-align: middle; }
+.mat-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1.6px solid var(--line); margin-right: 4px; vertical-align: middle; }
+.mat-dot.big { width: 30px; height: 30px; }
+.trade-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.trade-line .arrow { font-size: 1.3em; }
+.give-picker { margin: 6px 0; }
+.give-picker .chip { display: inline-flex; align-items: center; gap: 4px; }
+.chip.friend { display: inline-flex; align-items: center; gap: 4px; }
+.joint-card { margin-top: 8px; }
+.together { background: #fff3c4; border: 1.6px dashed var(--line); border-radius: 10px; padding: 6px 10px; font-size: .95em; }
+.joint-part { border-top: 1.6px dashed rgba(43,36,32,.25); padding: 8px 0; }
+.joint-actions { margin-top: 6px; }
+.contributors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.contrib { display: inline-flex; align-items: center; gap: 2px; font-size: .9em; }

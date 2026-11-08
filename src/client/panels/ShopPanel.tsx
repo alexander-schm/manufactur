@@ -1,4 +1,5 @@
 import { MATERIALS } from '../../shared/content';
+import { shopPrice } from '../../shared/village/specialties';
 import type { GameState } from '../../shared/types';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
@@ -12,15 +13,19 @@ export function ShopPanel({ s }: { s: GameState }) {
       <p class="muted">Händlerin Hedwig hat heute im Angebot:</p>
       {mats.map((m) => {
         const available = !m.unlock || s.unlocks.includes(m.unlock);
+        const price = shopPrice(s, m.id);
+        const mine = s.village?.specialty === m.id;
         return (
           <div class="shop-row">
             <span class="mat-swatch" style={{ background: SWATCH[m.id] }} />
             <div class="grow">
-              <strong>{m.name}</strong> <span class="muted">· {m.price} T · du hast {Math.floor(s.materials[m.id] ?? 0)}</span>
+              <strong>{m.name}</strong> <span class="muted">· {price.toLocaleString('de-DE')} T · du hast {Math.floor(s.materials[m.id] ?? 0)}</span>
+              {mine && <span class="badge" style={{ marginLeft: '6px', background: 'var(--g5)' }}>Deine Spezialität!</span>}
+              {!mine && price > m.price && <span class="badge" style={{ marginLeft: '6px' }}>bei Freunden günstiger</span>}
               <div class="muted" style={{ fontSize: '.85em' }}>{available ? m.description : 'Noch nicht im Angebot.'}</div>
             </div>
             {available && [10, 50].map((n) => (
-              <Button small variant="quiet" disabled={s.taler < n * m.price} onClick={() => dispatch({ type: 'buyMaterial', material: m.id, amount: n })}>+{n}</Button>
+              <Button small variant="quiet" disabled={s.taler < n * price} onClick={() => dispatch({ type: 'buyMaterial', material: m.id, amount: n })}>+{n}</Button>
             ))}
           </div>
         );

@@ -48,7 +48,7 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const readOnly = !onStation;
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
-  const pins = state.designs.slice(-4).reverse().map((design) => ({ design, glaze: state.glazes.find((g) => g.id === design.glazeId) }));
+  const pins = state.designs.filter((d) => !d.origin).slice(-4).reverse().map((design) => ({ design, glaze: state.glazes.find((g) => g.id === design.glazeId) }));
   const byStation = (st: Station) => ({
     running: state.batches.filter((b) => b.stationId === st.id && b.startedAt !== null),
     waiting: state.batches.filter((b) => b.startedAt === null && stageKind(b.stage) === st.kind),
@@ -59,7 +59,7 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
-        <Room pins={pins} room2={room2} />
+        <Room pins={pins} room2={room2} decor={state.decorPlaced} />
         <Cat x={760} y={652} sleeping={!catAwake} />
         {ordered.map((st) => {
           const pos = SLOTS[st.slot];
