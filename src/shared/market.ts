@@ -1,4 +1,4 @@
-import { EFFECTS, getForm, getStationDef } from './content';
+import { EFFECTS, getForm, getStationDef, own } from './content';
 import type { GameState, GoodsStack } from './types';
 
 export const QUALITY_MUL: Record<1 | 2 | 3, number> = { 1: 0.8, 2: 1, 3: 1.3 };
@@ -7,7 +7,7 @@ export const STALL_PRICE_FACTOR = 0.8;
 export function pieceValue(state: GameState, stack: Pick<GoodsStack, 'designId' | 'quality' | 'effect'>): number {
   const design = state.designs.find((d) => d.id === stack.designId);
   const base = design ? getForm(design.form).baseValue : 5;
-  const eff = stack.effect ? EFFECTS[stack.effect]?.valueMul ?? 1 : 1;
+  const eff = stack.effect ? own(EFFECTS, stack.effect)?.valueMul ?? 1 : 1;
   return base * QUALITY_MUL[stack.quality] * eff;
 }
 

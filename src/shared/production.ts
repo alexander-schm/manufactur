@@ -1,4 +1,4 @@
-import { getForm, getStationDef, getTrait, MATERIALS } from './content';
+import { getForm, getStationDef, getTrait, MATERIALS, own } from './content';
 import type { Batch, Design, GameState, Stage, Station, StationKind, Worker } from './types';
 
 const STAGE_STATION: Record<Stage, StationKind> = {
@@ -125,4 +125,4 @@ export function startNewBatch(state: GameState, design: Design, count: number, a
   return null;
 }
 
-const MATERIAL_PRICE = (id: string) => MATERIALS[id]?.price ?? 1;
+const MATERIAL_PRICE = (id: string) => own(MATERIALS, id)?.price ?? 1;

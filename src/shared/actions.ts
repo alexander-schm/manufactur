@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { EFFECTS, getStationDef, MATERIALS, STATIONS } from './content';
+import { EFFECTS, getStationDef, MATERIALS, own, STATIONS } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { validateDesign } from './design';
 import { newId } from './ids';
@@ -57,6 +57,7 @@ export function applyAction(state: GameState, action: Action, now: number): Acti
     const s = structuredClone(advance(state, now));
     const events: GameEvent[] = [];
     run(s, action, now, events);
+    if (!Number.isFinite(s.taler) || !Number.isFinite(s.ruf) || s.taler < 0) fail('Ungültige Aktion');
     const seen = touchSeen(s, now);
     const checked = checkMilestones(seen);
     events.push(...checked.events);
@@ -76,8 +77,7 @@ function needUnlock(s: GameState, id: string, msg: string) {
 function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
   switch (a.type) {
     case 'buyMaterial': {
-      const m = MATERIALS[a.material];
-      if (!m) fail('Unbekanntes Material');
+      const m = own(MATERIALS, a.material) ?? fail('Unbekanntes Material');
       if (m.locked || (m.unlock && !s.unlocks.includes(m.unlock))) fail(`${m.name} gibt es hier noch nicht zu kaufen`);
       if (!isInt(a.amount, 1, 1000)) fail('Ungültige Menge');
       const cost = m.price * a.amount;
@@ -140,7 +140,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     }
     case 'buildStation': {
       needUnlock(s, 'room2', 'Dafür brauchst du den zweiten Raum');
-      const cost = BUILD_COST[a.kind];
+      const cost = own(BUILD_COST as Record<string, number>, a.kind);
       if (cost === undefined) fail('Diese Station gibt es nur einmal');
       const used = new Set(s.stations.map((x) => x.slot));
       let slot = -1;

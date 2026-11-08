@@ -1,4 +1,4 @@
-import { FORMS } from './content';
+import { FORMS, own } from './content';
 import { designDifficultyOf } from './production';
 import type { Design, GameState, GlazeRecipe, Taste } from './types';
 
@@ -60,7 +60,7 @@ const PROFILE_KEYS = ['height', 'belly', 'neck', 'foot', 'rim'] as const;
 export function validateDesign(d: Design, state: GameState): string | null {
   if (!d || typeof d !== 'object') return 'Ungültiger Entwurf';
   if (typeof d.name !== 'string' || d.name.trim().length < 1 || d.name.length > 30) return 'Der Name muss 1–30 Zeichen lang sein';
-  const form = FORMS[d.form];
+  const form = own(FORMS, d.form);
   if (!form) return 'Unbekannte Form';
   if (!state.unlocks.includes(form.unlock)) return `${form.plural} sind noch nicht freigeschaltet`;
   if (!d.profile) return 'Profil fehlt';

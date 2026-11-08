@@ -17,8 +17,13 @@ export type { EffectDef, RecipeInput } from './effects';
 export type { UnlockDef } from './unlocks';
 export type { CustomerDef } from './customers';
 
+/** Own-property lookup: never resolves prototype keys like "__proto__" or "constructor". */
+export function own<T>(table: Record<string, T>, id: unknown): T | undefined {
+  return typeof id === 'string' && Object.hasOwn(table, id) ? table[id] : undefined;
+}
+
 function lookup<T>(table: Record<string, T>, id: string, what: string): T {
-  const v = table[id];
+  const v = own(table, id);
   if (!v) throw new Error(`Unbekannt: ${what} "${id}"`);
   return v;
 }

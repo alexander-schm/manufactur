@@ -1,4 +1,4 @@
-import { EFFECTS, MATERIALS, type RecipeInput } from './content';
+import { EFFECTS, MATERIALS, own, type RecipeInput } from './content';
 import { COLOR_FAMILY_NAMES, colorFamily } from './design';
 import { newId } from './ids';
 import type { GameState, GlazeRecipe } from './types';
@@ -92,7 +92,7 @@ export function validateRecipe(r: RecipeInput, state: GameState): string | null 
   if (!r || typeof r !== 'object') return 'Ungültiges Rezept';
   if (!['transparent', 'matt', 'opak'].includes(r.base)) return 'Unbekannte Glasurbasis';
   if (r.colorant !== null) {
-    const m = MATERIALS[r.colorant];
+    const m = own(MATERIALS, r.colorant);
     if (!m || m.kind !== 'colorant' || m.locked) return 'Das ist kein Farbkörper';
     if (m.unlock && !state.unlocks.includes(m.unlock)) return `${m.name} hast du noch nicht`;
   }

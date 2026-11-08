@@ -126,3 +126,18 @@ describe('declineOrder', () => {
     expect(advance(r.state, T0 + 10 * 60_000).orders.length).toBeGreaterThanOrEqual(s.orders.length);
   });
 });
+
+describe('[Final review #1] prototype keys never corrupt state', () => {
+  for (const key of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+    it(`rejects "${key}" everywhere a table is indexed`, () => {
+      const s = plainGame();
+      s.unlocks.push('room2', 'studio');
+      s.taler = 1000;
+      expectRejected(s, { type: 'buyMaterial', material: key, amount: 1 });
+      expectRejected(s, { type: 'buildStation', kind: key as never });
+      expectRejected(s, { type: 'saveDesign', design: { ...s.designs[0], id: 'x', form: key } });
+      expectRejected(s, { type: 'experiment', recipe: { base: 'opak', colorant: key, colorantPct: 2, firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' } } });
+      expectRejected(s, { type: key as never } as Action);
+    });
+  }
+});
