@@ -139,7 +139,15 @@ export async function handleJoin(req: Request, env: Env): Promise<Response> {
   if ((count?.n ?? 0) >= MAX_MEMBERS) return error(409, `Das Dorf ist voll (höchstens ${MAX_MEMBERS})`);
   const p = await createPlayer(env, village.id, (body.name as string).trim(), body.password as string);
   if (p instanceof Response) return p;
-  await joinVillage(env, village.id, p.playerId);
+  const joined = await joinVillage(env, village.id, p.playerId);
+  if (!joined.ok) {
+    // someone else took the last place at the same moment: undo the account
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM workshops WHERE player_id = ?').bind(p.playerId),
+      env.DB.prepare('DELETE FROM players WHERE id = ?').bind(p.playerId),
+    ]);
+    return error(409, joined.error);
+  }
   const token = await createSession(env, p.playerId);
   return json({ inviteCode: code, villageName: village.name }, 201, { 'set-cookie': sessionCookie(token) });
 }

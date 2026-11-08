@@ -19,14 +19,19 @@ export async function saveWorkshop(env: Env, playerId: string, expectedVersion: 
   return r.meta.changes === 1;
 }
 
-/** Read-modify-write with retries; `change` must be safe to recompute from a fresh read. */
-export async function updateWorkshop(env: Env, playerId: string, change: (s: GameState) => GameState, tries = 8): Promise<GameState | null> {
+export type UpdateResult = 'applied' | 'noop' | 'missing' | 'conflict';
+
+/**
+ * Read-modify-write with retries; `change` must be safe to recompute from a fresh read.
+ * `change` returning null means "nothing to do" (e.g. already applied).
+ */
+export async function updateWorkshop(env: Env, playerId: string, change: (s: GameState) => GameState | null, tries = 8): Promise<UpdateResult> {
   for (let i = 0; i < tries; i++) {
     const s = await loadWorkshop(env, playerId);
-    if (!s) return null;
-    const next = { ...change(s), version: s.version + 1 };
-    if (await saveWorkshop(env, playerId, s.version, next)) return next;
+    if (!s) return 'missing';
+    const changed = change(s);
+    if (!changed) return 'noop';
+    if (await saveWorkshop(env, playerId, s.version, { ...changed, version: s.version + 1 })) return 'applied';
   }
-  console.error('delivery failed after retries', playerId);
-  return null;
+  return 'conflict';
 }

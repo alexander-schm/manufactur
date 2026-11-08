@@ -136,3 +136,15 @@ describe('[Final review #6] gifted pieces are scored with their own glaze colour
     expect(glazeForDesign(b, foreign)?.color).toBe('#3f6fb5');
   });
 });
+
+describe('[Final review #2] deliveries are applied exactly once', () => {
+  it('applyDeltaOnce ignores a delivery it has already applied', async () => {
+    const { applyDeltaOnce } = await import('../../../src/shared/village/apply');
+    const { ws } = village(2);
+    const once = applyDeltaOnce(ws.p1, 'op1:0', { materials: { holz: 5 } })!;
+    expect(once.materials.holz).toBe(15);
+    expect(applyDeltaOnce(once, 'op1:0', { materials: { holz: 5 } })).toBeNull();
+    const other = applyDeltaOnce(once, 'op1:1', { materials: { holz: 5 } })!;
+    expect(other.materials.holz).toBe(20);
+  });
+});

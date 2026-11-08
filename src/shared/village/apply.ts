@@ -86,6 +86,22 @@ export function applyDelta(state: GameState, d: WorkshopDelta): GameState {
   return s;
 }
 
+export const APPLIED_OPS_KEPT = 200;
+
+export function markApplied(s: GameState, key: string): void {
+  const ops = (s.appliedOps ??= []);
+  ops.push(key);
+  if (ops.length > APPLIED_OPS_KEPT) ops.splice(0, ops.length - APPLIED_OPS_KEPT);
+}
+
+/** Apply a delivery unless this workshop already got it. Returns null if it was already applied. */
+export function applyDeltaOnce(state: GameState, key: string, d: WorkshopDelta): GameState | null {
+  if (state.appliedOps?.includes(key)) return null;
+  const s = applyDelta(state, d);
+  markApplied(s, key);
+  return s;
+}
+
 function giveToDelta(g: Give): WorkshopDelta {
   if (g.kind === 'taler') return { taler: g.amount };
   if (g.kind === 'material') return { materials: { [g.material]: g.count } };

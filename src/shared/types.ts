@@ -127,6 +127,8 @@ export interface GameState {
   /** decor items owned / placed in the workshop */
   decor: string[];
   decorPlaced: string[];
+  /** ids of village operations / deliveries already applied here (exactly-once), newest last */
+  appliedOps?: string[];
 }
 
 export interface VillageSnapshot {

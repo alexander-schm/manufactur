@@ -107,3 +107,66 @@ describe('village API', () => {
     expect((await call('GET', '/api/village')).status).toBe(401);
   });
 });
+
+import { runInDurableObject } from 'cloudflare:test';
+
+const villageStub = async (cookie: string) => {
+  const m = await (await import('./util')).call('GET', '/api/me', undefined, cookie);
+  const row = await env.DB.prepare('SELECT village_id FROM players WHERE id = ?').bind(m.json.playerId).first<{ village_id: string }>();
+  return env.VILLAGE.get(env.VILLAGE.idFromName(row!.village_id));
+};
+
+describe('[Final review #2/#3/#4] village consistency', () => {
+  it('two simultaneous joins into a village of 9: one gets in, the other gets 409 and no account', async () => {
+    const a = await found();
+    for (let i = 0; i < 8; i++) expect((await join(a.json.inviteCode)).status).toBe(201);
+    const [x, y] = await Promise.all([join(a.json.inviteCode), join(a.json.inviteCode)]);
+    expect([x.status, y.status].sort()).toEqual([201, 409]);
+    const loser = x.status === 409 ? x : y;
+    expect((await call('POST', '/api/login', { name: loser.name, password: 'geheim123' })).status).toBe(401);
+    const v = await call('GET', '/api/village', undefined, a.cookie!);
+    expect(v.json.village.members).toHaveLength(10);
+  });
+  it('a half-finished operation (village saved, workshop not) is rolled back', async () => {
+    const a = await found();
+    const b = await join(a.json.inviteCode);
+    const idA = (await me(a.cookie!)).playerId;
+    const stub = await villageStub(a.cookie!);
+    await runInDurableObject(stub, async (_inst: unknown, state: DurableObjectState) => {
+      const prev = await state.storage.get<any>('state');
+      const broken = structuredClone(prev);
+      broken.offers.push({ id: 'ghost', from: idA, give: { kind: 'material', material: 'ton', count: 99 }, want: { kind: 'taler', amount: 1 }, createdAt: Date.now() });
+      await state.storage.put({ state: broken, pending: { opId: 'never-written', playerId: idA, prev } });
+    });
+    const v = await call('GET', '/api/village', undefined, b.cookie!);
+    expect(v.json.village.offers.find((o: any) => o.id === 'ghost')).toBeUndefined();
+  });
+  it('a queued delivery is applied exactly once, even if drained twice', async () => {
+    const a = await found();
+    const b = await join(a.json.inviteCode);
+    const idB = (await me(b.cookie!)).playerId;
+    const before = (await state(b.cookie!)).materials.holz ?? 0;
+    const stub = await villageStub(a.cookie!);
+    await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => {
+      await s.storage.put('outbox', [{ key: 'manual:0', to: idB, delta: { materials: { holz: 7 } } }]);
+    });
+    await call('GET', '/api/village', undefined, a.cookie!);
+    await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => {
+      await s.storage.put('outbox', [{ key: 'manual:0', to: idB, delta: { materials: { holz: 7 } } }]);
+    });
+    await call('GET', '/api/village', undefined, a.cookie!);
+    const after = (await state(b.cookie!)).materials.holz ?? 0;
+    expect(after - before).toBeGreaterThanOrEqual(7);
+    expect(after - before).toBeLessThan(14);
+  });
+  it('a new maker’s mark shows up in the village', async () => {
+    const a = await found();
+    await join(a.json.inviteCode);
+    const s = await state(a.cookie!);
+    const r = await call('POST', '/api/action', { action: { type: 'setMakerMark', mark: { shape: 'circle', letter: 'Q', color: '#2a4f9a' } }, version: s.version }, a.cookie!);
+    expect(r.status).toBe(200);
+    const v = await call('GET', '/api/village', undefined, a.cookie!);
+    const idA = (await me(a.cookie!)).playerId;
+    expect(v.json.village.members.find((m: any) => m.playerId === idA).makerMark.letter).toBe('Q');
+  });
+});

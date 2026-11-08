@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { advance } from '../shared/advance';
 import type { GameState } from '../shared/types';
-import { applyDelta, applyVillageAction } from '../shared/village/apply';
+import { applyDeltaOnce, applyVillageAction, markApplied } from '../shared/village/apply';
 import { helpsLeft } from '../shared/village/help';
 import { ensureJointOrders } from '../shared/village/joint';
 import { addMember, MAX_MEMBERS, newVillage } from '../shared/village/state';
@@ -23,14 +23,26 @@ function view(v: VillageState, viewerId: string, now: number): VillageView {
 }
 
 /** The workshop-side village snapshot for one member. */
-function snapshotDelivery(v: VillageState, m: Member): Delivery {
-  return { to: m.playerId, delta: { village: { villageId: v.villageId, specialty: m.specialty, buildings: [...v.buildings], members: v.members.length } } };
+function snapshotDelta(v: VillageState, m: Member): Delivery['delta'] {
+  return { village: { villageId: v.villageId, specialty: m.specialty, buildings: [...v.buildings], members: v.members.length } };
 }
+
+type OutboxEntry = { key: string; to: string; delta: Delivery['delta'] };
+/** Written together with the new village document, before any workshop is touched. */
+type Pending = { opId: string; playerId: string; prev: VillageState };
+
+const DRAIN_RETRY_MS = 30_000;
 
 /**
  * One instance per village. Serialises every village operation (a promise chain, because awaiting D1
  * would otherwise let two requests interleave), keeps the village document in DO storage and
  * writes workshop changes to D1.
+ *
+ * Consistency: the new village document, the operation's deliveries (outbox) and a `pending` marker are
+ * stored atomically first. Then the actor's workshop is written with the op id. If we crash in between,
+ * recover() sees `pending`: if the actor's workshop has the op id the op happened, otherwise the
+ * village document is rolled back. Deliveries carry keys and are applied exactly once; they stay in
+ * the outbox until they land (retried by an alarm).
  */
 export class VillageDO extends DurableObject<Env> {
   private queue: Promise<unknown> = Promise.resolve();
@@ -41,40 +53,89 @@ export class VillageDO extends DurableObject<Env> {
     return run;
   }
 
-  private async memberInfo(villageId: string): Promise<Omit<Member, 'specialty' | 'houseSlot'>[]> {
-    const rows = await this.env.DB.prepare('SELECT id, name, created_at FROM players WHERE village_id = ? ORDER BY created_at, id').bind(villageId).all<{ id: string; name: string; created_at: number }>();
-    const out: Omit<Member, 'specialty' | 'houseSlot'>[] = [];
-    for (const r of rows.results) {
-      const ws = await loadWorkshop(this.env, r.id);
-      out.push({ playerId: r.id, name: r.name, avatarSeed: ws?.avatarSeed ?? 0, makerMark: ws?.makerMark ?? { shape: 'circle', letter: r.name[0]?.toUpperCase() ?? 'M', color: '#b44c36' }, joinedAt: r.created_at, lastSeen: ws?.lastSeen ?? r.created_at });
+  private async recover(): Promise<void> {
+    const pending = await this.ctx.storage.get<Pending>('pending');
+    if (!pending) return;
+    const ws = await loadWorkshop(this.env, pending.playerId);
+    if (ws?.appliedOps?.includes(pending.opId)) {
+      await this.ctx.storage.delete('pending');
+      return;
     }
-    return out;
+    const outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
+    await this.ctx.storage.put({ state: pending.prev, outbox: outbox.filter((e) => !e.key.startsWith(`${pending.opId}:`)) });
+    await this.ctx.storage.delete('pending');
+  }
+
+  /** Apply queued deliveries; anything that can't land now stays queued and an alarm retries it. */
+  private async drain(): Promise<void> {
+    let outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
+    if (!outbox.length) return;
+    const left: OutboxEntry[] = [];
+    for (const e of outbox) {
+      try {
+        const r = await updateWorkshop(this.env, e.to, (s) => applyDeltaOnce(s, e.key, e.delta));
+        if (r === 'conflict') left.push(e);
+      } catch (err) {
+        console.error('delivery failed, will retry', e.key, err);
+        left.push(e);
+      }
+    }
+    outbox = left;
+    await this.ctx.storage.put('outbox', outbox);
+    if (outbox.length) await this.ctx.storage.setAlarm(Date.now() + DRAIN_RETRY_MS);
+  }
+
+  async alarm(): Promise<void> {
+    await this.serial(async () => { await this.recover(); await this.drain(); });
+  }
+
+  private async enqueue(entries: OutboxEntry[]): Promise<void> {
+    if (!entries.length) return;
+    const outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
+    await this.ctx.storage.put('outbox', [...outbox, ...entries]);
   }
 
   /** Load the village, creating or completing it from D1 (players who joined before the village existed). */
   private async ensure(villageId: string): Promise<VillageState> {
+    await this.recover();
     let v = (await this.ctx.storage.get<VillageState>('state')) ?? null;
     const now = Date.now();
     if (!v) {
       const row = await this.env.DB.prepare('SELECT name FROM villages WHERE id = ?').bind(villageId).first<{ name: string }>();
       v = newVillage(villageId, row?.name ?? 'Dorf', parseInt(villageId.replace(/-/g, '').slice(0, 8), 16) || 1);
     }
+    const rejected = new Set((await this.ctx.storage.get<string[]>('rejected')) ?? []);
     const known = new Set(v.members.map((m) => m.playerId));
-    const missing = (await this.memberInfo(villageId)).filter((m) => !known.has(m.playerId));
-    if (missing.length) {
-      for (const m of missing) {
-        const r = addMember(v, m);
-        if (typeof r !== 'string') v = r;
-      }
-      ensureJointOrders(v, now);
-      await this.ctx.storage.put('state', v);
-      await this.deliver(v.members.map((m) => snapshotDelivery(v!, m)));
+    const rows = await this.env.DB.prepare('SELECT id, name, created_at FROM players WHERE village_id = ? ORDER BY created_at, id').bind(villageId).all<{ id: string; name: string; created_at: number }>();
+    const missing = rows.results.filter((r) => !known.has(r.id) && !rejected.has(r.id));
+    let added = false;
+    for (const r of missing) {
+      const ws = await loadWorkshop(this.env, r.id); // only newcomers are read
+      const res = addMember(v, { playerId: r.id, name: r.name, avatarSeed: ws?.avatarSeed ?? 0, makerMark: ws?.makerMark ?? { shape: 'circle', letter: r.name[0]?.toUpperCase() ?? 'M', color: '#b44c36' }, joinedAt: r.created_at, lastSeen: ws?.lastSeen ?? r.created_at });
+      if (typeof res === 'string') rejected.add(r.id);
+      else { v = res; added = true; }
     }
+    if (missing.length) await this.ctx.storage.put('rejected', [...rejected]);
+    if (added) {
+      ensureJointOrders(v, now);
+      const opId = `join${v.members.length}-${now}`;
+      await this.ctx.storage.put('state', v);
+      await this.enqueue(v.members.map((m) => ({ key: `${opId}:${m.playerId}`, to: m.playerId, delta: snapshotDelta(v!, m) })));
+    }
+    await this.drain();
     return v;
   }
 
-  private async deliver(ds: Delivery[]): Promise<void> {
-    for (const d of ds) await updateWorkshop(this.env, d.to, (s) => applyDelta(s, d.delta));
+  /** Keep the village's picture of a member (look, mark, last seen) in sync with their workshop. */
+  private syncMember(v: VillageState, ws: GameState): boolean {
+    const m = v.members.find((x) => x.playerId === ws.playerId);
+    if (!m) return false;
+    const same = m.avatarSeed === ws.avatarSeed && JSON.stringify(m.makerMark) === JSON.stringify(ws.makerMark) && m.lastSeen >= ws.lastSeen;
+    if (same) return false;
+    m.avatarSeed = ws.avatarSeed;
+    m.makerMark = { ...ws.makerMark };
+    m.lastSeen = Math.max(m.lastSeen, ws.lastSeen);
+    return true;
   }
 
   async join(villageId: string, playerId: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -88,14 +149,16 @@ export class VillageDO extends DurableObject<Env> {
     return this.serial(async () => {
       const v = await this.ensure(villageId);
       if (!v.members.some((m) => m.playerId === playerId)) return null;
+      const ws = await loadWorkshop(this.env, playerId);
+      if (ws && this.syncMember(v, ws)) await this.ctx.storage.put('state', v);
       return view(v, playerId, Date.now());
     });
   }
 
   async act(villageId: string, playerId: string, action: VillageAction): Promise<ActResult> {
     return this.serial(async () => {
-      const v = await this.ensure(villageId);
       for (let attempt = 0; attempt < 2; attempt++) {
+        const v = await this.ensure(villageId);
         const now = Date.now();
         const stored = await loadWorkshop(this.env, playerId);
         if (!stored) return { status: 404, error: 'Keine Werkstatt gefunden' };
@@ -104,12 +167,23 @@ export class VillageDO extends DurableObject<Env> {
           await saveWorkshop(this.env, playerId, stored.version, caught);
           return { status: 409, error: 'Deine Werkstatt holt noch auf', catchingUp: true, state: caught };
         }
+        this.syncMember(v, caught);
         const r = applyVillageAction(v, playerId, caught, action, now);
         if (typeof r === 'string') return { status: 400, error: r };
+        const opId = `op${r.v.version}-${now}`;
         const actor = { ...r.actor, version: stored.version + 1 };
-        if (!(await saveWorkshop(this.env, playerId, stored.version, actor))) continue; // the player acted meanwhile — redo on fresh state
-        await this.ctx.storage.put('state', r.v);
-        await this.deliver(r.deliveries);
+        markApplied(actor, opId);
+        const outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
+        const entries = r.deliveries.map((d, i) => ({ key: `${opId}:${i}`, to: d.to, delta: d.delta }));
+        // 1) remember everything atomically, 2) write the actor, 3) clear the marker, 4) deliver
+        await this.ctx.storage.put({ state: r.v, outbox: [...outbox, ...entries], pending: { opId, playerId, prev: v } satisfies Pending });
+        if (!(await saveWorkshop(this.env, playerId, stored.version, actor))) {
+          await this.ctx.storage.put({ state: v, outbox });
+          await this.ctx.storage.delete('pending');
+          continue; // the player acted meanwhile — redo on fresh state
+        }
+        await this.ctx.storage.delete('pending');
+        await this.drain();
         return { status: 200, village: view(r.v, playerId, now), state: actor, events: r.events };
       }
       return { status: 409, error: 'Veraltet' };
