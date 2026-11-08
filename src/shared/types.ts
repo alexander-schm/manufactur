@@ -20,7 +20,7 @@ export interface Design {
   /** css colour */
   patternColor: string;
   /** set on designs that arrived as gifts: drawn with the giver's mark, never produced here */
-  origin?: { playerName: string; makerMark: MakerMark };
+  origin?: { playerName: string; makerMark: MakerMark; glazeColor: string };
 }
 
 export interface FiringSettings {

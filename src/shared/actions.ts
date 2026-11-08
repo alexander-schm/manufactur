@@ -94,13 +94,14 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     }
     case 'queueBatch': {
       const d = s.designs.find((x) => x.id === a.designId) ?? fail('Unbekannter Entwurf');
+      if (d.origin) fail('Geschenkte Stücke kannst du nicht nachmachen');
       const err = startNewBatch(s, d, a.count, false, (p) => newId(s, p));
       if (err) fail(err);
       return;
     }
     case 'setStanding': {
       if (a.designId === null) { s.standing = null; return; }
-      if (!s.designs.some((x) => x.id === a.designId)) fail('Unbekannter Entwurf');
+      if (!s.designs.some((x) => x.id === a.designId && !x.origin)) fail('Unbekannter Entwurf');
       const size = a.batchSize ?? 6;
       if (!isInt(size, 1, kilnCapacity(s))) fail(`Chargengröße 1–${kilnCapacity(s)}`);
       s.standing = { designId: a.designId, batchSize: size, autoBuy: a.autoBuy ?? true };
@@ -161,6 +162,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'saveDesign': {
       needUnlock(s, 'studio', 'Das Entwurfsstudio ist noch nicht freigeschaltet');
       const d = a.design;
+      if (typeof d?.id === 'string' && (d.id.startsWith('f:') || s.designs.find((x) => x.id === d.id)?.origin)) fail('Geschenkte Entwürfe kannst du nicht ändern');
       const err = validateDesign(d, s);
       if (err) fail(err);
       const clean: Design = {
@@ -172,7 +174,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       const inUse = idx >= 0 && (s.goods.some((g) => g.designId === d.id) || s.batches.some((b) => b.designId === d.id));
       if (idx >= 0 && !inUse) s.designs[idx] = clean;
       else {
-        if (s.designs.length >= MAX_DESIGNS) fail(`Höchstens ${MAX_DESIGNS} Entwürfe`);
+        if (s.designs.filter((x) => !x.origin).length >= MAX_DESIGNS) fail(`Höchstens ${MAX_DESIGNS} Entwürfe`);
         const oldId = d.id;
         clean.id = newId(s, 'd');
         s.designs.push(clean);
