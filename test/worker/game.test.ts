@@ -55,3 +55,38 @@ describe('game api', () => {
     expect(r.json.error).toBe('Nicht genug Taler');
   });
 });
+
+import { env } from 'cloudflare:test';
+import { shiftTime } from '../../src/worker/dev';
+
+describe('[Final review #4] long absence is caught up in bounded chunks', () => {
+  it('GET reports catchingUp and repeated GETs finish the catch-up', async () => {
+    const f = await found();
+    const me = (await call('GET', '/api/me', undefined, f.cookie!)).json;
+    const row = await env.DB.prepare('SELECT state FROM workshops WHERE player_id = ?').bind(me.playerId).first<{ state: string }>();
+    const s = JSON.parse(row!.state);
+    s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
+    const old = shiftTime(s, 20 * 24 * 3_600_000);
+    await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(old), me.playerId).run();
+    let r = await call('GET', '/api/state', undefined, f.cookie!);
+    expect(r.status).toBe(200);
+    expect(r.json.catchingUp).toBe(true);
+    expect(r.json.state.lastTick).toBeLessThan(r.json.serverNow);
+    let n = 1;
+    while (r.json.catchingUp && n < 200) { r = await call('GET', '/api/state', undefined, f.cookie!); n++; }
+    expect(r.json.catchingUp).toBe(false);
+    expect(r.json.state.stats.made).toBeGreaterThan(1000);
+    expect(r.json.state.away).not.toBeNull();
+  });
+  it('an action during catch-up gets a 409 with the partial state instead of a CPU blow-up', async () => {
+    const f = await found();
+    const me = (await call('GET', '/api/me', undefined, f.cookie!)).json;
+    const row = await env.DB.prepare('SELECT state, version FROM workshops WHERE player_id = ?').bind(me.playerId).first<{ state: string; version: number }>();
+    const s = JSON.parse(row!.state);
+    s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
+    await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(shiftTime(s, 20 * 24 * 3_600_000)), me.playerId).run();
+    const r = await call('POST', '/api/action', { action: { type: 'buyMaterial', material: 'ton', amount: 1 }, version: row!.version }, f.cookie!);
+    expect(r.status).toBe(409);
+    expect(r.json.catchingUp).toBe(true);
+  });
+});

@@ -84,3 +84,38 @@ describe('store', () => {
     expect(store.serverState.value!.version).toBe(1);
   });
 });
+
+describe('[Final review #4] client follows a chunked catch-up', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+  it('loadState keeps fetching while the server is catching up', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const s0 = newGame('p', 3, T0 - 1000);
+    const partial = { ...structuredClone(s0), lastTick: T0 - 500 };
+    const done = { ...structuredClone(s0), lastTick: T0 };
+    const calls = mockFetch([
+      { status: 200, body: { state: partial, serverNow: T0, catchingUp: true } },
+      { status: 200, body: { state: partial, serverNow: T0, catchingUp: true } },
+      { status: 200, body: { state: done, serverNow: T0, catchingUp: false } },
+    ]);
+    const store = await freshStore();
+    await store.loadState();
+    expect(calls.length).toBe(3);
+    expect(store.serverState.value!.lastTick).toBe(T0);
+  });
+  it('a 409 "catching up" during an action finishes loading, then retries the action', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const s0 = newGame('p', 3, T0);
+    const after = { ...structuredClone(s0), version: 1, taler: 90, materials: { ...s0.materials, ton: 40 } };
+    const calls = mockFetch([
+      { status: 200, body: { state: s0, serverNow: T0, catchingUp: false } },
+      { status: 409, body: { error: 'Deine Werkstatt holt noch auf', state: s0, serverNow: T0, catchingUp: true } },
+      { status: 200, body: { state: s0, serverNow: T0, catchingUp: false } },
+      { status: 200, body: { state: after, events: [], serverNow: T0 } },
+    ]);
+    const store = await freshStore();
+    await store.loadState();
+    await store.dispatch({ type: 'buyMaterial', material: 'ton', amount: 10 });
+    expect(calls.map((c) => c.url)).toEqual(['/api/state', '/api/action', '/api/state', '/api/action']);
+    expect(store.serverState.value).toEqual(after);
+  });
+});

@@ -34,8 +34,16 @@ function adopt(r: StateReply): void {
   serverState.value = r.state;
 }
 
+/** Shown while a long absence is being caught up on the server. */
+export const catchingUp = signal(false);
+
 export async function loadState(): Promise<void> {
-  adopt(await api.getState());
+  for (let i = 0; i < 500; i++) {
+    const r = await api.getState();
+    adopt(r);
+    catchingUp.value = !!r.catchingUp;
+    if (!r.catchingUp) return;
+  }
 }
 
 export async function loadMe(): Promise<Me | null> {
@@ -84,10 +92,12 @@ async function doDispatch(action: Action): Promise<GameEvent[]> {
     } catch (e) {
       if (e instanceof ApiError && e.status === 409 && e.body?.state && attempt === 0) {
         adopt({ state: e.body.state, serverNow: e.body.serverNow ?? serverTime() });
-        const retry = applyAction(e.body.state, action, serverTime());
+        if (e.body.catchingUp) await loadState();
+        const fresh = serverState.value!;
+        const retry = applyAction(fresh, action, serverTime());
         if (!retry.ok) { toast(retry.error, 'error'); return []; }
         serverState.value = retry.state;
-        version = e.body.state.version;
+        version = fresh.version;
         continue;
       }
       serverState.value = e instanceof ApiError && e.body?.state ? e.body.state : base; // roll back

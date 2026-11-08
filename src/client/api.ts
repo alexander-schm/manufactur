@@ -6,7 +6,7 @@ export class ApiError extends Error {
 }
 
 export type Me = { playerId: string; name: string; villageName: string; inviteCode: string };
-export type StateReply = { state: GameState; serverNow: number };
+export type StateReply = { state: GameState; serverNow: number; catchingUp?: boolean };
 export type ActionReply = StateReply & { events: GameEvent[] };
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {

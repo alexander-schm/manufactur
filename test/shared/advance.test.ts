@@ -127,3 +127,19 @@ describe('[Final review #3] absence is never penalised: one long catch-up equals
     expect(after.workers[0].traits.length).toBe(3);
   });
 });
+
+describe('[Final review #4] budgeted catch-up', () => {
+  it('stops after maxEvents with lastTick < now, and continuing reaches the one-shot result', () => {
+    const base = withStanding(); base.stallDesignIds = [base.designs[0].id];
+    const end = T0 + 3 * 24 * H;
+    const once = advance(base, end);
+    let s = advance(base, end, 500);
+    expect(s.lastTick).toBeLessThan(end);
+    let rounds = 1;
+    while (s.lastTick < end && rounds < 1000) { s = advance(s, end, 500); rounds++; }
+    expect(s.lastTick).toBe(end);
+    expect(rounds).toBeGreaterThan(1);
+    expect(s.stats.made).toBe(once.stats.made);
+    expect(s.taler).toBeCloseTo(once.taler, 1);
+  });
+});

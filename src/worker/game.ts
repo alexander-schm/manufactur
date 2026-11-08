@@ -29,15 +29,25 @@ export function serverNow(_env: Env, _req?: Request): number {
   return Date.now();
 }
 
+/** Simulation events per request: keeps CPU per request small even after weeks away (~3–5 ms). */
+export const CATCHUP_EVENTS = 3000;
+
+/** Catch up as far as the budget allows; only mark the player present once fully caught up. */
+function catchUp(stored: GameState, now: number): { state: GameState; catchingUp: boolean } {
+  const s = advance(stored, now, CATCHUP_EVENTS);
+  if (s.lastTick < now) return { state: s, catchingUp: true };
+  return { state: touchSeen(s, now), catchingUp: false };
+}
+
 export async function handleGetState(req: Request, env: Env): Promise<Response> {
   const who = await requirePlayer(req, env);
   if (who instanceof Response) return who;
   const now = serverNow(env, req);
   const stored = await load(env, who.playerId);
   if (!stored) return error(404, 'Keine Werkstatt gefunden');
-  const next = touchSeen(advance(stored, now), now);
-  if (next !== stored) await save(env, who.playerId, stored.version, next); // version unchanged; a lost race is harmless
-  return json({ state: next, serverNow: now });
+  const { state, catchingUp } = catchUp(stored, now);
+  if (state !== stored) await save(env, who.playerId, stored.version, state); // version unchanged; a lost race is harmless
+  return json({ state, serverNow: now, catchingUp });
 }
 
 export async function handleAction(req: Request, env: Env): Promise<Response> {
@@ -51,14 +61,17 @@ export async function handleAction(req: Request, env: Env): Promise<Response> {
   const now = serverNow(env, req);
   const stored = await load(env, who.playerId);
   if (!stored) return error(404, 'Keine Werkstatt gefunden');
-  if (stored.version !== version) {
-    return error(409, 'Veraltet', { state: touchSeen(advance(stored, now), now), serverNow: now });
+  const pre = catchUp(stored, now);
+  if (pre.catchingUp) {
+    await save(env, who.playerId, stored.version, pre.state);
+    return error(409, 'Deine Werkstatt holt noch auf', { state: pre.state, serverNow: now, catchingUp: true });
   }
-  const result = applyAction(stored, action, now);
+  if (stored.version !== version) return error(409, 'Veraltet', { state: pre.state, serverNow: now });
+  const result = applyAction(pre.state, action, now);
   if (!result.ok) return error(400, result.error);
   if (!(await save(env, who.playerId, stored.version, result.state))) {
     const fresh = (await load(env, who.playerId))!;
-    return error(409, 'Veraltet', { state: touchSeen(advance(fresh, now), now), serverNow: now });
+    return error(409, 'Veraltet', { state: catchUp(fresh, now).state, serverNow: now });
   }
   return json({ state: result.state, events: result.events, serverNow: now });
 }

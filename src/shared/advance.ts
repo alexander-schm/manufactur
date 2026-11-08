@@ -19,26 +19,30 @@ const endOf = (b: Batch) => (b.startedAt ?? 0) + b.durationMs;
 /**
  * Deterministic catch-up: simulate everything that happened between state.lastTick and now.
  * Pure — returns a new state; returns the same object if there is nothing to do.
+ * With maxEvents it stops early (lastTick < now); calling again continues where it left off.
  */
-export function advance(state: GameState, now: number): GameState {
+export function advance(state: GameState, now: number, maxEvents = MAX_ITER): GameState {
   if (now <= state.lastTick) return state;
   const s = structuredClone(state);
   if (now - s.lastSeen > AWAY_LOG_AFTER_MS && !s.away) {
     s.away = { since: s.lastSeen, made: 0, sold: 0, talerEarned: 0, discoveries: [] };
   }
   let t = s.lastTick;
-  for (let i = 0; i < MAX_ITER; i++) {
+  let caughtUp = false;
+  const limit = Math.min(maxEvents, MAX_ITER);
+  for (let i = 0; i < limit; i++) {
     startWork(s, t);
     const next = nextEventTime(s, t);
     const until = next === null || next > now ? now : next;
     sell(s, t, until);
     t = until;
     applyMilestones(s); // unlocks and worker growth take effect the moment they're earned
-    if (next === null || next > now) break;
+    if (next === null || next > now) { caughtUp = true; break; }
     completeDue(s, t);
     applyMilestones(s);
   }
-  s.lastTick = now;
+  // out of budget: remember how far we got; the next call continues from here
+  s.lastTick = caughtUp ? now : t;
   return s;
 }
 
