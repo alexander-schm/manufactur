@@ -119,3 +119,21 @@ describe('[Final review #4] client follows a chunked catch-up', () => {
     expect(store.serverState.value).toEqual(after);
   });
 });
+
+describe('[Final review #5] an idle tab does not re-simulate ever-longer spans', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+  it('tick rebases the local state once it is more than 2 minutes behind', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const s0 = newGame('p', 3, T0);
+    mockFetch([{ status: 200, body: { state: s0, serverNow: T0 } }]);
+    const store = await freshStore();
+    await store.loadState();
+    now.mockReturnValue(T0 + 60_000);
+    store.tick();
+    expect(store.serverState.value!.lastTick).toBe(T0);
+    now.mockReturnValue(T0 + 5 * 60_000);
+    store.tick();
+    expect(store.serverState.value!.lastTick).toBe(T0 + 5 * 60_000);
+    expect(store.serverState.value!.version).toBe(s0.version);
+  });
+});

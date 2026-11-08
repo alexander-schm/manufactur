@@ -18,8 +18,15 @@ export const serverTime = () => Date.now() + clockOffset.value;
 /** The state as it is right now (catch-up simulated locally between server responses). */
 export const view = computed(() => (serverState.value ? advance(serverState.value, now.value + clockOffset.value) : null));
 
+/** Rebase the local copy this far behind so the per-frame catch-up stays tiny. */
+export const REBASE_AFTER_MS = 2 * 60_000;
+
 export function tick(): void {
   now.value = Date.now();
+  const s = serverState.value;
+  const t = now.value + clockOffset.value;
+  // safe because catch-up is path-independent: advancing in steps equals advancing once
+  if (s && t - s.lastTick > REBASE_AFTER_MS) serverState.value = advance(s, t);
 }
 
 let timer: ReturnType<typeof setInterval> | null = null;
