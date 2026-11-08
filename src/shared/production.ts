@@ -1,4 +1,5 @@
-import { getForm, getStationDef, getTrait, MATERIALS, own } from './content';
+import { getForm, getStationDef, getTrait } from './content';
+import { shopPrice } from './village/specialties';
 import type { Batch, Design, GameState, Stage, Station, StationKind, Worker } from './types';
 
 const STAGE_STATION: Record<Stage, StationKind> = {
@@ -12,6 +13,8 @@ export function stationForStage(stage: Stage): StationKind {
 /** The owner always lends a hand; each worker adds this share of the base speed. */
 export const WORKER_SHARE = 0.6;
 export const AWAY_AFTER_MS = 5 * 60_000;
+/** speed bonus while a friend's helping hand is active */
+export const HELP_BOOST = 1.25;
 
 export function workersAt(state: GameState, stationId: string): Worker[] {
   return state.workers.filter((w) => w.stationId === stationId);
@@ -45,6 +48,7 @@ export function stationSpeed(state: GameState, station: Station, stage: Stage, n
     if (other && Math.abs(other.slot - station.slot) === 1) speed *= mul;
   }
   if (now < state.boostUntil) speed *= 2;
+  if (state.village && now < state.village.helpBoostUntil) speed *= HELP_BOOST;
   return speed;
 }
 
@@ -111,7 +115,7 @@ export function startNewBatch(state: GameState, design: Design, count: number, a
     const missing = n - (state.materials[m] ?? 0);
     if (missing > 0) {
       if (!autoBuy) return 'Nicht genug Material';
-      cost += missing * MATERIAL_PRICE(m);
+      cost += missing * shopPrice(state, m);
     }
   }
   if (cost > state.taler) return 'Nicht genug Taler für das Material';
@@ -131,4 +135,3 @@ export function startNewBatch(state: GameState, design: Design, count: number, a
   return null;
 }
 
-const MATERIAL_PRICE = (id: string) => own(MATERIALS, id)?.price ?? 1;

@@ -1,4 +1,5 @@
-import { getStationDef, getTrait } from './content';
+import { getStationDef, getTrait, own } from './content';
+import { SPECIALTIES } from './village/specialties';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { addOrder, nextOrderTime } from './orders';
 import { applyMilestones } from './progression';
@@ -105,8 +106,21 @@ export function nextEventTime(s: GameState, t: number): number | null {
   return next;
 }
 
+/** The village specialty trickles in over time (deterministic, carried fraction). */
+function trickle(s: GameState, from: number, to: number): void {
+  const v = s.village;
+  if (!v?.specialty || to <= from) return;
+  const def = own(SPECIALTIES, v.specialty);
+  if (!def) return;
+  const exact = v.trickleCarry + (def.yieldPerHour * (to - from)) / 3_600_000;
+  const n = Math.floor(exact);
+  v.trickleCarry = exact - n;
+  if (n > 0) s.materials[def.material] = (s.materials[def.material] ?? 0) + n;
+}
+
 function sell(s: GameState, from: number, to: number): void {
   if (to <= from) return;
+  trickle(s, from, to);
   const r = stallSalesBetween(s, from, to);
   if (s.away) { s.away.sold += r.sold; s.away.talerEarned = Math.round((s.away.talerEarned + r.taler) * 100) / 100; }
   if (r.sold > 0) tryUnblock(s);

@@ -3,6 +3,8 @@ import type { GameState, GoodsStack } from './types';
 
 export const QUALITY_MUL: Record<1 | 2 | 3, number> = { 1: 0.8, 2: 1, 3: 1.3 };
 export const STALL_PRICE_FACTOR = 0.8;
+export const MARKTHALLE_PRICE_FACTOR = 0.9;
+export const stallPriceFactor = (s: GameState) => (s.village?.buildings.includes('markthalle') ? MARKTHALLE_PRICE_FACTOR : STALL_PRICE_FACTOR);
 
 export function pieceValue(state: GameState, stack: Pick<GoodsStack, 'designId' | 'quality' | 'effect'>): number {
   const design = state.designs.find((d) => d.id === stack.designId);
@@ -95,7 +97,7 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
     budget.left[i] -= k;
     g.count -= k;
     sold += k;
-    taler += k * pieceValue(state, g) * STALL_PRICE_FACTOR;
+    taler += k * pieceValue(state, g) * stallPriceFactor(state);
   }
   if (state.goods.some((g) => g.count === 0)) state.goods = state.goods.filter((g) => g.count > 0);
   taler = Math.round(taler * 100) / 100;

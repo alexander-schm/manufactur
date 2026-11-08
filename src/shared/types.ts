@@ -19,6 +19,8 @@ export interface Design {
   pattern: PatternKind;
   /** css colour */
   patternColor: string;
+  /** set on designs that arrived as gifts: drawn with the giver's mark, never produced here */
+  origin?: { playerName: string; makerMark: MakerMark };
 }
 
 export interface FiringSettings {
@@ -120,4 +122,22 @@ export interface GameState {
   lastOrderAt: number;
   /** fractional pieces sold by the stall, carried between events */
   stallCarry: number;
+  /** the player's village, as last written by the village (null for players outside a village) */
+  village: VillageSnapshot | null;
+  /** decor items owned / placed in the workshop */
+  decor: string[];
+  decorPlaced: string[];
+}
+
+export interface VillageSnapshot {
+  villageId: string;
+  /** material id of this player's land specialty */
+  specialty: string | null;
+  buildings: string[];
+  /** ×1.25 speed while now < this (friends lending a hand) */
+  helpBoostUntil: number;
+  /** fractional specialty units carried between catch-ups */
+  trickleCarry: number;
+  /** member count — foreign specialties only cost more once there's someone to trade with */
+  members: number;
 }

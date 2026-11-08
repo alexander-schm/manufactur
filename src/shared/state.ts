@@ -4,7 +4,7 @@ import { addOrder } from './orders';
 import { nextRandom, pick } from './rng';
 import type { Design, GameState, GlazeRecipe, Station, StationKind, Worker } from './types';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export { newId };
 
@@ -36,7 +36,7 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
     boostUntil: 0, lastSeen: now, away: null, cooldowns: {}, avatarSeed: seed >>> 0,
     makerMark: { shape: 'circle', letter: 'M', color: '#b44c36' }, nextId: 1,
     stats: { made: 0, sold: 0, ordersDone: 0, experiments: 0, designsSaved: 0, effectsFound: 0 },
-    lastOrderAt: now, stallCarry: 0,
+    lastOrderAt: now, stallCarry: 0, village: null, decor: [], decorPlaced: [],
   };
   s.stations = ROOM1.map((kind, slot): Station => ({ id: newId(s, 's'), kind, level: 1, slot }));
   const first = rollWorker(s);
@@ -62,6 +62,11 @@ export function migrateState(raw: unknown): GameState {
   const s = raw as GameState;
   for (const k of REQUIRED_KEYS) if (!(k in s)) throw new Error(`Spielstand unvollständig: ${String(k)}`);
   if (s.schemaVersion > SCHEMA_VERSION) throw new Error('Spielstand ist neuer als das Spiel');
-  // future: step-wise upgrades `if (s.schemaVersion === 1) { ...; s.schemaVersion = 2 }`
+  if (s.schemaVersion === 1) {
+    s.village = null;
+    s.decor = [];
+    s.decorPlaced = [];
+    s.schemaVersion = 2;
+  }
   return s;
 }
