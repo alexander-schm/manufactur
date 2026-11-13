@@ -36,8 +36,10 @@ function inviteCode(): string {
   return Array.from(randomBytes(6), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
 }
 
-function sessionCookie(token: string, maxAge = SESSION_TTL_S): string {
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+/** `Secure` only over https: browsers drop Secure cookies on plain http (Safari even on localhost, all of them on a LAN IP). */
+function sessionCookie(req: Request, token: string, maxAge = SESSION_TTL_S): string {
+  const secure = new URL(req.url).protocol === 'https:' ? ' Secure;' : '';
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
 export const MAX_BODY = 32 * 1024;
@@ -118,7 +120,7 @@ export async function handleFound(req: Request, env: Env): Promise<Response> {
   if (p instanceof Response) return p;
   await joinVillage(env, villageId, p.playerId);
   const token = await createSession(env, p.playerId);
-  return json({ inviteCode: code }, 201, { 'set-cookie': sessionCookie(token) });
+  return json({ inviteCode: code }, 201, { 'set-cookie': sessionCookie(req, token) });
 }
 
 export async function handleJoin(req: Request, env: Env): Promise<Response> {
@@ -149,7 +151,7 @@ export async function handleJoin(req: Request, env: Env): Promise<Response> {
     return error(409, joined.error);
   }
   const token = await createSession(env, p.playerId);
-  return json({ inviteCode: code, villageName: village.name }, 201, { 'set-cookie': sessionCookie(token) });
+  return json({ inviteCode: code, villageName: village.name }, 201, { 'set-cookie': sessionCookie(req, token) });
 }
 
 export async function handleLogin(req: Request, env: Env): Promise<Response> {
@@ -170,7 +172,7 @@ export async function handleLogin(req: Request, env: Env): Promise<Response> {
   }
   await clearFailures(env, limitKey);
   const token = await createSession(env, row.id);
-  return json({ ok: true }, 200, { 'set-cookie': sessionCookie(token) });
+  return json({ ok: true }, 200, { 'set-cookie': sessionCookie(req, token) });
 }
 
 function readCookie(req: Request, name: string): string | null {
@@ -185,7 +187,7 @@ function readCookie(req: Request, name: string): string | null {
 export async function handleLogout(req: Request, env: Env): Promise<Response> {
   const token = readCookie(req, SESSION_COOKIE);
   if (token) await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
-  return new Response(null, { status: 204, headers: { 'set-cookie': sessionCookie('', 0) } });
+  return new Response(null, { status: 204, headers: { 'set-cookie': sessionCookie(req, '', 0) } });
 }
 
 export async function requirePlayer(req: Request, env: Env): Promise<{ playerId: string; villageId: string } | Response> {

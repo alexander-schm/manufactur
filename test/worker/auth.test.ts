@@ -22,6 +22,16 @@ describe('accounts', () => {
     expect(c).toMatch(/SameSite=Lax/i);
     expect(c).toMatch(/Max-Age=7776000/);
   });
+  it('session cookie over plain http is not Secure (browsers would drop it)', async () => {
+    const res = await (await import('cloudflare:test')).SELF.fetch('http://x/api/found', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ villageName: 'Dorf', name: uniqueName(), password: 'geheim123' }),
+    });
+    const c = res.headers.get('set-cookie')!;
+    expect(c).toMatch(/^mf_session=/);
+    expect(c).not.toMatch(/Secure/i);
+    expect(c).toMatch(/HttpOnly/i);
+  });
   it('join with the invite code works; wrong code is 404', async () => {
     const f = await found();
     const j = await call('POST', '/api/join', { inviteCode: f.json.inviteCode.toLowerCase(), name: uniqueName('Gast'), password: 'geheim123' });
