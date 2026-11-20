@@ -110,7 +110,7 @@ These need new art in `Pot.tsx` / `potShape.ts` and go through a screenshot revi
 
 ### 5.6 Milestone ladder (continuing after 72 Ruf)
 
-Extend `MILESTONES` with a long chain spread over weeks. Each step unlocks something small and visible: a pattern, a handle or rim style, a maker's-mark frame, a decor item, a new glaze colourant (for example `mangan`, purple-brown), or a customer. Kinds of triggers:
+Extend `MILESTONES` with a long chain spread over weeks. Each step unlocks something small and visible: a pattern, a handle or rim style, a maker's-mark frame (new optional `MakerMark.frame`: a drawn ring around the mark wherever it is shown), a decor item, a new glaze colourant (for example `mangan`, purple-brown), or a customer. Kinds of triggers:
 
 - Ruf 250 / 400 / 600 / 1000 / 1500 / 2500 (above the 200 that level 5 already requires)
 - first stoneware piece, first porcelain piece
