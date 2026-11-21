@@ -1,6 +1,6 @@
-import { collectionEntries } from '../../shared/collection';
+import { collectionEntries, recordCollection } from '../../shared/collection';
 import { BODIES } from '../../shared/content';
-import { glazeColor } from '../../shared/discovery';
+import { discoveredEffects, glazeColor } from '../../shared/discovery';
 import { generateCommission } from '../../shared/masterwork';
 import { MILESTONES } from '../../shared/progression';
 import type { Batch, Design, GameState, MasterworkRecord, Prestige, StationKind, Tier } from '../../shared/types';
@@ -54,7 +54,15 @@ export function mockEndgame(now: number, tier: Tier = 'manufaktur'): GameState {
     record('mw3', teapot, 'gold', 3, 3, 200),
   ];
   s.commission = generateCommission(s);
-  s.collection = collectionEntries().filter((e) => e.body === 'irdenware' || e.effect === null).slice(0, 20).map((e) => e.key);
+  // the collection only holds what this player could have made: every irdenware piece in a discovered effect
+  // (so the "ohne" and Craquelé columns are complete and wear their ribbons), a few stoneware pieces
+  s.collection = [];
+  s.collectionRewards = [];
+  const known = discoveredEffects(s);
+  for (const e of collectionEntries()) {
+    const made = e.body === 'irdenware' ? e.effect === null || known.includes(e.effect) : (e.effect === null && e.form !== 'teller') || (e.form === 'teekanne' && e.effect === 'oelfleck');
+    if (made) recordCollection(s, e.form, e.body, e.effect);
+  }
   s.decor = [...new Set([...s.decor, ...ENDGAME_DECOR])];
   s.decorPlaced = [...ENDGAME_DECOR];
   s.keepStock = { ton: 500 };

@@ -31,8 +31,8 @@ export function collectionEntries(): CollectionEntry[] {
   return build();
 }
 
-const rowId = (body: BodyId, form: string): string => `r|${body}|${form}`;
-const colId = (body: BodyId, effect: string | null): string => `c|${body}|${effect ?? '-'}`;
+export const rowId = (body: BodyId, form: string): string => `r|${body}|${form}`;
+export const colId = (body: BodyId, effect: string | null): string => `c|${body}|${effect ?? '-'}`;
 
 function complete(s: GameState, members: CollectionEntry[]): boolean {
   const have = new Set(s.collection);

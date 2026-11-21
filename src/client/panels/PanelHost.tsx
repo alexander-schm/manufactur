@@ -50,7 +50,7 @@ export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: str
   else if (id === 'workshop') body = <WorkshopPanel s={s} onOpen={onOpen} />;
   else if (id === 'station') body = <StationPanel s={s} stationId={arg ?? ''} onOpen={onOpen} />;
   else if (id === 'studio') body = <DesignStudio s={s} tab={arg} />;
-  else if (id === 'recipes') body = <RecipeBook s={s} />;
+  else if (id === 'recipes') body = <RecipeBook s={s} tab={arg} />;
   else if (id === 'village') return <Sheet title={`Dorf ${me.value?.villageName ?? ''}`} onClose={onClose} wide><VillagePanel tab={arg} /></Sheet>;
   else body = <MarketPanel s={s} />;
   return <Sheet title={title} onClose={onClose}>{body}</Sheet>;

@@ -1,7 +1,10 @@
 import { BODIES, EFFECTS, MATERIALS, bodyAvailable, bodyOf, getBody, getTier } from '../../shared/content';
 import { discoveredEffects } from '../../shared/discovery';
 import type { GameState, GlazeRecipe } from '../../shared/types';
+import { useState } from 'preact/hooks';
 import { inkStyle } from '../art/ink';
+import { Tabs } from '../ui/Tabs';
+import { CollectionBook } from './CollectionBook';
 
 const FIRING = (g: GlazeRecipe) => `${g.firing.temp}, ${g.firing.atmosphere === 'reduzierend' ? 'Reduktion' : 'viel Luft'}, ${g.firing.cooling} abkühlen`;
 
@@ -14,7 +17,7 @@ function Swatch({ color, effect }: { color: string; effect: string | null }) {
   );
 }
 
-export function RecipeBook({ s }: { s: GameState }) {
+function GlazeBook({ s }: { s: GameState }) {
   const found = discoveredEffects(s);
   const undiscovered = Object.values(EFFECTS).filter((e) => !found.includes(e.id));
   const missing = undiscovered.filter((e) => !e.body || bodyAvailable(s, e.body));
@@ -49,6 +52,19 @@ export function RecipeBook({ s }: { s: GameState }) {
         ))}
         {hiddenTiers.map((t) => <p class="muted">{`+${hidden.filter((e) => getBody(e.body!).tier === t).length} weitere Effekte ab der ${getTier(t).name}`}</p>)}
         {missing.length === 0 && hidden.length === 0 && <p>Du hast alle Effekte entdeckt! Meisterlich.</p>}
+      </div>
+    </div>
+  );
+}
+
+/** The recipe book: own glazes on one tab, the collection (Sammlung) on the other. */
+export function RecipeBook({ s, tab: initial }: { s: GameState; tab?: string }) {
+  const [tab, setTab] = useState<'glazes' | 'sammlung'>(initial === 'sammlung' ? 'sammlung' : 'glazes');
+  return (
+    <div>
+      <Tabs tabs={[{ id: 'glazes', label: 'Glasuren' }, { id: 'sammlung', label: 'Sammlung' }]} value={tab} onChange={setTab} />
+      <div class="tab-body">
+        {tab === 'glazes' ? <GlazeBook s={s} /> : <CollectionBook s={s} />}
       </div>
     </div>
   );
