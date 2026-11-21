@@ -150,7 +150,14 @@ if (!v.news.some((n) => n.text.includes('abgekühlt'))) fail('no cooled-down new
 console.log('great kiln: ok, 12 pieces fired');
 
 if (v.projects.offered.length < 1) fail('no projects offered');
-const projectId = v.projects.offered[0];
+// pick the offer whose first stage has the most material parts (the project data comes straight from the dev server's module graph),
+// so A can buy at least half the stage in the village store and the Taler remainder below must hit the 70 % cap
+const firstStageMaterials = await A.evaluate(async (ids) => {
+  const { PROJECTS } = await import('/src/shared/village/projects.ts');
+  return Object.fromEntries(ids.map((id) => [id, PROJECTS[id].stages[0].parts.filter((p) => p.kind === 'material').length]));
+}, v.projects.offered);
+const projectId = [...v.projects.offered].sort((x, y) => firstStageMaterials[y] - firstStageMaterials[x])[0];
+if (firstStageMaterials[projectId] < 2) fail(`${projectId} has only ${firstStageMaterials[projectId]} material parts in stage 1`);
 const proj = async (p, part, count, source = 'store') => api(p, 'POST', '/api/village/action', { action: { type: 'contributeProject', projectId, part, count, source } });
 const projOk = async (p, part, count, source) => { const r = await proj(p, part, count, source); if (r.status !== 200) fail(`contributeProject: ${r.status} ${JSON.stringify(r.json)}`); return r.json.village; };
 const stageOf = async () => (await api(A, 'GET', '/api/village')).json.village.projects.active;
@@ -170,8 +177,10 @@ for (let part = 0; part < nParts(); part++) {
   const p = act1.parts[part];
   if (p.kind !== 'material') continue;
   const size = p.count, left = size - p.filled;
-  const share = act1.parts.reduce((t, q) => t + ((q.by[idA] ?? 0) / (q.kind === 'taler' ? q.amount : q.count)) / nParts(), 0);
-  let n = Math.min(left, Math.floor((0.7 - share) * size * nParts() + 1e-9));
+  // masterwork parts weigh nothing (stageShares in src/shared/village/projects.ts)
+  const valued = act1.parts.filter((q) => q.kind !== 'masterwork').length;
+  const share = act1.parts.reduce((t, q) => t + (q.kind === 'masterwork' ? 0 : ((q.by[idA] ?? 0) / (q.kind === 'taler' ? q.amount : q.count)) / valued), 0);
+  let n = Math.min(left, Math.floor((0.7 - share) * size * valued + 1e-9));
   while (n > 0) { const r = await proj(A, part, n); if (r.status === 200) break; n = Math.floor(n / 2); }
 }
 act1 = await stageOf();
