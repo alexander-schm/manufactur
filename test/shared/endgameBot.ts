@@ -3,8 +3,8 @@ import { advance } from '../../src/shared/advance';
 import { getStationDef, nextTier, stationTierGate } from '../../src/shared/content';
 import { glazeForDesign } from '../../src/shared/design';
 import { goodsTotal, pieceValue, shelfCapacity } from '../../src/shared/market';
-import { kilnCapacity } from '../../src/shared/production';
-import type { GameState } from '../../src/shared/types';
+import { batchMaterials, kilnCapacity } from '../../src/shared/production';
+import type { Design, GameState } from '../../src/shared/types';
 
 const H = 3_600_000;
 const DAY = 24 * H;
@@ -13,7 +13,8 @@ const CHECK_INS = [8, 13, 20];
 
 /**
  * A mid/late-game player who looks in three times a day: delivers what fits, sells out a full shelf,
- * keeps the best own design in production (turning down orders it can never fill), buys the next tier as soon as it can and upgrades the cheapest station it can afford.
+ * keeps the best own design in production, keeps one earthenware line for plain orders (side batches of an own earthenware design, preferably in the standing form),
+ * turns down orders it can never fill, buys the next tier as soon as it can and upgrades the cheapest station it can afford.
  * `tierDay[tier]` is the 1-based day on which that tier was bought.
  */
 export function endgameBot(state: GameState, days: number): { state: GameState; tierDay: Record<string, number> } {
@@ -29,10 +30,15 @@ export function endgameBot(state: GameState, days: number): { state: GameState; 
       if (goodsTotal(s) >= 0.9 * shelfCapacity(s)) for (const g of [...s.goods]) act({ type: 'sellNow', designId: g.designId, quality: g.quality, effect: g.effect, count: g.count });
       const best = bestDesign(s);
       if (best && s.standing?.designId !== best) act({ type: 'setStanding', designId: best, batchSize: kilnCapacity(s), autoBuy: true });
-      // Beyond the plain brief: orders the standing design can never fill (other form or body; an order without a body wants earthenware) would fill all MAX_ORDERS
+      // An order without a body wants earthenware: like a real player, the bot runs a side batch of its own earthenware design in that form.
+      makeEarthenware(s, act);
+      // Beyond the plain brief: orders neither the standing design nor the earthenware line can ever fill would take all MAX_ORDERS
       // slots for good and freeze Ruf, so the bot turns them down like a real player would.
       const made = s.designs.find((d) => d.id === s.standing?.designId);
-      for (const o of [...s.orders]) if (made && (o.form !== made.form || (o.body ?? 'irdenware') !== made.body)) act({ type: 'declineOrder', orderId: o.id });
+      for (const o of [...s.orders]) {
+        const standingFits = made && o.form === made.form && (o.body ?? 'irdenware') === made.body;
+        if (made && !standingFits && !(!o.body && earthenwareFor(s, o.form))) act({ type: 'declineOrder', orderId: o.id });
+      }
       const next = nextTier(s);
       if (next && s.ruf >= next.ruf && s.taler >= next.price && act({ type: 'upgradeTier' })) tierDay[next.id] = day + 1;
       const cheapest = cheapestUpgrade(s);
@@ -53,6 +59,37 @@ function deliverAll(s: GameState, act: (a: Action) => boolean): void {
       .sort((a, b) => b.quality - a.quality || (b.effect ? 1 : 0) - (a.effect ? 1 : 0));
     const g = fits[0];
     if (g) act({ type: 'deliverOrder', orderId: o.id, designId: g.designId, quality: g.quality, effect: g.effect });
+  }
+}
+
+/** The bot's one earthenware line: its own earthenware design in the standing design's form (or, failing that, its most valuable one). Null for other forms. */
+function earthenwareFor(s: GameState, form: string): Design | null {
+  const standing = s.designs.find((d) => d.id === s.standing?.designId);
+  let best: Design | null = null, bestScore = -1;
+  for (const d of s.designs) {
+    if (d.origin || (d.body ?? 'irdenware') !== 'irdenware') continue;
+    const score = (standing && d.form === standing.form ? 1000 : 0) + pieceValue(s, { designId: d.id, quality: 2, effect: glazeForDesign(s, d)?.effect ?? null });
+    if (score > bestScore) { bestScore = score; best = d; }
+  }
+  return best && best.form === form ? best : null;
+}
+
+/** For each form with open plain orders the shelf can't cover, queue one kiln-sized earthenware batch unless one is already under way. */
+function makeEarthenware(s: GameState, act: (a: Action) => boolean): void {
+  const forms: string[] = [];
+  for (const o of s.orders) if (!o.body && !forms.includes(o.form)) forms.push(o.form);
+  for (const form of forms) {
+    const d = earthenwareFor(s, form);
+    if (!d || d.id === s.standing?.designId || s.batches.some((b) => b.designId === d.id)) continue;
+    const want = s.orders.filter((o) => !o.body && o.form === form).reduce((n, o) => n + o.count, 0);
+    const have = s.goods.filter((g) => g.designId === d.id).reduce((n, g) => n + g.count, 0);
+    if (have >= want) continue;
+    const count = Math.min(kilnCapacity(s), Math.max(want - have, 6));
+    for (const [material, n] of Object.entries(batchMaterials(s, d, count))) {
+      const missing = Math.ceil(n - (s.materials[material] ?? 0));
+      if (missing > 0) act({ type: 'buyMaterial', material, amount: missing });
+    }
+    act({ type: 'queueBatch', designId: d.id, count });
   }
 }
 
