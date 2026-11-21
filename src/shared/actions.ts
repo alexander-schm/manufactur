@@ -10,11 +10,13 @@ import { checkMilestones, touchSeen } from './progression';
 import { rollWorker } from './state';
 import { hasBuilding } from './village/buildings';
 import { DECOR, MAX_DECOR_PLACED } from './village/decor';
+import { MAX_BUY, buyError } from './shop';
 import { shopPrice } from './village/specialties';
 import type { BodyId, Design, GameState, GlazeRecipe, MakerMark, StationKind } from './types';
 
 export type Action =
   | { type: 'buyMaterial'; material: string; amount: number }
+  | { type: 'setKeepStock'; material: string; target: number }
   | { type: 'queueBatch'; designId: string; count: number }
   | { type: 'setStanding'; designId: string | null; batchSize?: number; autoBuy?: boolean }
   | { type: 'hire'; workerId: string }
@@ -37,7 +39,7 @@ export type Action =
   | { type: 'ackMilestone'; id: string };
 
 export type ActionType = Action['type'];
-export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'upgradeTier', 'buildStation', 'saveDesign',
+export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'setKeepStock', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'upgradeTier', 'buildStation', 'saveDesign',
   'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'placeDecor', 'removeDecor', 'ackAway', 'ackMilestone'];
 
 export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
@@ -84,13 +86,21 @@ function needUnlock(s: GameState, id: string, msg: string) {
 function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
   switch (a.type) {
     case 'buyMaterial': {
-      const m = own(MATERIALS, a.material) ?? fail('Unbekanntes Material');
-      if (m.locked || (m.unlock && !s.unlocks.includes(m.unlock))) fail(`${m.name} gibt es hier noch nicht zu kaufen`);
-      if (!isInt(a.amount, 1, 1000)) fail('Ungültige Menge');
+      const err = buyError(s, a.material);
+      if (err) fail(err);
+      if (!isInt(a.amount, 1, MAX_BUY)) fail('Ungültige Menge');
       const cost = Math.round(shopPrice(s, a.material) * a.amount * 100) / 100;
       if (cost > s.taler) fail('Nicht genug Taler');
       s.taler = Math.round((s.taler - cost) * 100) / 100;
       s.materials[a.material] = (s.materials[a.material] ?? 0) + a.amount;
+      return;
+    }
+    case 'setKeepStock': {
+      const err = buyError(s, a.material);
+      if (err) fail(err);
+      if (!isInt(a.target, 0, MAX_BUY)) fail('Ungültige Menge');
+      if (a.target === 0) delete s.keepStock[a.material];
+      else s.keepStock[a.material] = a.target;
       return;
     }
     case 'queueBatch': {

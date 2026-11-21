@@ -5,6 +5,7 @@ import { addOrder, nextOrderTime } from './orders';
 import { applyMilestones } from './progression';
 import { baysOf, kilnCapacity, kilnLoad, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
 import { nextRandom } from './rng';
+import { restock } from './shop';
 import { newId } from './state';
 import { STAGES, type Batch, type GameState, type Station } from './types';
 
@@ -72,6 +73,7 @@ function canStartOn(s: GameState, st: Station, b: Batch): boolean {
 }
 
 export function startWork(s: GameState, t: number): void {
+  restock(s);
   // standing order: keep the pipeline fed
   if (s.standing && s.batches.length < standingPipeline(s) && !s.batches.some((b) => b.stage === 'prepare')) {
     const design = s.designs.find((d) => d.id === s.standing!.designId);
