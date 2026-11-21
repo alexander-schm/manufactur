@@ -1,4 +1,4 @@
-import { FORMS, bodyOf, own } from './content';
+import { BODIES, FORMS, bodyAvailable, bodyOf, getBody, getTier, own } from './content';
 import { designDifficultyOf } from './production';
 import type { Design, GameState, GlazeRecipe, Taste } from './types';
 
@@ -63,6 +63,14 @@ export function appeal(d: Design, glaze: GlazeRecipe | undefined, taste: Taste):
 const HEX = /^#[0-9a-f]{6}$/i;
 const PROFILE_KEYS = ['height', 'belly', 'neck', 'foot', 'rim'] as const;
 
+/** German rejection for an unknown clay body or one the workshop's tier does not offer yet; null when usable. */
+export function bodyGateError(state: GameState, id: unknown): string | null {
+  const body = own(BODIES, id);
+  if (!body) return 'Unbekannte Tonsorte';
+  if (!bodyAvailable(state, body.id)) return `${body.name} gibt es erst ab der ${getTier(body.tier).name}`;
+  return null;
+}
+
 export function validateDesign(d: Design, state: GameState): string | null {
   if (!d || typeof d !== 'object') return 'Ungültiger Entwurf';
   if (typeof d.name !== 'string' || d.name.trim().length < 1 || d.name.length > 30) return 'Der Name muss 1–30 Zeichen lang sein';
@@ -78,7 +86,12 @@ export function validateDesign(d: Design, state: GameState): string | null {
   if (d.handle !== 'none' && !form.handleAllowed) return `${form.plural} haben keinen Henkel`;
   if (!['plain', 'rolled', 'flared'].includes(d.rim)) return 'Unbekannter Rand';
   if ((d.handle === 'ear' || d.handle === 'loop' || d.rim !== 'plain') && !state.unlocks.includes('formdetails')) return 'Diese Henkel und Ränder sind noch nicht freigeschaltet';
-  if (!state.glazes.some((g) => g.id === d.glazeId)) return 'Diese Glasur kennst du noch nicht';
+  const bodyId = d.body ?? 'irdenware';
+  const bodyErr = bodyGateError(state, bodyId);
+  if (bodyErr) return bodyErr;
+  const glaze = state.glazes.find((g) => g.id === d.glazeId);
+  if (!glaze) return 'Diese Glasur kennst du noch nicht';
+  if (bodyOf(glaze) !== bodyId) return `Diese Glasur ist für ${getBody(bodyOf(glaze)).name} – für ${getBody(bodyId).name} brauchst du eine eigene`;
   if (!['none', 'stripes', 'dots', 'waves', 'leaves'].includes(d.pattern)) return 'Unbekanntes Muster';
   if ((d.pattern === 'waves' || d.pattern === 'leaves') && !state.unlocks.includes('patterns2')) return 'Dieses Muster ist noch nicht freigeschaltet';
   if (!HEX.test(d.patternColor)) return 'Ungültige Musterfarbe';

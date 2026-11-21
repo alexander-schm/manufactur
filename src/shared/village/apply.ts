@@ -56,7 +56,7 @@ export function take(s: GameState, ref: GiveRef, makerName: string, makerMark: M
 export function importStack(s: GameState, t: TransferStack): void {
   const { id: _id, ...rest } = t.design;
   const key = 'f:' + hash(JSON.stringify({ ...rest, name: t.design.name, origin: t.design.origin }));
-  if (!s.designs.some((d) => d.id === key)) s.designs.push({ ...structuredClone(t.design), id: key });
+  if (!s.designs.some((d) => d.id === key)) s.designs.push({ ...structuredClone(t.design), id: key, body: t.design.body ?? 'irdenware' });
   addGoods(s, { designId: key, quality: t.quality, effect: t.effect, count: t.count });
 }
 

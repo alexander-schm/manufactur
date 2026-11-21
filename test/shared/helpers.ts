@@ -29,3 +29,11 @@ export function manufakturGame(seed = 1): GameState {
   s.milestonesAcked = [...held];
   return s;
 }
+
+/** A plain game with a standing order of 6 of the first design. */
+export function withStanding(seed = 1): GameState {
+  const s = plainGame(seed);
+  s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
+  s.stallDesignIds = [];
+  return s;
+}

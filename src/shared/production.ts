@@ -1,4 +1,4 @@
-import { getForm, getStationDef, getTrait } from './content';
+import { bodyOf, getBody, getForm, getStationDef, getTrait } from './content';
 import { shopPrice } from './village/specialties';
 import type { Batch, Design, GameState, Stage, Station, StationKind, Worker } from './types';
 
@@ -56,11 +56,15 @@ export function stageDurationMs(state: GameState, batch: Batch, station: Station
   const speed = stationSpeed(state, station, batch.stage, now) * (batch.touch ?? 1);
   // harder designs take longer at the wheel and the glaze table (spec §4.3)
   let difficulty = 1;
-  if (batch.stage === 'form' || batch.stage === 'glaze') {
+  let fireMul = 1;
+  if (batch.stage === 'form' || batch.stage === 'glaze' || batch.stage === 'glazeFire') {
     const d = state.designs.find((x) => x.id === batch.designId);
-    if (d) difficulty = designDifficultyOf(d);
+    if (d) {
+      if (batch.stage === 'glazeFire') fireMul = getBody(bodyOf(d)).glazeFireMul;
+      else difficulty = designDifficultyOf(d);
+    }
   }
-  return Math.round(((batch.count * difficulty) / speed) * 60_000);
+  return Math.round(((batch.count * difficulty * fireMul) / speed) * 60_000);
 }
 
 export function designDifficultyOf(design: Design): number {
@@ -68,7 +72,7 @@ export function designDifficultyOf(design: Design): number {
   const p = design.profile;
   const shape = 1 + Math.max(0, p.height - 0.5) * 0.4 + Math.abs(p.belly - p.neck) * 0.3;
   const extras = (design.handle !== 'none' ? 0.1 : 0) + (design.pattern !== 'none' ? 0.15 : 0) + (design.rim !== 'plain' ? 0.05 : 0);
-  return Math.min(2, Math.max(0.5, form.baseDifficulty * shape + extras));
+  return Math.min(2, Math.max(0.5, form.baseDifficulty * shape + extras)) + getBody(bodyOf(design)).difficultyAdd;
 }
 
 export function batchQuality(state: GameState, design: Design, workers: Worker[]): number {
@@ -91,7 +95,7 @@ export function qualityTier(q: number): 1 | 2 | 3 {
 /** Materials needed to start a batch. */
 export function batchMaterials(state: GameState, design: Design, count: number): Record<string, number> {
   const form = getForm(design.form);
-  const need: Record<string, number> = { ton: Math.ceil(count * form.clayPerPiece), glasurbasis: Math.ceil(count / 4) };
+  const need: Record<string, number> = { [getBody(bodyOf(design)).material]: Math.ceil(count * form.clayPerPiece), glasurbasis: Math.ceil(count / 4) };
   const glaze = state.glazes.find((g) => g.id === design.glazeId);
   if (glaze?.colorant) need[glaze.colorant] = (need[glaze.colorant] ?? 0) + Math.ceil(count / 5);
   return need;

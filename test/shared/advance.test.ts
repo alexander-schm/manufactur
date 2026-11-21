@@ -2,19 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
 import { getStationDef } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
-import { plainGame, T0 } from './helpers';
+import { plainGame, T0, withStanding } from './helpers';
 
 const MIN = 60_000;
 const H = 60 * MIN;
 const goodsCount = (s: GameState) => s.goods.reduce((a, g) => a + g.count, 0);
 const shelfCap = (s: GameState) => { const sh = s.stations.find((x) => x.kind === 'shelf')!; return getStationDef('shelf').capacity![sh.level - 1]; };
-
-function withStanding(seed = 1): GameState {
-  const s = plainGame(seed);
-  s.standing = { designId: s.designs[0].id, batchSize: 6, autoBuy: true };
-  s.stallDesignIds = [];
-  return s;
-}
 
 describe('advance', () => {
   it('produces the first batch of 6 cups after 150–210 s', () => {
