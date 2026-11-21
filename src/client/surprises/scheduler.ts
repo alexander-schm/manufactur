@@ -32,8 +32,15 @@ export function createScheduler(defs: SurpriseDef[], env: SurpriseEnv, opts: Opt
   let nextRollAt = env.now() + span(opts.firstRollMs);
 
   const cooldownOf = (d: SurpriseDef, dflt: number) => d.cooldownMs ?? dflt;
-  const offCooldown = (d: SurpriseDef, now: number, dflt: number) => {
-    const last = env.store.load()[d.id];
+  // Storage can throw (private mode, quota); the in-memory copy keeps cooldowns working in-session.
+  const mem: Record<string, number> = {};
+  const loadStore = (): Record<string, number> => {
+    let stored: Record<string, number> = {};
+    try { stored = env.store.load(); } catch { /* fall back to memory */ }
+    return { ...stored, ...mem };
+  };
+  const offCooldown = (d: SurpriseDef, now: number, dflt: number, store: Record<string, number>) => {
+    const last = store[d.id];
     return last === undefined || last + cooldownOf(d, dflt) <= now;
   };
   const albumOf = (d: SurpriseDef, c: SurpriseCtx) => (d.pickAlbum ? d.pickAlbum(c) : (d.album[0] ?? null));
@@ -45,13 +52,15 @@ export function createScheduler(defs: SurpriseDef[], env: SurpriseEnv, opts: Opt
     };
     if (data) play.data = data;
     plays = plays.filter((p) => p.id !== d.id).concat(play);
-    env.store.save({ ...env.store.load(), [d.id]: c.now });
+    mem[d.id] = c.now;
+    try { env.store.save(loadStore()); } catch { /* memory copy still holds */ }
     opts.onStart?.(play, albumOf(d, c));
     return play;
   }
 
   function roll(c: SurpriseCtx): Play | null {
-    const eligible = mine.filter((d) => d.trigger.kind === 'ambient' && (!d.when || d.when(c)) && offCooldown(d, c.now, COOLDOWN[d.rarity]));
+    const store = loadStore();
+    const eligible = mine.filter((d) => d.trigger.kind === 'ambient' && (!d.when || d.when(c)) && offCooldown(d, c.now, COOLDOWN[d.rarity], store));
     const weights = eligible.map((d) => CHANCE[d.rarity] * (d.album.some((a) => c.s.curiosities[a] !== undefined) ? 1 : UNDISCOVERED_BOOST));
     const sum = weights.reduce((a, b) => a + b, 0);
     const scale = sum > 1 ? 1 / sum : 1;
@@ -91,8 +100,9 @@ export function createScheduler(defs: SurpriseDef[], env: SurpriseEnv, opts: Opt
     click(target, c, data) {
       const lock = comboLock.get(target);
       if (lock !== undefined && lock > c.now) return null;
+      const store = loadStore();
       const cands = mine.filter((d) => d.trigger.kind === 'click' && d.trigger.target === target
-        && (!d.when || d.when(c)) && offCooldown(d, c.now, 0));
+        && (!d.when || d.when(c)) && offCooldown(d, c.now, 0, store));
       const maxWindow = Math.max(0, ...cands.map((d) => (d.trigger.kind === 'click' && d.trigger.combo?.withinMs) || 0));
       const times = (clicks.get(target) ?? []).filter((t) => t > c.now - maxWindow).concat(c.now);
       clicks.set(target, times);

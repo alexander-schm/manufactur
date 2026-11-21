@@ -32,21 +32,19 @@ const ambient = (id: string, extra: Partial<SurpriseDef> = {}): SurpriseDef => (
 const opts = { where: ['workshop' as const], firstRollMs: [20_000, 40_000] as [number, number] };
 
 describe('surprise scheduler', () => {
-  it('first ambient roll comes inside the first-roll window, then every 60–120 s', () => {
-    // randoms: first-roll timing, roll, seed, next-roll timing, roll, seed
-    const { env } = fakeEnv({ randoms: [0, 0, 0.5, 0, 0, 0.5] });
+  it('first ambient roll comes inside the first-roll window; the 20-minute cooldown then blocks the next roll', () => {
+    // randoms: first-roll timing, roll, seed, next-roll timing
+    const { env } = fakeEnv({ randoms: [0, 0, 0.5, 0] });
     const sx = createScheduler([ambient('a', { durationMs: 1_000 })], env, opts);
     expect(sx.tick(ctx(T0 + 19_999))).toBe(false);
     expect(sx.plays()).toEqual([]);
     expect(sx.tick(ctx(T0 + 20_000))).toBe(true);
     expect(sx.plays().map((p) => p.id)).toEqual(['a']);
     expect(sx.plays()[0]!.seed).toBe(2 ** 31);
-    // next roll at +20 s + 60 s (cooldown is overridden by clearing the store below)
     sx.tick(ctx(T0 + 21_000)); // play ended
     expect(sx.plays()).toEqual([]);
     expect(sx.tick(ctx(T0 + 79_999))).toBe(false);
-    // 20 min cooldown still blocks the second roll
-    sx.tick(ctx(T0 + 80_000));
+    sx.tick(ctx(T0 + 80_000)); // roll is due, but 'a' is on cooldown
     expect(sx.plays()).toEqual([]);
   });
 
@@ -213,5 +211,22 @@ describe('surprise scheduler', () => {
     const sx = createScheduler(defs, fakeEnv({ randoms: [0, 0.999] }).env, opts);
     sx.tick(ctx(T0 + 20_000));
     expect(sx.plays().map((p) => p.id)).toEqual(['d19']);
+  });
+
+  it('a throwing store neither breaks tick/click nor loses onStart; the cooldown holds in-session', () => {
+    const { env } = fakeEnv({ randoms: [0, 0, 0, 0, 0, 0] });
+    env.store = { load: () => { throw new Error('denied'); }, save: () => { throw new Error('quota'); } };
+    const started: string[] = [];
+    const pet: SurpriseDef = { id: 'pet', where: 'workshop', trigger: { kind: 'click', target: 'cat' }, rarity: 'C', durationMs: 100, cooldownMs: 10_000, album: ['pet'] };
+    const sx = createScheduler([ambient('a', { durationMs: 1_000 }), pet], env, { ...opts, onStart: (p) => started.push(p.id) });
+    expect(() => sx.tick(ctx(T0 + 20_000))).not.toThrow();
+    expect(started).toEqual(['a']);
+    sx.tick(ctx(T0 + 22_000)); // play ended; next roll not yet due
+    sx.tick(ctx(T0 + 80_000)); // roll due, but 'a' is on cooldown (memory fallback)
+    expect(sx.plays()).toEqual([]);
+    expect(() => sx.click('cat', ctx(T0 + 100_000))).not.toThrow();
+    expect(started).toEqual(['a', 'pet']);
+    expect(sx.click('cat', ctx(T0 + 101_000))).toBeNull(); // click cooldown holds too
+    expect(sx.click('cat', ctx(T0 + 110_001))?.id).toBe('pet');
   });
 });
