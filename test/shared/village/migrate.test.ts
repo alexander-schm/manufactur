@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from '../../../src/shared/state';
 import { villageLevel } from '../../../src/shared/village/level';
+import { MUSEUM_PER_MEMBER, museumEntries } from '../../../src/shared/village/museum';
 import { addMember, MAX_GUESTBOOK, MAX_NEWS, migrateVillage, newVillage } from '../../../src/shared/village/state';
 import type { MuseumPiece, VillageState } from '../../../src/shared/village/types';
 import { T0, village } from './helpers';
@@ -35,7 +36,7 @@ describe('migrateVillage', () => {
     for (const m of v.members) {
       v.guestbooks[m.playerId] = Array.from({ length: MAX_GUESTBOOK }, () => ({ from: 'p1', fromName: 'Anna', sticker: 'herz', at: T0 }));
     }
-    const museum = Object.fromEntries(v.members.map((m) => [m.playerId, Array.from({ length: 6 }, (_, i): MuseumPiece => ({ id: `m${i}`, design, glazeColor: '#e9c9a6', effect: null, quality: 3, prestige: 'gold', patronName: 'Frau Meier', finishedAt: T0 }))]));
+    const museum = Object.fromEntries(v.members.map((m) => [m.playerId, Array.from({ length: MUSEUM_PER_MEMBER }, (_, i): MuseumPiece => ({ id: `m${i}`, design, glazeColor: '#e9c9a6', effect: null, quality: 3, prestige: 'gold', patronName: 'Frau Meier', finishedAt: T0 }))]));
     const v1 = JSON.parse(JSON.stringify(v));
     v1.schemaVersion = 1;
     for (const k of ['stagesDone', 'greatKiln', 'lastFiring', 'projects', 'museum', 'lentMasterworks']) delete v1[k];
@@ -43,5 +44,17 @@ describe('migrateVillage', () => {
     out.museum = museum; // the new v2 museum, filled to its cap
     expect(out.members).toHaveLength(10);
     expect(JSON.stringify(out).length).toBeLessThan(100_000);
+  });
+});
+
+describe('museumEntries', () => {
+  it('shows the best prestige first, then the newest, at most six', () => {
+    const s = newGame('x', 1, T0);
+    const prestiges = ['bronze', 'gold', 'silver', 'gold', 'bronze', 'silver', 'gold', 'bronze'] as const;
+    s.masterworks = prestiges.map((prestige, i) => ({ id: `m${i}`, commissionId: `c${i}`, patronName: 'Frau Meier', design: s.designs[0], glazeColor: '#e9c9a6', effect: null, quality: 3, met: 3, total: 3, prestige, finishedAt: T0 + i, acked: true }));
+    const out = museumEntries(s);
+    expect(out.map((p) => p.id)).toEqual(['m6', 'm3', 'm1', 'm5', 'm2', 'm7']);
+    expect(Object.keys(out[0]).sort()).toEqual(['design', 'effect', 'finishedAt', 'glazeColor', 'id', 'patronName', 'prestige', 'quality']);
+    expect(museumEntries(newGame('y', 1, T0))).toEqual([]);
   });
 });

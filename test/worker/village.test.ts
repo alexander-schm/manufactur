@@ -170,3 +170,115 @@ describe('[Final review #2/#3/#4] village consistency', () => {
     expect(v.json.village.members.find((m: any) => m.playerId === idA).makerMark.letter).toBe('Q');
   });
 });
+
+import { runDurableObjectAlarm } from 'cloudflare:test';
+
+/** Read a workshop straight from D1 (no catch-up), change it and write it back. */
+async function patchWorkshop(playerId: string, fn: (s: any) => void): Promise<any> {
+  const row = await env.DB.prepare('SELECT state FROM workshops WHERE player_id = ?').bind(playerId).first<{ state: string }>();
+  const s = JSON.parse(row!.state);
+  fn(s);
+  await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(s), playerId).run();
+  return s;
+}
+const rawWorkshop = async (playerId: string) => patchWorkshop(playerId, () => undefined);
+const countOf = (s: any, designId: string) => s.goods.filter((g: any) => g.designId === designId).reduce((n: number, g: any) => n + g.count, 0);
+
+async function manufakturVillage() {
+  const a = await found();
+  const b = await join(a.json.inviteCode);
+  const idA = (await me(a.cookie!)).playerId;
+  const s = await patchWorkshop(idA, (x) => { x.tier = 'manufaktur'; x.taler = 5000; });
+  return { a, b, idA, design0: s.designs[0].id as string, stub: await villageStub(a.cookie!) };
+}
+
+describe('village long goals', () => {
+  it('a stored v1 village is migrated on first load', async () => {
+    const a = await found();
+    await join(a.json.inviteCode);
+    const stub = await villageStub(a.cookie!);
+    await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => {
+      const v1 = structuredClone(await s.storage.get<any>('state'));
+      v1.schemaVersion = 1; v1.completedJoint = 3;
+      for (const k of ['stagesDone', 'greatKiln', 'lastFiring', 'projects', 'museum', 'lentMasterworks']) delete v1[k];
+      for (const m of v1.members) delete m.tier;
+      await s.storage.put('state', v1);
+    });
+    const v = await call('GET', '/api/village', undefined, a.cookie!);
+    expect(v.status).toBe(200);
+    expect(v.json.village.schemaVersion).toBe(2);
+    expect(v.json.village.members).toHaveLength(2);
+    expect(v.json.village.completedJoint).toBe(3);
+    expect(v.json.village.greatKiln.loads).toEqual([]);
+    const stored = await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => s.storage.get<any>('state'));
+    expect(stored.schemaVersion).toBe(2);
+    expect(stored.members.every((m: any) => m.tier === 'werkstatt')).toBe(true);
+  });
+  it('the kiln appears after a member reaches the Manufaktur and the alarm is armed when loaded', async () => {
+    const { a, design0, stub } = await manufakturVillage();
+    const v = await call('GET', '/api/village', undefined, a.cookie!);
+    expect(v.json.village.buildings).toContain('gemeinschaftsofen');
+    const r = await vact(a.cookie!, { type: 'loadKiln', designId: design0, count: 5, wood: 10 });
+    expect(r.status).toBe(200);
+    const [alarm, firesAt] = await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => [await s.storage.getAlarm(), (await s.storage.get<any>('state')).greatKiln.firesAt]);
+    expect(firesAt).toBeGreaterThan(Date.now());
+    expect(alarm).toBe(firesAt);
+  });
+  it('[Review Focus 2] the alarm fires the kiln and returns pieces exactly once', async () => {
+    const { a, idA, design0, stub } = await manufakturVillage();
+    const before = countOf(await rawWorkshop(idA), design0);
+    const r = await vact(a.cookie!, { type: 'loadKiln', designId: design0, count: 5, wood: 10 });
+    expect(r.status).toBe(200);
+    expect(countOf(r.json.state, design0)).toBe(before); // loading pays materials, not cups
+    await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => {
+      const v = await s.storage.get<any>('state');
+      v.greatKiln.firesAt = Date.now() - 1;
+      await s.storage.put('state', v);
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    const lit = await runInDurableObject(stub, async (_inst: unknown, s: DurableObjectState) => {
+      const v = await s.storage.get<any>('state');
+      expect(await s.storage.getAlarm()).toBe(v.greatKiln.doneAt);
+      v.greatKiln.doneAt = Date.now() - 1;
+      await s.storage.put('state', v);
+      return v.greatKiln;
+    });
+    expect(lit.heat).toBeGreaterThan(0);
+    await runDurableObjectAlarm(stub);
+    const mid = await call('GET', '/api/village', undefined, a.cookie!);
+    await runDurableObjectAlarm(stub);
+    await call('GET', '/api/village', undefined, a.cookie!);
+    expect(countOf(await rawWorkshop(idA), design0)).toBe(before + 5);
+    expect(mid.json.village.lastFiring.pieces).toBe(5);
+    expect(mid.json.village.greatKiln.loads).toEqual([]);
+    expect(mid.json.village.news.some((n: any) => n.text.includes('abgekühlt'))).toBe(true);
+  });
+  it('a member’s tier and masterworks reach the village', async () => {
+    const { a, idA, design0 } = await manufakturVillage();
+    const s0 = await rawWorkshop(idA);
+    await patchWorkshop(idA, (s) => {
+      s.masterworks = [{ id: 'mw1', commissionId: 'c1', patronName: 'Frau Meier', design: s0.designs.find((d: any) => d.id === design0), glazeColor: '#e9c9a6', effect: null, quality: 3, met: 3, total: 3, prestige: 'gold', finishedAt: Date.now(), acked: true }];
+    });
+    const v = await call('GET', '/api/village', undefined, a.cookie!);
+    expect(v.json.village.members.find((m: any) => m.playerId === idA).tier).toBe('manufaktur');
+    expect(v.json.village.museum[idA]).toHaveLength(1);
+    expect(v.json.village.museum[idA][0]).toMatchObject({ id: 'mw1', prestige: 'gold', patronName: 'Frau Meier' });
+    expect(v.json.village.museum[idA][0].commissionId).toBeUndefined();
+  });
+  it('village warp is not available unless DEV_FAST=1', async () => {
+    const a = await found();
+    expect((await call('POST', '/api/dev/village-warp', { minutes: 10 }, a.cookie!)).status).toBe(404);
+    expect((await call('POST', '/api/dev/village-warp', { minutes: 10 })).status).toBe(404);
+  });
+  it('shiftVillageTime moves the great kiln’s clocks into the past', async () => {
+    const { shiftVillageTime } = await import('../../src/worker/dev');
+    const { emptyKiln, newVillage } = await import('../../src/shared/village/state');
+    const v = newVillage('v', 'Tonhausen', 1);
+    v.greatKiln = { ...emptyKiln('k1'), firesAt: 1_000_000, doneAt: 2_000_000 };
+    const out = shiftVillageTime(v, 60_000);
+    expect(out.greatKiln.firesAt).toBe(940_000);
+    expect(out.greatKiln.doneAt).toBe(1_940_000);
+    expect(v.greatKiln.firesAt).toBe(1_000_000);
+    expect(shiftVillageTime(newVillage('v', 'T', 1), 60_000).greatKiln).toEqual(emptyKiln('k1'));
+  });
+});

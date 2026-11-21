@@ -4,9 +4,12 @@ import type { GameState } from '../shared/types';
 import { applyDeltaOnce, applyVillageAction, markApplied } from '../shared/village/apply';
 import { helpsLeft } from '../shared/village/help';
 import { ensureJointOrders } from '../shared/village/joint';
-import { addMember, MAX_MEMBERS, newVillage } from '../shared/village/state';
+import { museumEntries } from '../shared/village/museum';
+import { addMember, MAX_MEMBERS, migrateVillage, newVillage } from '../shared/village/state';
+import { nextVillageWake, tickVillage } from '../shared/village/tick';
 import type { Delivery, Member, VillageAction, VillageState, VillageView } from '../shared/village/types';
 import { readBody, requirePlayer } from './auth';
+import { shiftVillageTime } from './dev';
 import { CATCHUP_EVENTS } from './game';
 import { error, json } from './http';
 import type { Env } from './index';
@@ -24,7 +27,7 @@ function view(v: VillageState, viewerId: string, now: number): VillageView {
 
 /** The workshop-side village snapshot for one member. */
 function snapshotDelta(v: VillageState, m: Member): Delivery['delta'] {
-  return { village: { villageId: v.villageId, specialty: m.specialty, buildings: [...v.buildings], members: v.members.length } };
+  return { village: { villageId: v.villageId, specialty: m.specialty, buildings: [...v.buildings], members: v.members.length, projects: { ...v.projects.levels } } };
 }
 
 type OutboxEntry = { key: string; to: string; delta: Delivery['delta'] };
@@ -82,23 +85,62 @@ export class VillageDO extends DurableObject<Env> {
     }
     outbox = left;
     await this.ctx.storage.put('outbox', outbox);
-    if (outbox.length) await this.ctx.storage.setAlarm(Date.now() + DRAIN_RETRY_MS);
+  }
+
+  /**
+   * Wake up for the village's next timed event (the great kiln) or to retry undelivered deliveries,
+   * whichever comes first; no alarm when neither is waiting.
+   */
+  private async rearm(v: VillageState | null): Promise<void> {
+    const outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
+    const at = Math.min(v ? nextVillageWake(v) ?? Infinity : Infinity, outbox.length ? Date.now() + DRAIN_RETRY_MS : Infinity);
+    if (at === Infinity) await this.ctx.storage.deleteAlarm();
+    else await this.ctx.storage.setAlarm(at);
   }
 
   async alarm(): Promise<void> {
-    await this.serial(async () => { await this.recover(); await this.drain(); });
+    await this.serial(async () => {
+      await this.recover();
+      const v = await this.load();
+      if (!v) return;
+      await this.settle(v.state, Date.now(), v.migrated);
+      await this.drain();
+      await this.rearm(v.state);
+    });
   }
 
-  private async enqueue(entries: OutboxEntry[]): Promise<void> {
-    if (!entries.length) return;
+  /** The stored village, brought up to the current schema; null before the village exists. */
+  private async load(): Promise<{ state: VillageState; migrated: boolean } | null> {
+    const raw = await this.ctx.storage.get<VillageState>('state');
+    if (!raw) return null;
+    const state = migrateVillage(raw);
+    return { state, migrated: raw.schemaVersion !== state.schemaVersion };
+  }
+
+  /**
+   * Move the village on to `now` (mutates `v`). When anything changed, the village and all new
+   * deliveries (`entries` plus the tick's own) are stored in one put, so none can get lost or doubled.
+   */
+  private async settle(v: VillageState, now: number, dirty: boolean, entries: OutboxEntry[] = []): Promise<void> {
+    const t = tickVillage(v, now);
+    if (t.changed) {
+      v.version += 1;
+      entries = [...entries, ...t.deliveries.map((d, i) => ({ key: `tick${v.version}-${now}:${i}`, to: d.to, delta: d.delta }))];
+    }
+    if (!dirty && !t.changed && !entries.length) return;
     const outbox = (await this.ctx.storage.get<OutboxEntry[]>('outbox')) ?? [];
-    await this.ctx.storage.put('outbox', [...outbox, ...entries]);
+    await this.ctx.storage.put({ state: v, outbox: [...outbox, ...entries] });
   }
 
-  /** Load the village, creating or completing it from D1 (players who joined before the village existed). */
-  private async ensure(villageId: string): Promise<VillageState> {
+  /**
+   * Load the village, creating or completing it from D1 (players who joined before the village existed),
+   * bring the viewer's picture up to date and move the village on to now.
+   */
+  private async ensure(villageId: string, viewerId?: string): Promise<VillageState> {
     await this.recover();
-    let v = (await this.ctx.storage.get<VillageState>('state')) ?? null;
+    const loaded = await this.load();
+    let v = loaded?.state ?? null;
+    let dirty = !!loaded?.migrated;
     const now = Date.now();
     if (!v) {
       const row = await this.env.DB.prepare('SELECT name FROM villages WHERE id = ?').bind(villageId).first<{ name: string }>();
@@ -111,30 +153,42 @@ export class VillageDO extends DurableObject<Env> {
     let added = false;
     for (const r of missing) {
       const ws = await loadWorkshop(this.env, r.id); // only newcomers are read
-      const res = addMember(v, { playerId: r.id, name: r.name, avatarSeed: ws?.avatarSeed ?? 0, makerMark: ws?.makerMark ?? { shape: 'circle', letter: r.name[0]?.toUpperCase() ?? 'M', color: '#b44c36' }, joinedAt: r.created_at, lastSeen: ws?.lastSeen ?? r.created_at });
+      const res = addMember(v, { playerId: r.id, name: r.name, avatarSeed: ws?.avatarSeed ?? 0, makerMark: ws?.makerMark ?? { shape: 'circle', letter: r.name[0]?.toUpperCase() ?? 'M', color: '#b44c36' }, joinedAt: r.created_at, lastSeen: ws?.lastSeen ?? r.created_at, tier: ws?.tier ?? 'werkstatt' });
       if (typeof res === 'string') rejected.add(r.id);
       else { v = res; added = true; }
     }
     if (missing.length) await this.ctx.storage.put('rejected', [...rejected]);
+    let entries: OutboxEntry[] = [];
     if (added) {
       ensureJointOrders(v, now);
       const opId = `join${v.members.length}-${now}`;
-      await this.ctx.storage.put('state', v);
-      await this.enqueue(v.members.map((m) => ({ key: `${opId}:${m.playerId}`, to: m.playerId, delta: snapshotDelta(v!, m) })));
+      entries = v.members.map((m) => ({ key: `${opId}:${m.playerId}`, to: m.playerId, delta: snapshotDelta(v!, m) }));
+      dirty = true;
     }
+    if (viewerId && v.members.some((m) => m.playerId === viewerId)) {
+      const ws = await loadWorkshop(this.env, viewerId);
+      if (ws && this.syncMember(v, ws)) dirty = true;
+    }
+    await this.settle(v, now, dirty, entries);
     await this.drain();
+    await this.rearm(v);
     return v;
   }
 
-  /** Keep the village's picture of a member (look, mark, last seen) in sync with their workshop. */
+  /** Keep the village's picture of a member (look, mark, last seen, tier, museum) in sync with their workshop. */
   private syncMember(v: VillageState, ws: GameState): boolean {
     const m = v.members.find((x) => x.playerId === ws.playerId);
     if (!m) return false;
-    const same = m.avatarSeed === ws.avatarSeed && JSON.stringify(m.makerMark) === JSON.stringify(ws.makerMark) && m.lastSeen >= ws.lastSeen;
+    const museum = museumEntries(ws);
+    const ids = (list: { id: string }[] | undefined) => (list ?? []).map((p) => p.id).join(',');
+    const same = m.avatarSeed === ws.avatarSeed && JSON.stringify(m.makerMark) === JSON.stringify(ws.makerMark) && m.lastSeen >= ws.lastSeen
+      && m.tier === ws.tier && ids(v.museum[m.playerId]) === ids(museum);
     if (same) return false;
     m.avatarSeed = ws.avatarSeed;
     m.makerMark = { ...ws.makerMark };
     m.lastSeen = Math.max(m.lastSeen, ws.lastSeen);
+    m.tier = ws.tier;
+    v.museum[m.playerId] = museum;
     return true;
   }
 
@@ -147,10 +201,8 @@ export class VillageDO extends DurableObject<Env> {
 
   async getView(villageId: string, playerId: string): Promise<VillageView | null> {
     return this.serial(async () => {
-      const v = await this.ensure(villageId);
+      const v = await this.ensure(villageId, playerId);
       if (!v.members.some((m) => m.playerId === playerId)) return null;
-      const ws = await loadWorkshop(this.env, playerId);
-      if (ws && this.syncMember(v, ws)) await this.ctx.storage.put('state', v);
       return view(v, playerId, Date.now());
     });
   }
@@ -184,9 +236,23 @@ export class VillageDO extends DurableObject<Env> {
         }
         await this.ctx.storage.delete('pending');
         await this.drain();
+        await this.rearm(r.v);
         return { status: 200, village: view(r.v, playerId, now), state: actor, events: r.events };
       }
       return { status: 409, error: 'Veraltet' };
+    });
+  }
+
+  /** Dev only: let `ms` of village time pass (the great kiln's clocks), then tick as usual. */
+  async devWarp(villageId: string, ms: number, viewerId = ''): Promise<VillageView | null> {
+    return this.serial(async () => {
+      const v = await this.ensure(villageId);
+      const shifted = shiftVillageTime(v, ms);
+      const now = Date.now();
+      await this.settle(shifted, now, true);
+      await this.drain();
+      await this.rearm(shifted);
+      return view(shifted, viewerId, now);
     });
   }
 

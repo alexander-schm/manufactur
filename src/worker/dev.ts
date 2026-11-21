@@ -1,4 +1,5 @@
 import type { GameState } from '../shared/types';
+import type { VillageState } from '../shared/village/types';
 import { readBody, requirePlayer } from './auth';
 import { error, json } from './http';
 import type { Env } from './index';
@@ -32,6 +33,29 @@ export async function handleWarp(req: Request, env: Env): Promise<Response> {
   const s = shiftTime(JSON.parse(row.state), minutes * 60_000);
   await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(s), who.playerId).run();
   return json({ ok: true });
+}
+
+/** Move the village's clocks (the great kiln) `ms` into the past. Dev/testing only. */
+export function shiftVillageTime(v: VillageState, ms: number): VillageState {
+  const out = structuredClone(v);
+  const k = out.greatKiln;
+  if (k.firesAt !== null) k.firesAt -= ms;
+  if (k.doneAt !== null) k.doneAt -= ms;
+  return out;
+}
+
+/** POST /api/dev/village-warp {minutes} — only when env.DEV_FAST === '1'. */
+export async function handleVillageWarp(req: Request, env: Env): Promise<Response> {
+  if (env.DEV_FAST !== '1') return error(404, 'Nicht gefunden');
+  const who = await requirePlayer(req, env);
+  if (who instanceof Response) return who;
+  const parsed = await readBody<{ minutes?: number }>(req);
+  if ('error' in parsed) return parsed.error;
+  const minutes = Number(parsed.value.minutes);
+  if (!Number.isFinite(minutes) || minutes < 1 || minutes > 100_000) return error(400, 'minutes 1…100000');
+  const village = await env.VILLAGE.get(env.VILLAGE.idFromName(who.villageId)).devWarp(who.villageId, minutes * 60_000, who.playerId);
+  if (!village) return error(404, 'Kein Dorf gefunden');
+  return json({ village, serverNow: Date.now() });
 }
 
 export const MAX_GRANT = 10_000_000;
