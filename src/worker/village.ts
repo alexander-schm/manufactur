@@ -229,6 +229,8 @@ export class VillageDO extends DurableObject<Env> {
         const entries = r.deliveries.map((d, i) => ({ key: `${opId}:${i}`, to: d.to, delta: d.delta }));
         // 1) remember everything atomically, 2) write the actor, 3) clear the marker, 4) deliver
         await this.ctx.storage.put({ state: r.v, outbox: [...outbox, ...entries], pending: { opId, playerId, prev: v } satisfies Pending });
+        // arm the alarm now: if this isolate dies before the end, the alarm still drains the outbox and fires the kiln
+        await this.rearm(r.v);
         if (!(await saveWorkshop(this.env, playerId, stored.version, actor))) {
           await this.ctx.storage.put({ state: v, outbox });
           await this.ctx.storage.delete('pending');
@@ -245,6 +247,7 @@ export class VillageDO extends DurableObject<Env> {
 
   /** Dev only: let `ms` of village time pass (the great kiln's clocks), then tick as usual. */
   async devWarp(villageId: string, ms: number, viewerId = ''): Promise<VillageView | null> {
+    if (this.env.DEV_FAST !== '1') return null; // the route checks too; this guards any other caller
     return this.serial(async () => {
       const v = await this.ensure(villageId);
       const shifted = shiftVillageTime(v, ms);

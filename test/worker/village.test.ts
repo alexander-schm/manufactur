@@ -269,6 +269,10 @@ describe('village long goals', () => {
     const a = await found();
     expect((await call('POST', '/api/dev/village-warp', { minutes: 10 }, a.cookie!)).status).toBe(404);
     expect((await call('POST', '/api/dev/village-warp', { minutes: 10 })).status).toBe(404);
+    // the Durable Object refuses on its own too
+    const stub = await villageStub(a.cookie!);
+    const row = await env.DB.prepare('SELECT village_id FROM players WHERE id = ?').bind((await me(a.cookie!)).playerId).first<{ village_id: string }>();
+    expect(await stub.devWarp(row!.village_id, 60_000)).toBeNull();
   });
   it('shiftVillageTime moves the great kiln’s clocks into the past', async () => {
     const { shiftVillageTime } = await import('../../src/worker/dev');
