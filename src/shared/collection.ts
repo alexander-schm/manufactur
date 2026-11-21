@@ -7,8 +7,8 @@ export const collectionKey = (form: string, body: BodyId, effect: string | null)
 
 let entries: CollectionEntry[] | null = null;
 let keys: Set<string> | null = null;
-/** keys that count towards the percentage (every entry but the great-kiln bonus ones) */
-let counted: Set<string> | null = null;
+/** keys that count towards the percentage (every entry but the great-kiln bonus ones), with their body */
+let counted: Map<string, BodyId> | null = null;
 let countedPerBody: Map<BodyId, number> | null = null;
 
 function build(): CollectionEntry[] {
@@ -26,7 +26,7 @@ function build(): CollectionEntry[] {
   entries = out;
   keys = new Set(out.map((e) => e.key));
   const plain = out.filter((e) => !isGreatKilnEffect(e.effect));
-  counted = new Set(plain.map((e) => e.key));
+  counted = new Map(plain.map((e) => [e.key, e.body]));
   countedPerBody = new Map();
   for (const e of plain) countedPerBody.set(e.body, (countedPerBody.get(e.body) ?? 0) + 1);
   return out;
@@ -64,12 +64,23 @@ export function recordCollection(s: GameState, form: string, body: BodyId, effec
   award(s, colId(body, effect), all.filter((e) => e.body === body && e.effect === effect));
 }
 
+// the last whole-book count: milestone checks ask for it on every catch-up step, and the array only grows by unique pushes
+let lastList: string[] | null = null;
+let lastLen = -1;
+let lastFound = 0;
+
 /** Share of the book found, over all bodies or one page. Great-kiln entries are a bonus and never count. */
 export function collectionPercent(s: GameState, body?: BodyId): number {
-  build();
+  if (!counted) build();
+  const list = s.collection;
+  if (!body && list === lastList && list.length === lastLen) return Math.floor((100 * lastFound) / counted!.size);
   const total = body ? countedPerBody!.get(body) ?? 0 : counted!.size;
   let found = 0;
-  for (const k of new Set(s.collection)) if (counted!.has(k) && (!body || k.split('|')[1] === body)) found++;
+  for (const k of list) {
+    const b = counted!.get(k);
+    if (b !== undefined && (!body || b === body)) found++;
+  }
+  if (!body) { lastList = list; lastLen = list.length; lastFound = found; }
   return total ? Math.floor((100 * found) / total) : 0;
 }
 
