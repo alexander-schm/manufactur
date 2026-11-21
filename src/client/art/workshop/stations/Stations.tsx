@@ -19,8 +19,13 @@ const BRASS = '#d9a93a';
 
 const STONE_CLAY = '#b9b1a5';
 const STONE_GREEN = '#dad5cc';
+const KAOLIN = '#ebe5da';
+const KAOLIN_GREEN = '#f4f0e8';
+const GOLD = '#d9a636';
 /** Raw clay colour of a design's body on the wheel. */
-const rawClay = (d: Design) => (bodyOf(d) === 'steinzeug' ? STONE_CLAY : CLAY);
+const rawClay = (d: Design) => ({ steinzeug: STONE_CLAY, porzellan: KAOLIN }[bodyOf(d) as string] ?? CLAY);
+/** Leather-hard colour on the drying rack. */
+const greenware = (d: Design) => ({ steinzeug: STONE_GREEN, porzellan: KAOLIN_GREEN }[bodyOf(d) as string] ?? GREEN);
 
 export const designOf = (s: GameState, id: string): Design | undefined => s.designs.find((d) => d.id === id);
 export const glazeColorOf = (s: GameState, d?: Design) => d?.origin?.glazeColor ?? ((d && s.glazes.find((g) => g.id === d.glazeId)?.color) || '#e9c9a6');
@@ -110,9 +115,35 @@ export function DryingRack({ x, y, state, running, waiting }: StationProps) {
       <path d={`M${left + 8} ${top} L${left + 8} ${y} M${left + w - 8} ${top} L${left + w - 8} ${y}`} stroke="var(--woodDark)" stroke-width="9" />
       <path d={`M${left + 8} ${top} L${left + 8} ${y} M${left + w - 8} ${top} L${left + w - 8} ${y}`} fill="none" style={S} />
       {[top + 70, top + 150].map((by) => <path d={`M${left} ${by} L${left + w} ${by} L${left + w} ${by + 9} L${left} ${by + 9} Z`} fill="var(--wood)" style={S} />)}
-      {pots.map((p, i) => <ScenePot x={left + 24 + (i % 5) * 31} y={i < 5 ? top + 70 : top + 150} size={42} design={p.d} color={bodyOf(p.d) === 'steinzeug' ? STONE_GREEN : GREEN} />)}
+      {pots.map((p, i) => <ScenePot x={left + 24 + (i % 5) * 31} y={i < 5 ? top + 70 : top + 150} size={42} design={p.d} color={greenware(p.d)} />)}
       <path d={`M${left + 20} ${top + 12} q10 -8 20 0 q10 -8 20 0`} fill="none" style={T} class="steam" />
       <Label x={x} y={y + 22}>Trocknen</Label>
+    </g>
+  );
+}
+
+/** The court's gilded crest on the kiln dome (level 8): a shield with a white vase, a crown and two laurel sprigs. */
+function KilnCrest({ x, y }: { x: number; y: number }) {
+  const shield = (w: number, t: number, b: number) => `M${x - w} ${t} L${x + w} ${t} L${x + w} ${t + (b - t) * 0.45} Q${x + w} ${b - (b - t) * 0.18} ${x} ${b} Q${x - w} ${b - (b - t) * 0.18} ${x - w} ${t + (b - t) * 0.45} Z`;
+  const leaves = (f: 1 | -1) => (
+    <g>
+      <path d={`M${x + 8 * f} ${y + 24} Q${x + 24 * f} ${y + 20} ${x + 26 * f} ${y - 2}`} fill="none" stroke="var(--g2Dark)" stroke-width="2" stroke-linecap="round" />
+      {[0, 1, 2, 3].map((i) => {
+        const lx = x + (13 + i * 3.6) * f, ly = y + 21 - i * 6.4;
+        return <ellipse cx={lx} cy={ly} rx="2.2" ry="4.4" transform={`rotate(${(30 + i * 12) * f} ${lx} ${ly})`} fill={GOLD} style={inkStyle(1)} />;
+      })}
+    </g>
+  );
+  return (
+    <g class="kiln-crest" data-kiln-crest="">
+      {leaves(1)}
+      {leaves(-1)}
+      <path d={shield(15, y - 14, y + 22)} fill={GOLD} style={inkStyle(1.8)} />
+      <path d={shield(10.5, y - 10, y + 16)} fill="var(--g1)" style={inkStyle(1.1)} />
+      <path d={`M${x - 2.6} ${y - 6} L${x + 2.6} ${y - 6} L${x + 2} ${y - 3} Q${x + 7} ${y + 2} ${x + 4} ${y + 8} L${x - 4} ${y + 8} Q${x - 7} ${y + 2} ${x - 2} ${y - 3} Z`} fill="#fbf8f2" style={inkStyle(0.9)} />
+      <path d={`M${x - 9} ${y - 14} L${x - 10} ${y - 24} L${x - 4.5} ${y - 18.5} L${x} ${y - 26} L${x + 4.5} ${y - 18.5} L${x + 10} ${y - 24} L${x + 9} ${y - 14} Z`} fill={GOLD} style={inkStyle(1.4)} />
+      {[-10, 0, 10].map((dx) => <circle cx={x + dx} cy={y - (dx ? 25 : 27)} r="1.8" fill="#fffbe0" style={inkStyle(0.8)} />)}
+      <path d={`M${x - 11} ${y - 8} q3 -2 6 -1`} stroke="#fffbe0" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.9" />
     </g>
   );
 }
@@ -151,6 +182,7 @@ export function Kiln({ x, y, station, running, now }: StationProps) {
           {band(x + doorGap, x1, y - 46)}
         </g>
       )}
+      {station.level >= 8 && <KilnCrest x={x} y={top + 40} />}
       {station.level >= 7 && <path d={door(7)} fill="none" stroke={BRASS} stroke-width="11" />}
       {station.level >= 7 && <path d={door(12)} fill="none" style={inkStyle(1.8)} />}
       {/* chimney + smoke */}
@@ -195,7 +227,7 @@ export function Kiln({ x, y, station, running, now }: StationProps) {
 export function GlazeTable({ x, y, state, running, waiting, now }: StationProps) {
   const w = 200, left = x - w / 2, top = y - 92;
   const items: { b: Batch; on: boolean }[] = running.length > 0 ? running.map((b) => ({ b, on: true })) : waiting.slice(0, 1).map((b) => ({ b, on: false }));
-  const glazes = state.glazes.slice(items.length > 1 ? -2 : -3);
+  const glazes = state.glazes.slice(items.length > 2 ? -1 : items.length > 1 ? -2 : -3);
   return (
     <g>
       {glazes.map((g, i) => {
@@ -210,7 +242,7 @@ export function GlazeTable({ x, y, state, running, waiting, now }: StationProps)
       })}
       {items.map(({ b, on }, i) => {
         const d = designOf(state, b.designId);
-        const px = items.length > 2 ? left + 128 + i * 34 : items.length > 1 ? left + 124 + i * 52 : left + w - 28;
+        const px = items.length > 2 ? left + 80 + i * 48 : items.length > 1 ? left + 124 + i * 52 : left + w - 28;
         return d ? (
           <g>
             <g style={{ animationDelay: `${i * 0.4}s` }} class={on ? 'dip' : undefined}>
@@ -223,7 +255,9 @@ export function GlazeTable({ x, y, state, running, waiting, now }: StationProps)
       <path d={`M${left} ${top} L${left + w} ${top} L${left + w} ${top + 12} L${left} ${top + 12} Z`} fill="var(--wood)" style={S} />
       <path d={`M${left + 10} ${top + 12} L${left + 8} ${y} M${left + w - 10} ${top + 12} L${left + w - 8} ${y} M${left + 10} ${top + 56} L${left + w - 10} ${top + 56}`} fill="none" style={S} />
       <path d={`M${left + 20} ${top + 18} L${left + 60} ${top + 17}`} fill="none" style={T} />
-      {running.length > 1
+      {running.length > 2
+        ? running.map((b, i) => <Progress x={left + 80 + i * 48} y={top + 36} batch={b} now={now} />)
+        : running.length > 1
         ? running.map((b, i) => <Progress x={left + w + 14} y={top - 22 - i * 50} batch={b} now={now} />)
         : <Progress x={left + w + 10} y={top - 70} batch={running[0]} now={now} />}
     </g>
@@ -305,8 +339,9 @@ export function PrepBench({ x, y, state, running, now }: StationProps) {
       )}
       {sack(left - 28, y + 6, 1, 'TON', ton)}
       {sack(left + w + 30, y + 10, 0.85, 'Glasur', glaze)}
+      {/* with several bays each gauge hangs on the bench front, right under its own lump */}
       {running.length > 1
-        ? running.map((b, i) => <Progress x={i % 2 ? left + w - 10 : left + 4} y={top - 52 - Math.floor(i / 2) * 48} batch={b} now={now} />)
+        ? running.map((b, i) => <Progress x={left + (running.length > 2 ? 38 : 58) + i * lumpStep} y={top + 36} batch={b} now={now} />)
         : <Progress x={left + w - 10} y={top - 52} batch={running[0]} now={now} />}
     </g>
   );

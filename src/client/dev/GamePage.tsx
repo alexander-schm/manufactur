@@ -8,11 +8,13 @@ import { addOrder } from '../../shared/orders';
 let ready = false;
 export function GamePage() {
   if (!ready) {
-    // dev-only: #game&endgame — deep Manufaktur state (everything acknowledged); &celebrate brings back the tier card
+    // dev-only: #game&endgame — deep Manufaktur state (everything acknowledged); &hof makes it a Hofmanufaktur; &celebrate brings back the tier card
     const endgame = location.hash.includes('endgame');
-    const s = endgame ? mockEndgame(Date.now()) : mockWorkshop(Date.now());
+    const s = endgame ? mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur') : mockWorkshop(Date.now());
     for (const u of ['orders', 'studio', 'schale', 'hiring', 'recipes', 'upgrades', 'teller', 'vase', 'farbkoerper', 'formdetails', 'krug', 'patterns2', 'reduktion']) if (!s.unlocks.includes(u)) s.unlocks.push(u);
     if (!endgame) { s.ruf = 37; s.taler = 1840; }
+    // dev-only: #game&endgame&hof&draft=figur — the studio opens on the porcelain owl
+    if (location.hash.includes('draft=figur')) { const i = s.designs.findIndex((d) => d.id === 'd96'); if (i > 0) s.designs.unshift(...s.designs.splice(i, 1)); }
     s.orders = [];
     for (let i = 0; i < 4; i++) addOrder(s, Date.now());
     const o = s.orders[0];

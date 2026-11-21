@@ -12,7 +12,7 @@ import { ownDesigns } from '../../shared/village/apply';
 import { BodyPicker } from './BodyPicker';
 import { ExperimentPanel } from './ExperimentPanel';
 import { describeTaste } from './logic';
-import { difficultyLabel, patternColorsFor, PRESETS, saveActionFor, switchBody, topFans } from './studioLogic';
+import { difficultyLabel, patternColorsFor, PRESETS, saveActionFor, switchBody, switchForm, topFans } from './studioLogic';
 
 export function DesignPreview({ s, draft, size = 220 }: { s: GameState; draft: Design; size?: number }) {
   const glaze = s.glazes.find((g) => g.id === draft.glazeId);
@@ -24,7 +24,7 @@ export function DesignPreview({ s, draft, size = 220 }: { s: GameState; draft: D
 }
 
 const SLIDERS: [keyof ProfileParams, string][] = [['height', 'Höhe'], ['belly', 'Bauch'], ['neck', 'Hals'], ['foot', 'Fuß'], ['rim', 'Rand']];
-const PATTERNS: [PatternKind, string, string?][] = [['none', 'ohne'], ['stripes', 'Streifen'], ['dots', 'Punkte'], ['waves', 'Wellen', 'patterns2'], ['leaves', 'Blätter', 'patterns2'], ['ranken', 'Ranken', 'muster-ranken'], ['karo', 'Karo', 'muster-karo']];
+const PATTERNS: [PatternKind, string, string?][] = [['none', 'ohne'], ['stripes', 'Streifen'], ['dots', 'Punkte'], ['waves', 'Wellen', 'patterns2'], ['leaves', 'Blätter', 'patterns2'], ['ranken', 'Ranken', 'muster-ranken'], ['karo', 'Karo', 'muster-karo'], ['schuppen', 'Schuppen', 'muster-schuppen']];
 const HANDLES: [Design['handle'], string, string?][] = [['none', 'ohne'], ['round', 'rund'], ['ear', 'Ohr', 'formdetails'], ['loop', 'Schlaufe', 'formdetails']];
 const RIMS: [Design['rim'], string, string?][] = [['plain', 'schlicht'], ['rolled', 'gerollt', 'formdetails'], ['flared', 'ausgestellt', 'formdetails']];
 
@@ -80,8 +80,16 @@ function Designer({ s }: { s: GameState }) {
         </div>
         <h4>Form</h4>
         <div class="chips">
-          {forms.map((f) => <button class="chip" aria-pressed={f.id === draft.form} onClick={() => set({ form: f.id, profile: { ...f.profileDefaults }, handle: f.handleAllowed ? (draft.handle === 'none' ? 'round' : draft.handle) : 'none' })}>{f.name}</button>)}
+          {forms.map((f) => <button class="chip" aria-pressed={f.id === draft.form} onClick={() => setDraft((d) => switchForm(d, f.id))}>{f.name}</button>)}
         </div>
+        {form.variants && (
+          <>
+            <h4>Tier</h4>
+            <div class="chips" role="radiogroup" aria-label="Tier">
+              {form.variants.map((v) => <button class="chip" role="radio" aria-checked={v.id === draft.variant} aria-pressed={v.id === draft.variant} onClick={() => set({ variant: v.id })}>{v.name}</button>)}
+            </div>
+          </>
+        )}
         <div class="chips" style={{ marginTop: '6px' }}>
           {PRESETS.map((p) => <button class="chip small" onClick={() => set({ profile: p.profile(form.profileDefaults) })}>{p.name}</button>)}
         </div>

@@ -33,6 +33,7 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   meisterstuecke: { id: 'meisterstuecke', kind: 'feature', title: 'Meisterstücke', text: 'Gönner aus der Stadt geben besondere Einzelstücke in Auftrag.' },
   'muster-ranken': { id: 'muster-ranken', kind: 'pattern', title: 'Ranken', text: 'Ein neues Muster für deine Entwürfe.' },
   'muster-karo': { id: 'muster-karo', kind: 'pattern', title: 'Karo', text: 'Ein neues Muster für deine Entwürfe.' },
+  'muster-schuppen': { id: 'muster-schuppen', kind: 'pattern', title: 'Schuppen', text: 'Ein neues Muster für deine Entwürfe.' },
   mangan: { id: 'mangan', kind: 'feature', title: 'Mangan', text: 'Ein neuer Farbkörper: violett bis tiefbraun.' },
   'kunde-sammlerin': { id: 'kunde-sammlerin', kind: 'customer', title: 'Frau von Scherbenfeld', text: 'Eine Sammlerin aus der Stadt schaut jetzt öfter vorbei.' },
   'kunde-hofgaertnerin': { id: 'kunde-hofgaertnerin', kind: 'customer', title: 'Hofgärtnerin Rosalind', text: 'Die Hofgärtnerin bestellt jetzt bei dir.' },

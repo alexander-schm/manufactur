@@ -4,11 +4,13 @@ import { mix } from '../../shared/discovery';
 import { hashSeed } from '../../shared/rng';
 import type { BodyId, Design, MakerMark } from '../../shared/types';
 import { inkStyle } from './ink';
+import { Figure } from './Figure';
 import { MarkFrame } from './markFrame';
 import { BASE_Y, CX, potShape, type PotShape } from './potShape';
+import { Tile } from './Tile';
 
-type Props = {
-  design: Pick<Design, 'form' | 'profile' | 'handle' | 'rim' | 'pattern' | 'patternColor'> & { id?: string; body?: BodyId };
+export type PotProps = {
+  design: Pick<Design, 'form' | 'profile' | 'handle' | 'rim' | 'pattern' | 'patternColor'> & { id?: string; body?: BodyId; variant?: string };
   glazeColor: string;
   effect?: string | null;
   size?: number | string;
@@ -28,19 +30,48 @@ type Props = {
   silhouette?: boolean;
 };
 
-const rnd = (seed: number, i: number) => hashSeed(seed, i) / 0xffffffff;
+type Props = PotProps;
 
-/** How the clay body shows: the unglazed foot colour and dark iron speckles for stoneware. */
-const BODY_LOOK: Record<string, { foot: string; speckles: boolean }> = {
+/** Stable per-design seed for speckles, effects and pattern jitter. */
+export const pieceSeed = (design: { id?: string; form: string }) => hashSeed((design.id ?? design.form).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, 3);
+
+export const rnd = (seed: number, i: number) => hashSeed(seed, i) / 0xffffffff;
+
+/** How the clay body shows: the unglazed foot colour, dark iron speckles for stoneware, a soft white glow for porcelain. */
+const BODY_LOOK: Record<string, { foot: string; speckles: boolean; glow?: boolean }> = {
   irdenware: { foot: 'var(--clayRaw)', speckles: false },
   steinzeug: { foot: '#9c8f80', speckles: true },
+  porzellan: { foot: '#fbf8f2', speckles: false, glow: true },
 };
-const bodyLook = (b: BodyId | undefined) => BODY_LOOK[b ?? 'irdenware'] ?? BODY_LOOK.irdenware;
-const SILHOUETTE_INK = { ...inkStyle(1.6), strokeDasharray: '4 3.2', opacity: 0.7 };
-const SILHOUETTE_FILL = '#e8dccb';
+export const bodyLook = (b: BodyId | undefined) => BODY_LOOK[b ?? 'irdenware'] ?? BODY_LOOK.irdenware;
+export const SILHOUETTE_INK = { ...inkStyle(1.6), strokeDasharray: '4 3.2', opacity: 0.7 };
+export const SILHOUETTE_FILL = '#e8dccb';
+
+/** The soft white halo behind a porcelain piece (gradient lives in ArtDefs). */
+export function Glow({ cx, cy, rx, ry }: { cx: number; cy: number; rx: number; ry: number }) {
+  return <ellipse data-glow cx={cx.toFixed(1)} cy={cy.toFixed(1)} rx={rx.toFixed(1)} ry={ry.toFixed(1)} fill="url(#porcelain-glow)" />;
+}
+
+/** A small four-point sparkle for quality-3 pieces. */
+export function Sparkle({ x, y }: { x: number; y: number }) {
+  return <path d={`M${x.toFixed(1)} ${y.toFixed(1)} l1.5 -4 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5 Z`} fill="#fffbe0" style={inkStyle(0.8)} />;
+}
+
+/** Fish scales: rows of downward arcs, every other row shifted by half a scale. Each scale carries data-scale. */
+export function Scales({ x0, x1, y0, rows, r, color }: { x0: number; x1: number; y0: number; rows: number; r: number; color: string }) {
+  const out: preact.JSX.Element[] = [];
+  for (let row = 0; row < rows; row++) {
+    const y = y0 + row * r * 1.15;
+    const shift = row % 2 ? r : 0;
+    for (let x = x0 + shift - (row % 2 ? 2 * r : 0); x <= x1; x += 2 * r) {
+      out.push(<path data-scale d={`M${(x).toFixed(1)} ${y.toFixed(1)} A${r} ${r} 0 0 0 ${(x + 2 * r).toFixed(1)} ${y.toFixed(1)}`} fill={color} fill-opacity="0.22" stroke={color} stroke-width={Math.max(0.8, r * 0.32).toFixed(2)} stroke-linecap="round" />);
+    }
+  }
+  return <g>{out}</g>;
+}
 
 /** Seeded dark speckles over the glaze (stoneware), placed inside the given box. */
-function Speckles({ seed, x, y, w, h }: { seed: number; x: number; y: number; w: number; h: number }) {
+export function Speckles({ seed, x, y, w, h }: { seed: number; x: number; y: number; w: number; h: number }) {
   return (
     <g fill="#3a2e26" opacity="0.35">
       {Array.from({ length: 11 }, (_, i) => (
@@ -50,7 +81,7 @@ function Speckles({ seed, x, y, w, h }: { seed: number; x: number; y: number; w:
   );
 }
 
-function Pattern({ s, kind, color, seed }: { s: PotShape; kind: Design['pattern']; color: string; seed: number }) {
+export function Pattern({ s, kind, color, seed }: { s: PotShape; kind: Design['pattern']; color: string; seed: number }) {
   const y = s.bandY, w = s.bandHalfWidth;
   const st = { stroke: color, strokeWidth: 2.2, strokeLinecap: 'round' as const, fill: 'none' };
   switch (kind) {
@@ -118,12 +149,14 @@ function Pattern({ s, kind, color, seed }: { s: PotShape; kind: Design['pattern'
         </g>
       );
     }
+    case 'schuppen':
+      return <Scales x0={CX - w - 6} x1={CX + w + 2} y0={y - 5} rows={3} r={Math.max(2.4, Math.min(3.6, w / 5))} color={color} />;
     default:
       return null;
   }
 }
 
-function Effect({ s, effect, seed, base }: { s: PotShape; effect: string; seed: number; base: string }) {
+export function Effect({ s, effect, seed, base }: { s: PotShape; effect: string; seed: number; base: string }) {
   const top = s.topY, h = BASE_Y - top, w = s.maxHalfWidth;
   switch (effect) {
     case 'craquele': {
@@ -161,7 +194,7 @@ function Effect({ s, effect, seed, base }: { s: PotShape; effect: string; seed: 
   }
 }
 
-function Mark({ mark, x, y, scale = 1 }: { mark: MakerMark; x: number; y: number; scale?: number }) {
+export function Mark({ mark, x, y, scale = 1 }: { mark: MakerMark; x: number; y: number; scale?: number }) {
   const r = mark.frame === 'sonne' ? 6.2 : 7.2;
   const shape = {
     circle: <circle cx={x} cy={y} r="4.2" />,
@@ -232,6 +265,7 @@ function Plate({ design, glazeColor, effect, seed, uid, mark, quality, silhouett
       );
       break;
     }
+    case 'schuppen': pattern = <g>{[0, 1].map((k) => ringPoints(bandRx * (1 - k * 0.12), bandRy * (1 - k * 0.12), cy, 16).map(([x, y], i) => <path data-scale d={`M${(x - 2.6).toFixed(1)} ${(y - 1).toFixed(1)} A2.6 2.6 0 0 0 ${(x + 2.6).toFixed(1)} ${(y - 1).toFixed(1)}`} transform={k ? `rotate(${(i * 11.25).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})` : undefined} fill={c} fill-opacity="0.22" stroke={c} stroke-width="1" />))}</g>; break;
     case 'karo': pattern = <g>{ringPoints(bandRx, bandRy, cy, 28).map(([x, y, a], i) => { const o = i % 2 ? 1.9 : -1.9; return <rect x={(x + Math.cos(a) * o - 1.4).toFixed(1)} y={(y + Math.sin(a) * o * 0.45 - 1.4).toFixed(1)} width="2.8" height="2.8" fill={c} />; })}</g>; break;
   }
   if (silhouette) {
@@ -247,8 +281,9 @@ function Plate({ design, glazeColor, effect, seed, uid, mark, quality, silhouett
   return (
     <>
       <defs><clipPath id={clip}><ellipse cx={CX} cy={cy} rx={rx} ry={ry} /></clipPath></defs>
+      {look.glow && <Glow cx={CX} cy={cy + depth / 2} rx={rx + 12} ry={ry + depth + 10} />}
       <ellipse cx={CX} cy={cy + depth + 3} rx={rx + 2} ry={ry * 0.8} fill="url(#hatch)" opacity="0.45" />
-      <path d={`M${CX - rx} ${cy} Q${CX - rx + 2} ${cy + ry + depth} ${CX} ${cy + ry + depth} Q${CX + rx - 2} ${cy + ry + depth} ${CX + rx} ${cy} Z`} fill={look.speckles ? mix(look.foot, '#2b2420', 0.1) : mix(glazeColor, '#2b2420', 0.25)} style={inkStyle(2)} />
+      <path d={`M${CX - rx} ${cy} Q${CX - rx + 2} ${cy + ry + depth} ${CX} ${cy + ry + depth} Q${CX + rx - 2} ${cy + ry + depth} ${CX + rx} ${cy} Z`} fill={look.speckles ? mix(look.foot, '#2b2420', 0.1) : look.glow ? look.foot : mix(glazeColor, '#2b2420', 0.25)} style={inkStyle(2)} />
       <ellipse cx={CX} cy={cy} rx={rx} ry={ry} fill={glazeColor} />
       <g clip-path={`url(#${clip})`}>
         <ellipse cx={CX} cy={cy + 1} rx={rx * well} ry={ry * well} fill={inner} />
@@ -259,7 +294,7 @@ function Plate({ design, glazeColor, effect, seed, uid, mark, quality, silhouett
         <path d={`M${CX - rx * 0.7} ${cy - ry * 0.45} Q${CX - rx * 0.2} ${cy - ry * 0.85} ${CX + rx * 0.3} ${cy - ry * 0.78}`} stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.6" />
       </g>
       <ellipse cx={CX} cy={cy} rx={rx} ry={ry} fill="none" style={inkStyle(design.rim === 'rolled' ? 3.2 : 2)} />
-      {quality === 3 && <path d={`M${CX + rx * 0.55} ${cy - ry * 0.5} l1.5 -4 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5 Z`} fill="#fffbe0" style={inkStyle(0.8)} />}
+      {quality === 3 && <Sparkle x={CX + rx * 0.55} y={cy - ry * 0.5} />}
       {mark && <Mark mark={mark} x={CX} y={cy + 1} />}
     </>
   );
@@ -279,11 +314,17 @@ function Lid({ lid, fill, style }: { lid: NonNullable<PotShape['lid']>; fill: st
   );
 }
 
-export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobble = true, fit = false, x, y, height, class: cls, title, silhouette }: Props) {
+export function Pot(props: Props) {
+  if (props.design.form === 'figur') return <Figure {...props} />;
+  if (props.design.form === 'fliese') return <Tile {...props} />;
+  return <Vessel {...props} />;
+}
+
+function Vessel({ design, glazeColor, effect, size = 96, mark, quality, wobble = true, fit = false, x, y, height, class: cls, title, silhouette }: Props) {
   const box = { x, y, width: size, height: height ?? size };
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const s = potShape(design.form, design.profile, design.rim, design.handle);
-  const seed = hashSeed((design.id ?? design.form).split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, 3);
+  const seed = pieceSeed(design);
   const body: BodyId = design.body ?? 'irdenware';
   const look = bodyLook(body);
   const inside = mix(glazeColor, '#2b2420', 0.28);
@@ -338,6 +379,7 @@ export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobb
         </linearGradient>
       </defs>
       <g filter={wobble ? 'url(#wobble-soft)' : undefined}>
+        {look.glow && <Glow cx={CX} cy={(s.topY + BASE_Y) / 2} rx={s.maxHalfWidth + (s.handle || s.spout ? 16 : 11)} ry={(BASE_Y - s.topY) / 2 + 10} />}
         <ellipse cx={CX} cy={BASE_Y + 1.5} rx={s.maxHalfWidth + 4} ry="4" fill="url(#hatch)" opacity="0.45" />
         {s.handle && <path d={s.handle} fill="none" style={{ ...inkStyle(8.5), strokeLinecap: 'round' }} />}
         {s.handle && <path d={s.handle} fill="none" stroke={glazeColor} stroke-width="5" stroke-linecap="round" />}
@@ -355,7 +397,7 @@ export function Pot({ design, glazeColor, effect, size = 96, mark, quality, wobb
         <ellipse cx={s.rim.cx} cy={s.rim.cy} rx={s.rim.rx} ry={s.rim.ry} fill={inside} style={inkStyle(design.rim === 'rolled' ? 3.2 : 1.8)} />
         {s.lid && <Lid lid={s.lid} fill={glazeTop} style={inkStyle(1.8)} />}
         <path d={`M${CX - s.maxHalfWidth * 0.55} ${s.footY - 6} Q${CX - s.maxHalfWidth * 0.72} ${(s.footY + s.topY) / 2} ${CX - s.rim.rx * 0.6} ${s.topY + 6}`} stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.55" />
-        {quality === 3 && <path d={`M${CX + s.maxHalfWidth * 0.5} ${s.topY + 8} l1.5 -4 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5 Z`} fill="#fffbe0" style={inkStyle(0.8)} />}
+        {quality === 3 && <Sparkle x={CX + s.maxHalfWidth * 0.5} y={s.topY + 8} />}
         {mark && <UprightMark s={s} mark={mark} />}
       </g>
     </svg>

@@ -56,6 +56,20 @@ export function MarkFrame({ frame, x, y, r, color }: { frame: string | undefined
         </g>
       );
       break;
+    case 'krone': {
+      // a plain ring with a little gold crown sitting on top of it
+      const cw = r * 0.62, base = y - r * 0.86, peak = base - r * 0.62;
+      const crown = `M${f1(x - cw)} ${f1(base)} L${f1(x - cw * 1.08)} ${f1(peak)} L${f1(x - cw * 0.5)} ${f1(base - r * 0.3)} L${f1(x)} ${f1(peak - r * 0.12)} L${f1(x + cw * 0.5)} ${f1(base - r * 0.3)} L${f1(x + cw * 1.08)} ${f1(peak)} L${f1(x + cw)} ${f1(base)} Z`;
+      body = (
+        <g>
+          <circle cx={x} cy={y} r={f1(r)} fill="none" stroke={color} stroke-width={f1(w)} />
+          <path d={crown} fill={GOLD} style={inkStyle(w * 0.55)} />
+          {[x - cw * 1.08, x, x + cw * 1.08].map((cx, i) => <circle cx={f1(cx)} cy={f1(i === 1 ? peak - r * 0.12 : peak)} r={f1(r * 0.1)} fill={GOLD} style={inkStyle(w * 0.4)} />)}
+          <path d={`M${f1(x - cw * 0.8)} ${f1(base - r * 0.1)} L${f1(x + cw * 0.8)} ${f1(base - r * 0.1)}`} stroke="#fffbe0" stroke-width={f1(w * 0.6)} stroke-linecap="round" />
+        </g>
+      );
+      break;
+    }
     default:
       return null;
   }

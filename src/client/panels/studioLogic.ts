@@ -1,6 +1,6 @@
 import type { Action } from '../../shared/actions';
 import { appeal } from '../../shared/design';
-import { EXTRA_COLORS, bodyOf } from '../../shared/content';
+import { EXTRA_COLORS, FORMS, bodyOf } from '../../shared/content';
 import type { BodyId, Design, FiringSettings, GameState, GlazeRecipe, Order, ProfileParams } from '../../shared/types';
 import { designDifficulty } from '../../shared/design';
 
@@ -57,4 +57,13 @@ export function switchBody(s: GameState, draft: Design, body: BodyId): Design {
   if (current && bodyOf(current) === body) return { ...draft, body };
   const fitting = s.glazes.find((g) => bodyOf(g) === body);
   return { ...draft, body, glazeId: fitting ? fitting.id : draft.glazeId };
+}
+
+/** Change the form of a draft: its default profile, a handle only where allowed, and an animal for forms with variants (kept if still valid). */
+export function switchForm(draft: Design, formId: string): Design {
+  const f = FORMS[formId];
+  const { variant, ...rest } = draft;
+  const next: Design = { ...rest, form: f.id, profile: { ...f.profileDefaults }, handle: f.handleAllowed ? (draft.handle === 'none' ? 'round' : draft.handle) : 'none' };
+  if (f.variants) next.variant = f.variants.some((v) => v.id === variant) ? variant : f.variants[0].id;
+  return next;
 }

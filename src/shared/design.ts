@@ -9,12 +9,12 @@ export const COLOR_FAMILY_NAMES: Record<ColorFamily, string> = {
 };
 
 export const PATTERN_TEXT: Record<PatternKind, string> = {
-  none: 'ohne Muster', stripes: 'mit Streifen', dots: 'mit Punkten', waves: 'mit Wellen', leaves: 'mit Blättern', ranken: 'mit Ranken', karo: 'mit Karomuster',
+  none: 'ohne Muster', stripes: 'mit Streifen', dots: 'mit Punkten', waves: 'mit Wellen', leaves: 'mit Blättern', ranken: 'mit Ranken', karo: 'mit Karomuster', schuppen: 'mit Schuppen',
 };
 
 /** The unlock a pattern needs, or null when every workshop has it. */
 export const PATTERN_UNLOCK: Record<PatternKind, string | null> = {
-  none: null, stripes: null, dots: null, waves: 'patterns2', leaves: 'patterns2', ranken: 'muster-ranken', karo: 'muster-karo',
+  none: null, stripes: null, dots: null, waves: 'patterns2', leaves: 'patterns2', ranken: 'muster-ranken', karo: 'muster-karo', schuppen: 'muster-schuppen',
 };
 
 export const patternUnlocked = (state: GameState, p: PatternKind): boolean => {

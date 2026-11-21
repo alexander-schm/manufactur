@@ -6,7 +6,7 @@ export type StationKind = 'prepBench' | 'wheel' | 'dryingRack' | 'kiln' | 'glaze
 /** Each value is 0..1. */
 export interface ProfileParams { height: number; belly: number; neck: number; foot: number; rim: number }
 
-export type PatternKind = 'none' | 'stripes' | 'dots' | 'waves' | 'leaves' | 'ranken' | 'karo';
+export type PatternKind = 'none' | 'stripes' | 'dots' | 'waves' | 'leaves' | 'ranken' | 'karo' | 'schuppen';
 
 export type Tier = 'werkstatt' | 'manufaktur' | 'hofmanufaktur';
 export type BodyId = 'irdenware' | 'steinzeug' | 'porzellan';

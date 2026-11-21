@@ -8,8 +8,12 @@ import { mockWorkshop } from './ScenePage';
 
 const MIN = 60_000;
 export const ENDGAME_DECOR = ['steinzeugtopf', 'glasurproben', 'papierlampions', 'meisterbrief'];
+export const HOF_DECOR = ['porzellanvoegel', 'kronleuchter', 'glasurproben', 'meisterbrief'];
 
-/** Dev state for a player deep into the Manufaktur: bays, stoneware, masterworks, collection and the new decor. */
+/**
+ * Dev state for a player deep into the Manufaktur: bays, stoneware, masterworks, collection and the new decor.
+ * With tier 'hofmanufaktur': porcelain glazes, a porcelain cat, owl and tile, every station at level 8 with three bays busy.
+ */
 export function mockEndgame(now: number, tier: Tier = 'manufaktur'): GameState {
   const s = mockWorkshop(now);
   s.tier = tier;
@@ -66,6 +70,7 @@ export function mockEndgame(now: number, tier: Tier = 'manufaktur'): GameState {
   s.decor = [...new Set([...s.decor, ...ENDGAME_DECOR])];
   s.decorPlaced = [...ENDGAME_DECOR];
   s.keepStock = { ton: 500 };
+  if (tier === 'hofmanufaktur') addCourt(s, batch);
 
   // every milestone that holds is done and acknowledged, so no celebration card covers the scene
   const held = MILESTONES.filter((m) => m.done(s));
@@ -73,4 +78,41 @@ export function mockEndgame(now: number, tier: Tier = 'manufaktur'): GameState {
   s.milestonesDone = held.map((m) => m.id);
   s.milestonesAcked = [...s.milestonesDone];
   return s;
+}
+
+type MakeBatch = (id: string, designId: string, count: number, stage: Batch['stage'], kind: StationKind, ago: number, dur: number, masterwork?: boolean) => Batch;
+
+function addCourt(s: GameState, batch: MakeBatch) {
+  for (const st of s.stations) st.level = 8;
+  s.ruf = 1200;
+  s.taler = 400000;
+  s.materials.kaolin = 80;
+  const F = { temp: 'hoch' as const, atmosphere: 'oxidierend' as const, cooling: 'langsam' as const };
+  const clear = structuredClone(BODIES.porzellan.starterGlaze!);
+  const blue = { id: 'g95', name: 'Blau-Weiß', base: 'transparent' as const, colorant: 'kobalt', colorantPct: 1.5, firing: F, color: '', effect: 'blauweiss', body: 'porzellan' as const };
+  blue.color = glazeColor(blue);
+  const red = { id: 'g96', name: 'Ochsenblut', base: 'opak' as const, colorant: 'kupferoxid', colorantPct: 4, firing: { ...F, atmosphere: 'reduzierend' as const }, color: '', effect: 'ochsenblut', body: 'porzellan' as const };
+  red.color = glazeColor(red);
+  s.glazes.push(clear, blue, red);
+  const fig = (id: string, name: string, variant: string, glazeId: string, pattern: Design['pattern'], patternColor: string): Design =>
+    ({ id, name, form: 'figur', variant, profile: { height: 0.5, belly: 0.6, neck: 0.5, foot: 0.5, rim: 0.5 }, handle: 'none', rim: 'plain', glazeId, pattern, patternColor, body: 'porzellan' });
+  s.designs.push(
+    fig('d95', 'Porzellankatze', 'katze', clear.id, 'none', '#3f5e8c'),
+    fig('d96', 'Kleine Eule', 'eule', clear.id, 'dots', '#3f5e8c'),
+    { id: 'd97', name: 'Delfter Fliese', form: 'fliese', profile: { height: 0.05, belly: 0.5, neck: 0.5, foot: 0.5, rim: 0.5 }, handle: 'none', rim: 'plain', glazeId: blue.id, pattern: 'leaves', patternColor: '#3f5e8c', body: 'porzellan' },
+    fig('d98', 'Roter Igel', 'igel', red.id, 'none', '#fff8ec'),
+  );
+  s.unlocks.push('porzellan', 'figur', 'fliese', 'muster-schuppen', 'rahmen-krone');
+  // three bays busy at the bench, the wheel and the glaze table
+  s.batches.push(
+    batch('b911', 'd95', 4, 'form', 'wheel', 2, 14),
+    batch('b912', 'd97', 20, 'prepare', 'prepBench', 2, 9),
+    batch('b913', 'd96', 4, 'glaze', 'glazeTable', 1, 12),
+    batch('b914', 'd98', 3, 'dry', 'dryingRack', 1, 15),
+  );
+  s.goods.push({ designId: 'd95', quality: 3, effect: null, count: 2 }, { designId: 'd96', quality: 2, effect: null, count: 2 }, { designId: 'd97', quality: 2, effect: 'blauweiss', count: 6 });
+  s.stallDesignIds = ['d95', 'd97', 'd91'];
+  for (const e of collectionEntries()) if (e.body === 'porzellan' && (e.effect === null || e.effect === 'blauweiss') && ['figur', 'fliese', 'becher'].includes(e.form)) recordCollection(s, e.form, e.body, e.effect);
+  s.decor = [...new Set([...s.decor, ...HOF_DECOR])];
+  s.decorPlaced = [...HOF_DECOR];
 }

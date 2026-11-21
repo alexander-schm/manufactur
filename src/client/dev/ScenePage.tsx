@@ -34,7 +34,7 @@ export function mockWorkshop(now: number): GameState {
 
 export function ScenePage() {
   const [now, setNow] = useState(Date.now());
-  const [state] = useState(() => (location.hash.includes('endgame') ? mockEndgame(Date.now()) : mockWorkshop(Date.now())));
+  const [state] = useState(() => (location.hash.includes('endgame') ? mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur') : mockWorkshop(Date.now())));
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
   const view = advance(state, now);
   return (

@@ -7,11 +7,11 @@ export interface CollectionCell {
   key: string;
   found: boolean;
   title: string;
-  look: { design: Pick<Design, 'form' | 'profile' | 'handle' | 'rim' | 'pattern' | 'patternColor' | 'body'>; glazeColor: string; effect: string | null };
+  look: { design: Pick<Design, 'form' | 'profile' | 'handle' | 'rim' | 'pattern' | 'patternColor' | 'body' | 'variant'>; glazeColor: string; effect: string | null };
 }
 
 const defaultLook = (form: string, body: BodyId): CollectionCell['look']['design'] =>
-  ({ form, profile: { ...FORMS[form].profileDefaults }, handle: 'none', rim: 'plain', pattern: 'none', patternColor: '#fff8ec', body });
+  ({ form, profile: { ...FORMS[form].profileDefaults }, handle: 'none', rim: 'plain', pattern: 'none', patternColor: '#fff8ec', body, ...(FORMS[form].variants ? { variant: FORMS[form].variants![0].id } : {}) });
 
 /** One page of the book: rows are forms, columns are "no effect" plus every effect possible on that body. */
 export function collectionGrid(s: GameState, body: BodyId): { forms: string[]; effects: (string | null)[]; effectLabels: string[]; cells: CollectionCell[][] } {
@@ -31,7 +31,7 @@ export function collectionGrid(s: GameState, body: BodyId): { forms: string[]; e
     }
     const d = own.filter((x) => x.form === form).at(-1);
     const glaze = [...glazes].reverse().find((g) => g.effect === effect);
-    const design = d ? { form, profile: d.profile, handle: d.handle, rim: d.rim, pattern: d.pattern, patternColor: d.patternColor, body } : defaultLook(form, body);
+    const design = d ? { form, profile: d.profile, handle: d.handle, rim: d.rim, pattern: d.pattern, patternColor: d.patternColor, body, variant: d.variant } : defaultLook(form, body);
     const title = `${FORMS[form].name} · ${effect ? EFFECTS[effect].name : 'ohne Effekt'}`;
     return { key: entry.key, found: true, title, look: { design, glazeColor: glaze?.color ?? BODIES[body].clearColor, effect } };
   }));

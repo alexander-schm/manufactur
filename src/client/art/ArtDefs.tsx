@@ -26,6 +26,11 @@ export function ArtDefs() {
           <stop offset="60%" stop-color="#ffb238" stop-opacity="0.35" />
           <stop offset="100%" stop-color="#ffb238" stop-opacity="0" />
         </radialGradient>
+        <radialGradient id="porcelain-glow">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+          <stop offset="55%" stop-color="#fffdf6" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="#fffdf6" stop-opacity="0" />
+        </radialGradient>
       </defs>
     </svg>
   );

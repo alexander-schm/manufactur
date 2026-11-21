@@ -44,6 +44,27 @@ describe('WorkshopScene', () => {
     for (const d of ['steinzeugtopf', 'glasurproben', 'papierlampions', 'meisterbrief']) expect(html).toContain(`data-decor="${d}"`);
     expect(html).not.toMatch(/NaN|undefined/);
   });
+  it('Hofmanufaktur scene', () => {
+    const s = mockEndgame(T0, 'hofmanufaktur');
+    expect(s.milestonesAcked).toEqual(s.milestonesDone);
+    expect(s.designs.some((d) => d.form === 'figur' && d.body === 'porzellan' && d.variant)).toBe(true);
+    expect(s.designs.some((d) => d.form === 'fliese' && d.body === 'porzellan')).toBe(true);
+    const html = render(<WorkshopScene state={advance(s, T0)} now={T0} onStation={() => {}} onWorker={() => {}} />);
+    expect(html).toContain('data-tier-sign="hofmanufaktur"');
+    expect(html).toContain('data-kiln-level="8"');
+    expect(html).toContain('data-kiln-crest');
+    expect(html).toContain('data-sign-crown');
+    expect(html).toContain('data-body="porzellan"');
+    expect(html).toContain('data-glow');
+    for (const d of ['porzellanvoegel', 'kronleuchter']) expect(html).toContain(`data-decor="${d}"`);
+    const wheel = html.split('data-station="wheel"')[1].split('data-station=')[0];
+    expect((wheel.match(/class="progress"/g) ?? []).length).toBe(3);
+    expect(html).not.toMatch(/NaN|undefined/);
+    // the Manufaktur keeps its plain sign and kiln
+    const manu = render(<WorkshopScene state={advance(mockEndgame(T0), T0)} now={T0} onStation={() => {}} onWorker={() => {}} />);
+    expect(manu).not.toContain('data-kiln-crest');
+    expect(manu).not.toContain('data-sign-crown');
+  });
   it('a Werkstatt shows the Werkstatt sign and no plinths', () => {
     const html = render(<WorkshopScene state={newGame('p', 4, T0)} now={T0} onStation={() => {}} onWorker={() => {}} />);
     expect(html).toContain('data-tier-sign="werkstatt"');

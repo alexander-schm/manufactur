@@ -15,6 +15,8 @@ export const DECOR: Record<string, DecorDef> = {
   glasurproben: { id: 'glasurproben', name: 'Glasurproben-Brett', spot: 'wall' },
   papierlampions: { id: 'papierlampions', name: 'Papierlampions', spot: 'ceiling' },
   meisterbrief: { id: 'meisterbrief', name: 'Meisterbrief', spot: 'wall' },
+  porzellanvoegel: { id: 'porzellanvoegel', name: 'Porzellanvögel', spot: 'window' },
+  kronleuchter: { id: 'kronleuchter', name: 'Kronleuchter', spot: 'ceiling' },
 };
 
 export const MAX_DECOR_PLACED = 4;

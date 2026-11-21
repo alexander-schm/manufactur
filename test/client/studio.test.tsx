@@ -4,11 +4,12 @@ import { DesignPreview } from '../../src/client/panels/DesignStudio';
 import { BodyPicker } from '../../src/client/panels/BodyPicker';
 import { ExperimentPanel } from '../../src/client/panels/ExperimentPanel';
 import { RecipeBook } from '../../src/client/panels/RecipeBook';
-import { experimentActionFor, patternColorsFor, saveActionFor, switchBody, topFans } from '../../src/client/panels/studioLogic';
+import { experimentActionFor, patternColorsFor, saveActionFor, switchBody, switchForm, topFans } from '../../src/client/panels/studioLogic';
 import { T } from '../../src/client/strings';
 import { bodyGateError } from '../../src/shared/design';
 import { hofGame, manufakturGame, plainGame } from '../shared/helpers';
 import { advance } from '../../src/shared/advance';
+import { FORMS } from '../../src/shared/content';
 import { newGame } from '../../src/shared/state';
 
 const T0 = 1_800_000_000_000;
@@ -45,6 +46,16 @@ describe('design studio', () => {
     expect(switchBody(s, s.designs[0], 'steinzeug')).toMatchObject({ body: 'steinzeug', glazeId: 'klar-steinzeug' });
     const st = switchBody(s, s.designs[0], 'steinzeug');
     expect(switchBody(s, st, 'irdenware').glazeId).toBe(s.glazes.find((g) => g.body === 'irdenware')!.id);
+  });
+  it('switching to the Figur form picks an animal', () => {
+    const s = hofGame();
+    const fig = switchForm(s.designs[0], 'figur');
+    expect(fig).toMatchObject({ form: 'figur', variant: 'katze', handle: 'none', profile: FORMS.figur.profileDefaults });
+    expect(switchForm({ ...fig, variant: 'igel' }, 'figur').variant).toBe('igel');
+    const cup = switchForm({ ...fig, variant: 'eule' }, 'becher');
+    expect(cup.form).toBe('becher');
+    expect(cup.handle).toBe('round');
+    expect('variant' in cup).toBe(false);
   });
   it('experiment action carries the body', () => {
     expect(experimentActionFor({ base: 'matt', colorant: null, colorantPct: 0, temp: 'hoch', atmosphere: 'oxidierend', cooling: 'langsam', body: 'steinzeug' }).recipe.body).toBe('steinzeug');

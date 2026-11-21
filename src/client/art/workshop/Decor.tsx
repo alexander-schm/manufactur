@@ -2,6 +2,28 @@ import { inkStyle } from '../ink';
 
 const S = inkStyle(2.2);
 const T = { ...inkStyle(1.2), opacity: 0.7 };
+const GOLD = '#d9a636';
+const PORCELAIN = '#fbf8f2';
+const COBALT = '#3f5e8c';
+
+/** A little porcelain songbird on a round foot, facing right, standing at (x, y). */
+function PorcelainBird({ x, y, flip }: { x: number; y: number; flip?: boolean }) {
+  return (
+    <g transform={flip ? `translate(${2 * x} 0) scale(-1 1)` : undefined}>
+      <ellipse cx={x} cy={y - 12} rx="17" ry="15" fill="url(#porcelain-glow)" />
+      <path d={`M${x - 11} ${y - 9} L${x - 20} ${y - 16} L${x - 17} ${y - 6} Z`} fill={PORCELAIN} style={inkStyle(1.4)} />
+      <path d={`M${x - 12} ${y - 5} Q${x - 14} ${y - 17} ${x - 2} ${y - 17} Q${x + 9} ${y - 17} ${x + 10} ${y - 9} Q${x + 9} ${y - 2} ${x - 2} ${y - 2} Q${x - 10} ${y - 2} ${x - 12} ${y - 5} Z`} fill={PORCELAIN} style={inkStyle(1.6)} />
+      <circle cx={x + 5} cy={y - 19} r="6.2" fill={PORCELAIN} style={inkStyle(1.6)} />
+      <path d={`M${x + 10.6} ${y - 20.4} l4.4 1.4 l-4.4 1.8 Z`} fill="var(--g5)" style={inkStyle(0.9)} />
+      <circle cx={x + 7} cy={y - 20.4} r="1.3" fill="var(--line)" />
+      <ellipse cx={x + 6} cy={y - 16.2} rx="1.8" ry="1.1" fill="var(--cheek)" opacity="0.7" />
+      <path d={`M${x - 7} ${y - 12} q5 5 11 0`} fill="none" stroke={COBALT} stroke-width="1.8" stroke-linecap="round" />
+      <path d={`M${x - 5} ${y - 8} q3.5 3 7.5 0`} fill="none" stroke={COBALT} stroke-width="1.3" stroke-linecap="round" />
+      <path d={`M${x + 1} ${y - 24.5} q1.5 -3 4 -1`} fill="none" stroke={COBALT} stroke-width="1.3" stroke-linecap="round" />
+      <ellipse cx={x - 1} cy={y - 1.6} rx="9" ry="2.4" fill={PORCELAIN} style={inkStyle(1.3)} />
+    </g>
+  );
+}
 
 /** Decor items at fixed, hand-picked spots in room 1 (1200×700). */
 const DRAW: Record<string, () => preact.JSX.Element> = {
@@ -112,6 +134,39 @@ const DRAW: Record<string, () => preact.JSX.Element> = {
           <path d={`M${lx} ${ly + 13} l0 6`} stroke="var(--kiln)" stroke-width="2" stroke-linecap="round" />
         </g>
       ))}
+    </g>
+  ),
+  // on the window sill between the cactus and the flower pot: two porcelain birds in love
+  porzellanvoegel: () => (
+    <g>
+      <ellipse cx="493" cy="267" rx="34" ry="3" fill="url(#hatch)" opacity="0.4" />
+      <PorcelainBird x={479} y={266} />
+      <PorcelainBird x={507} y={266} flip />
+      <path d="M493 240 c-3 -4 -8 -1 -5 3 l5 4 l5 -4 c3 -4 -2 -7 -5 -3 Z" fill="var(--g3)" style={inkStyle(1.1)} />
+    </g>
+  ),
+  // ceiling between the right curtain and the pinboard
+  kronleuchter: () => (
+    <g class="hanging" style={{ transformOrigin: '668px 22px', animationDelay: '2s' }}>
+      <g transform="translate(668 22) scale(1.3) translate(-668 -22)">
+      <path d="M668 22 L668 56" style={T} />
+      {[30, 38, 46].map((cy) => <ellipse cx="668" cy={cy} rx="2" ry="3.4" fill="none" stroke={GOLD} stroke-width="1.6" />)}
+      {[[642, 76], [668, 70], [694, 76]].map(([cx, cy]) => <circle cx={cx} cy={cy - 12} r="11" fill="url(#glow)" opacity="0.8" />)}
+      <path d="M642 80 Q644 98 668 98 Q692 98 694 80" fill="none" stroke={GOLD} stroke-width="4" />
+      <path d="M642 80 Q644 98 668 98 Q692 98 694 80" fill="none" style={{ ...inkStyle(1.2), opacity: 0.8 }} />
+      <path d="M668 56 L668 98" stroke={GOLD} stroke-width="4" />
+      <path d="M668 56 L668 98" fill="none" style={{ ...inkStyle(1), opacity: 0.6 }} />
+      <ellipse cx="668" cy="98" rx="7" ry="5" fill={GOLD} style={inkStyle(1.4)} />
+      {[[642, 80], [668, 74], [694, 80]].map(([cx, cy]) => (
+        <g>
+          <path d={`M${cx - 6} ${cy} L${cx + 6} ${cy} L${cx + 4} ${cy + 4} L${cx - 4} ${cy + 4} Z`} fill={GOLD} style={inkStyle(1.2)} />
+          <rect x={cx - 2.6} y={cy - 12} width="5.2" height="12" fill={PORCELAIN} style={inkStyle(1.1)} />
+          <g class="flame" style={{ transformOrigin: `${cx}px ${cy - 12}px` }}><path d={`M${cx} ${cy - 21} Q${cx + 3.6} ${cy - 15} ${cx} ${cy - 12.5} Q${cx - 3.6} ${cy - 15} ${cx} ${cy - 21} Z`} fill="var(--fireCore)" style={inkStyle(0.8)} /></g>
+        </g>
+      ))}
+      {[650, 659, 677, 686].map((dx, i) => <path d={`M${dx} ${i % 3 ? 97 : 93} l0 4 M${dx} ${(i % 3 ? 101 : 97) + 1} q-2.4 3 0 5.6 q2.4 -2.6 0 -5.6 Z`} fill="#e3f1f6" style={inkStyle(0.8)} />)}
+      <path d="M668 103 l0 3 M668 107 q-2.8 3.6 0 6.6 q2.8 -3 0 -6.6 Z" fill="#e3f1f6" style={inkStyle(0.8)} />
+      </g>
     </g>
   ),
   // wall between the clock and the kiln

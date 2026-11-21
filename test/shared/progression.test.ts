@@ -138,7 +138,7 @@ describe('milestone ladder (Manufaktur range)', () => {
       for (const d of m.decor ?? []) expect(DECOR[d], d).toBeDefined();
     }
     for (const f of Object.values(FRAMES)) expect(UNLOCKS[f.unlock]).toBeDefined();
-    expect(Object.keys(FRAMES)).toEqual(['punkte', 'doppel', 'kranz', 'sonne', 'gold']);
+    expect(Object.keys(FRAMES)).toEqual(['punkte', 'doppel', 'kranz', 'sonne', 'gold', 'krone']);
   });
   it('ruf milestones fire and unlock their rewards', () => {
     const s = plainGame(); s.ruf = 600;
