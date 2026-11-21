@@ -83,7 +83,7 @@ const act = async (action) => {
   if (res.status !== 200) fail(`${action.type} ${res.status} ${JSON.stringify(res.json)}`);
   return res.json.state;
 };
-r = await api(a, 'POST', '/api/dev/grant', { taler: 60000, ruf: 320 });
+r = await api(a, 'POST', '/api/dev/grant', { taler: 260000, ruf: 320 }); // Manufaktur price 250 000 + a masterwork
 if (r.status !== 200) fail(`grant ${r.status} ${JSON.stringify(r.json)}`);
 st = await act({ type: 'upgradeTier' });
 if (st.tier !== 'manufaktur') fail(`tier is ${st.tier}`);

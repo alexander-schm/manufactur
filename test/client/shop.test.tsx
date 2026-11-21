@@ -2,6 +2,7 @@ import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { fillUpAmount, KEEP_STOCK_STEPS, ShopPanel } from '../../src/client/panels/ShopPanel';
 import { TierSection } from '../../src/client/panels/TierSection';
+import { getTier } from '../../src/shared/content';
 import { plainGame } from '../shared/helpers';
 
 describe('shop and tier UI', () => {
@@ -13,7 +14,7 @@ describe('shop and tier UI', () => {
     expect(KEEP_STOCK_STEPS).toEqual([0, 100, 500, 1000, 5000]);
   });
   it('tier section: gated by Ruf, then enabled', () => {
-    const s = plainGame(); s.taler = 60000; s.ruf = 100;
+    const s = plainGame(); s.taler = getTier('manufaktur').price + 10000; s.ruf = 100;
     expect(render(<TierSection s={s} />)).toMatch(/<button[^>]*disabled[^>]*>[^<]*Zur Manufaktur aufsteigen/);
     expect(render(<TierSection s={s} />)).toContain('ab 300 Ruf');
     s.ruf = 300;

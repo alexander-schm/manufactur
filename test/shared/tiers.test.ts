@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
+import { STATIONS, getTier } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
 import { manufakturGame, plainGame, T0 } from './helpers';
 
 const NOW = T0 + 1000;
+const PRICE = getTier('manufaktur').price;
 
 function ok(s: GameState, a: Action) {
   const r = applyAction(s, a, NOW);
@@ -21,7 +23,7 @@ function rejected(s: GameState, a: Action): string {
 
 describe('tiers', () => {
   it('upgradeTier buys the Manufaktur: pays, unlocks, gets the stoneware starter glaze', () => {
-    const s = plainGame(); s.ruf = 300; s.taler = 50000;
+    const s = plainGame(); s.ruf = 300; s.taler = PRICE;
     const r = ok(s, { type: 'upgradeTier' });
     expect(r.state.tier).toBe('manufaktur');
     expect(r.state.taler).toBe(0);
@@ -33,7 +35,7 @@ describe('tiers', () => {
   it('upgradeTier needs Ruf and Taler, and stops at the top tier', () => {
     const s = plainGame(); s.ruf = 299; s.taler = 1e6;
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/300 Ruf/);
-    s.ruf = 300; s.taler = 49999;
+    s.ruf = 300; s.taler = PRICE - 1;
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/Taler/);
     expect(rejected(manufakturGame(), { type: 'upgradeTier' })).toMatch(/Höher hinaus/); // Part 1 only
   });
@@ -44,7 +46,7 @@ describe('tiers', () => {
     s.tier = 'manufaktur';
     let t = ok(s, { type: 'upgradeStation', stationId: wheel.id }).state;
     expect(t.stations.find((x) => x.id === wheel.id)!.level).toBe(6);
-    expect(t.taler).toBe(1e6 - 9000);
+    expect(t.taler).toBe(1e6 - STATIONS.wheel.upgradeCost[4]);
     t = ok(t, { type: 'upgradeStation', stationId: wheel.id }).state;
     expect(t.stations.find((x) => x.id === wheel.id)!.level).toBe(7);
     expect(rejected(t, { type: 'upgradeStation', stationId: wheel.id })).toMatch(/höchster Stufe/);

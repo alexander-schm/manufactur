@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
 import { advance, startWork } from '../../src/shared/advance';
 import { collectionKey } from '../../src/shared/collection';
-import { FORMS, PATRONS, bodyOf } from '../../src/shared/content';
+import { FORMS, PATRONS, bodyOf, getTier } from '../../src/shared/content';
 import { colorFamily, validateDesign } from '../../src/shared/design';
 import {
   COMMISSION_SWAP_COST, MASTERWORK_QUALITY_BONUS, PRESTIGE_MUL, finishMasterwork, criteriaMet, describeCriterion, generateCommission, masterworkInProgress, predictMasterwork, prestigeFor,
@@ -376,7 +376,7 @@ describe('masterworks', () => {
   });
 
   it('reaching the Manufaktur brings the first commission', () => {
-    const s = plainGame(); s.ruf = 300; s.taler = 50000;
+    const s = plainGame(); s.ruf = 300; s.taler = getTier('manufaktur').price;
     const a = ok(s, { type: 'upgradeTier' });
     expect(a.commission).not.toBeNull();
     expect(a.commission!.criteria.length).toBe(3);
