@@ -14,8 +14,8 @@ import { ownDesigns } from '../../shared/village/apply';
 import { DecorSection } from './village/DecorPanel';
 import { TierSection } from './TierSection';
 import type { PanelId } from './PanelHost';
-
-const STAGE_LABEL: Record<string, string> = { prepare: 'Kneten', form: 'Drehen', dry: 'Trocknen', bisque: 'Schrühbrand', glaze: 'Glasieren', glazeFire: 'Glasurbrand' };
+import { T } from '../strings';
+import { masterworkInProgress } from '../../shared/masterwork';
 
 function upgradeEffect(st: Station): string {
   const def = getStationDef(st.kind);
@@ -87,7 +87,7 @@ export function StationPanel({ s, stationId, onOpen }: { s: GameState; stationId
             <div class="card-row" style={{ marginBottom: '8px' }}>
               {d && <DesignPot s={s} d={d} size={52} />}
               <div class="grow">
-                <div>{bays > 1 ? `Platz ${i + 1}/${bays} · ` : ''}{STAGE_LABEL[b.stage]}: {b.count}× {d?.name}</div>
+                <div>{bays > 1 ? `Platz ${i + 1}/${bays} · ` : ''}{T.stage[b.stage]}: {b.count}× {d?.name}</div>
                 <div class="progressbar"><div style={{ width: `${(p * 100).toFixed(1)}%` }} /></div>
                 <div class="muted" style={{ fontSize: '.85em' }}>{b.blocked ? 'Fertig – aber das Regal ist voll! Verkaufe etwas oder baue das Regal aus.' : `noch ${formatDuration(b.startedAt! + b.durationMs - t)}`}</div>
               </div>
@@ -157,6 +157,12 @@ export function WorkshopPanel({ s, onOpen }: { s: GameState; onOpen: (id: PanelI
           </button>
         ))}
       </div>
+      {s.unlocks.includes('meisterstuecke') && (
+        <button class="card card-row mw-card" data-open="masterwork" style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', marginTop: '12px' }} onClick={() => onOpen('masterwork')}>
+          <div class="grow"><strong>{T.tabs.masterwork}</strong><div class="muted" style={{ fontSize: '.85em' }}>{masterworkInProgress(s) ? T.mw.cardBusy : T.mw.card}</div></div>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
       <DecorSection s={s} />
       <section class="panel-section" style={{ marginTop: '16px' }}>
         <h3>Zweiter Raum</h3>

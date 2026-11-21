@@ -135,3 +135,32 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .coll-stamp { flex: none; transform: rotate(-12deg); }
 .coll-note { min-height: 1.3em; margin: 8px 0 2px; }
 .coll-prize { margin: 4px 0 0; font-style: italic; }
+/* masterworks */
+.masterwork { display: grid; gap: 4px; }
+.mw-letter { margin: 18px 2px 10px; transform: rotate(-0.6deg); background-color: #fffaf0; background-image: repeating-linear-gradient(transparent 0 27px, rgba(79,156,196,.18) 27px 28px); }
+.mw-patron { display: flex; align-items: flex-end; gap: 10px; border-bottom: 2px dashed rgba(43,36,32,.3); padding-bottom: 6px; }
+.mw-patron h3 { margin: 0; font-size: 1.35em; }
+.mw-from { display: block; font-size: .85em; }
+.mw-wish { margin: 10px 0 4px; font-style: italic; color: #3d4f7a; }
+.mw-criteria { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; font-size: 1.1em; }
+.mw-criteria li { display: flex; align-items: center; gap: 8px; }
+.mw-fit { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border: 2px solid var(--line); border-radius: 50% 45% 55% 48%; font-weight: bold; font-size: .85em; line-height: 1; }
+.mw-fit.yes { background: var(--g2); }
+.mw-fit.no { background: #fff; color: #b03a3a; border-color: rgba(176,58,58,.7); }
+.mw-terms { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 6px; }
+.mw-terms dt { font-weight: bold; }
+.mw-terms dd { margin: 0; }
+.mw-swap { display: block; margin-left: auto; }
+.mw-swap:disabled { opacity: .45; cursor: not-allowed; }
+.mw-designs { display: grid; gap: 8px; margin-bottom: 12px; }
+.mw-design { display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; cursor: pointer; }
+.mw-design[aria-pressed='true'] { background: #fff6d8; outline: 3px solid var(--g5); }
+.mw-fits { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.mw-predict { display: grid; justify-items: center; font-size: .8em; text-align: center; min-width: 52px; }
+.mw-start { width: 100%; white-space: normal; }
+.mw-progress .progressbar { margin: 4px 0 2px; }
+.mw-records { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.mw-record { position: relative; display: grid; justify-items: center; text-align: center; gap: 2px; background: #fff; border: 2px solid var(--line); border-radius: 12px 8px 14px 9px; padding: 8px 6px 6px; font-size: .9em; }
+.mw-record .medal { position: absolute; top: 4px; right: 6px; }
+.mw-record .muted { font-size: .85em; }
+.mw-done-art { display: flex; justify-content: center; align-items: flex-end; gap: 4px; margin: 6px 0; }

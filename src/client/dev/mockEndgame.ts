@@ -1,7 +1,7 @@
 import { collectionEntries, recordCollection } from '../../shared/collection';
 import { BODIES } from '../../shared/content';
 import { discoveredEffects, glazeColor } from '../../shared/discovery';
-import { generateCommission } from '../../shared/masterwork';
+import { generateCommission, PRESTIGE_MUL } from '../../shared/masterwork';
 import { MILESTONES } from '../../shared/progression';
 import type { Batch, Design, GameState, MasterworkRecord, Prestige, StationKind, Tier } from '../../shared/types';
 import { mockWorkshop } from './ScenePage';
@@ -46,7 +46,7 @@ export function mockEndgame(now: number, tier: Tier = 'manufaktur'): GameState {
 
   const record = (id: string, d: Design, prestige: Prestige, quality: 1 | 2 | 3, met: number, ago: number): MasterworkRecord => {
     const g = s.glazes.find((x) => x.id === d.glazeId);
-    return { id, commissionId: `c${id}`, patronName: 'Gräfin Adelheid', design: structuredClone(d), glazeColor: g?.color ?? '#d3c7b4', effect: g?.effect ?? null, quality, met, total: 3, prestige, finishedAt: now - ago * MIN, acked: true };
+    return { id, commissionId: `c${id}`, patronName: 'Gräfin Adelheid', design: structuredClone(d), glazeColor: g?.color ?? '#d3c7b4', effect: g?.effect ?? null, quality, met, total: 3, prestige, finishedAt: now - ago * MIN, acked: true, reward: { taler: Math.round(14000 * PRESTIGE_MUL[prestige]), ruf: Math.round(35 * PRESTIGE_MUL[prestige]) } };
   };
   s.masterworks = [
     record('mw1', s.designs.find((d) => d.id === 'd90')!, 'bronze', 2, 2, 3000),

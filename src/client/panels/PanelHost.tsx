@@ -6,6 +6,7 @@ import { Icon } from '../ui/Icons';
 import { Sheet } from '../ui/Sheet';
 import { DesignStudio } from './DesignStudio';
 import { MarketPanel } from './MarketPanel';
+import { MasterworkPanel } from './MasterworkPanel';
 import { OrdersPanel } from './OrdersPanel';
 import { RecipeBook } from './RecipeBook';
 import { ShopPanel } from './ShopPanel';
@@ -13,9 +14,9 @@ import { StationPanel, WorkshopPanel } from './StationPanel';
 import { WorkersPanel } from './WorkersPanel';
 import './panels.css';
 
-export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market' | 'village';
+export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market' | 'village' | 'masterwork';
 
-const UNLOCK: Partial<Record<PanelId, string>> = { orders: 'orders', studio: 'studio', recipes: 'recipes' };
+const UNLOCK: Partial<Record<PanelId, string>> = { orders: 'orders', studio: 'studio', recipes: 'recipes', masterwork: 'meisterstuecke' };
 export const panelUnlock = (id: PanelId) => UNLOCK[id];
 
 
@@ -34,6 +35,7 @@ function lockHint(unlock: string): string {
     orders: 'Verkaufe dein erstes Stück, dann kommen die Bestellungen.',
     studio: 'Erledige deinen ersten Auftrag.',
     recipes: 'Mach deinen ersten Glasurversuch im Entwurfsstudio.',
+    meisterstuecke: T.mw.lockHint,
   } as Record<string, string>)[unlock] ?? 'Kommt bald.';
 }
 
@@ -51,6 +53,7 @@ export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: str
   else if (id === 'station') body = <StationPanel s={s} stationId={arg ?? ''} onOpen={onOpen} />;
   else if (id === 'studio') body = <DesignStudio s={s} tab={arg} />;
   else if (id === 'recipes') body = <RecipeBook s={s} tab={arg} />;
+  else if (id === 'masterwork') body = <MasterworkPanel s={s} />;
   else if (id === 'village') return <Sheet title={`Dorf ${me.value?.villageName ?? ''}`} onClose={onClose} wide><VillagePanel tab={arg} /></Sheet>;
   else body = <MarketPanel s={s} />;
   return <Sheet title={title} onClose={onClose}>{body}</Sheet>;

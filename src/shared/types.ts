@@ -125,6 +125,8 @@ export interface MasterworkRecord {
   prestige: Prestige;
   finishedAt: number;
   acked: boolean;
+  /** what the patron paid; missing on records from before it was kept */
+  reward?: { taler: number; ruf: number };
 }
 
 export interface GameState {

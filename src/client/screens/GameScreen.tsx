@@ -14,6 +14,7 @@ import { inviteLink } from './AuthScreen';
 import { PanelHost, type PanelId, panelUnlock } from '../panels/PanelHost';
 import { AwaySummary } from '../panels/AwaySummary';
 import { Celebration } from '../panels/Celebration';
+import { MasterworkDone } from '../panels/MasterworkPanel';
 import { ONBOARDING, OnboardingCard, onboardingStep } from '../panels/Onboarding';
 import './screens.css';
 
@@ -31,6 +32,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
   const [skipTutorial, setSkipTutorial] = useState(() => { try { return localStorage.getItem('mf_skip_tutorial') === '1'; } catch { return false; } });
   if (!s) return <div class="loading">{T.loading}</div>;
   const pendingMilestone = s.milestonesDone.find((m) => !s.milestonesAcked.includes(m));
+  const pendingMasterwork = s.masterworks.find((m) => !m.acked);
   const ctx = { villageOpened: villageOpened.value, gaveOrHelped: gaveOrHelped.value };
   const step = onboardingStep(s, ctx);
   const highlight = !skipTutorial && step < ONBOARDING.length && !panel ? ONBOARDING[step].target : undefined;
@@ -48,7 +50,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
       </header>
       <div class="scene-frame">
         <Paper seed={21}>
-          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} onMasterwork={() => open('workshop')} highlight={highlight} />
+          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} onMasterwork={() => open('masterwork')} highlight={highlight} />
         </Paper>
       </div>
       <nav class="toolbar" aria-label="Werkzeuge">
@@ -66,11 +68,12 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
         })}
       </nav>
       {panel && <PanelHost id={panel.id} arg={panel.arg} onClose={() => setPanel(null)} onOpen={open} />}
-      {!skipTutorial && !panel && !awayAtLoad && !pendingMilestone && (
+      {!skipTutorial && !panel && !awayAtLoad && !pendingMilestone && !pendingMasterwork && (
         <OnboardingCard s={s} ctx={ctx} onOpen={open} onSkip={() => { try { localStorage.setItem('mf_skip_tutorial', '1'); } catch { /* ignore */ } setSkipTutorial(true); }} />
       )}
       {awayAtLoad && <AwaySummary away={awayAtLoad} boosted={now.value < s.boostUntil} now={s.lastTick} news={(village.value?.news ?? []).filter((n) => n.at > awayAtLoad.since && (n.for === null || n.for === me.value?.playerId))} onClose={() => { setAwayAtLoad(null); if (s.away) dispatch({ type: 'ackAway' }); }} />}
       {!awayAtLoad && pendingMilestone && <Celebration milestoneId={pendingMilestone} onClose={() => dispatch({ type: 'ackMilestone', id: pendingMilestone })} />}
+      {!awayAtLoad && !pendingMilestone && pendingMasterwork && <MasterworkDone record={pendingMasterwork} onClose={() => dispatch({ type: 'ackMasterwork', id: pendingMasterwork.id })} />}
       {menu && (
         <Sheet title={T.village} onClose={() => setMenu(false)}>
           <p>Einladungscode für <strong>{me.value?.villageName}</strong>:</p>

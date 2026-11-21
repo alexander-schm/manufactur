@@ -235,6 +235,7 @@ describe('masterworks', () => {
     expect(s.batches).toHaveLength(0);
     expect(s.masterworks).toHaveLength(1);
     expect(s.masterworks[0]).toMatchObject({ commissionId: '', prestige: 'bronze', met: 0, total: 0, finishedAt: T0 + 4 * H });
+    expect(s.masterworks[0].reward).toBeUndefined();
     expect(s.taler).toBe(taler);
     expect(s.ruf).toBe(ruf);
     expect(s.commission).not.toBeNull();
@@ -282,6 +283,7 @@ describe('masterworks', () => {
       expect(m.effect).toBe(s.glazes.find((g) => g.id === d.glazeId)!.effect);
       expect(s.taler).toBe(taler + Math.round(c.rewardTaler * PRESTIGE_MUL[m.prestige]));
       expect(s.ruf).toBe(ruf + Math.round(c.rewardRuf * PRESTIGE_MUL[m.prestige]));
+      expect(m.reward).toEqual({ taler: Math.round(c.rewardTaler * PRESTIGE_MUL[m.prestige]), ruf: Math.round(c.rewardRuf * PRESTIGE_MUL[m.prestige]) });
       expect(s.stats.made).toBe(made + 1);
       expect(s.collection).toContain(collectionKey(d.form, bodyOf(d), m.effect));
       expect(s.batches).toHaveLength(0);

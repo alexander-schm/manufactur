@@ -140,10 +140,10 @@ export function finishMasterwork(s: GameState, b: Batch, t: number): void {
   const quality = qualityTier(b.quality);
   // no patron to judge it (should not happen): the piece is kept, but earns nothing
   const prestige = c ? prestigeFor(met, metList.length, quality) : 'bronze';
-  if (c) {
-    const mul = PRESTIGE_MUL[prestige];
-    s.taler += Math.round(c.rewardTaler * mul);
-    s.ruf += Math.round(c.rewardRuf * mul);
+  const reward = c ? { taler: Math.round(c.rewardTaler * PRESTIGE_MUL[prestige]), ruf: Math.round(c.rewardRuf * PRESTIGE_MUL[prestige]) } : undefined;
+  if (reward) {
+    s.taler += reward.taler;
+    s.ruf += reward.ruf;
   }
   const glaze = glazeForDesign(s, design);
   // a masterwork always shows its glaze's effect: no chance roll
@@ -151,6 +151,7 @@ export function finishMasterwork(s: GameState, b: Batch, t: number): void {
   s.masterworks.push({
     id: newId(s, 'mw'), commissionId: c?.id ?? '', patronName: c?.patronName ?? '', design: structuredClone(design),
     glazeColor: glaze?.color ?? getBody(bodyOf(design)).clearColor, effect, quality, met, total: metList.length, prestige, finishedAt: t, acked: false,
+    ...(reward ? { reward } : {}),
   });
   recordCollection(s, design.form, bodyOf(design), effect);
   s.stats.made += 1;

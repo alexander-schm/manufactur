@@ -9,6 +9,8 @@ import { WorkshopScene } from '../../art/workshop/WorkshopScene';
 import { Button } from '../../ui/Button';
 import { Paper } from '../../ui/Paper';
 import { DesignPot } from '../common';
+import { MasterworkShelf } from '../MasterworkPanel';
+import { T } from '../../strings';
 import { Guestbook } from './GuestbookPanel';
 
 export function VisitView({ village, meId, member, state, now, onHelp }: { village: VillageView; meId: string; member: Member; state: GameState; now: number; onHelp: (sticker: string) => void }) {
@@ -41,6 +43,12 @@ export function VisitView({ village, meId, member, state, now, onHelp }: { villa
         <h3>Entwürfe von {member.name}</h3>
         <div class="goods-grid">{own.map((d) => <div class="goods-item"><DesignPot s={state} d={d} size={72} /><div>{d.name}</div></div>)}</div>
       </section>
+      {state.masterworks.length > 0 && (
+        <section class="panel-section">
+          <h3>{T.mw.visitTitle(member.name)}</h3>
+          <MasterworkShelf records={state.masterworks} />
+        </section>
+      )}
       <section class="panel-section">
         <h3>Gästebuch</h3>
         <Guestbook entries={village.guestbooks[member.playerId] ?? []} />

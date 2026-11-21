@@ -1,5 +1,6 @@
 import type { MasterworkRecord, Prestige } from '../../../shared/types';
 import { inkStyle } from '../ink';
+import { PRESTIGE_NAME } from '../../../shared/masterwork';
 import { ScenePot } from './stations/Stations';
 
 const S = inkStyle(2.2);
@@ -55,4 +56,32 @@ export function Plinths({ records, onClick }: { records: MasterworkRecord[]; onC
   const shown = records.slice(-SPOTS.length); // records are kept in the order they were finished
   if (shown.length === 0) return null;
   return <g class="plinths">{shown.map((r, i) => <Plinth r={r} x={SPOTS[i].x} y={SPOTS[i].y} h={SPOTS[i].h} onClick={onClick} />)}</g>;
+}
+
+const MEDAL_RIBBON: Record<Prestige, [string, string]> = { bronze: ['#a85e38', '#dcc2a6'], silver: ['#3f5e8c', '#9fb7d6'], gold: ['#b03a3a', '#f2b84b'] };
+
+/** A hanging medal: ribbon in two colours, a disc in the prestige metal and one, two or three stars, so the three read apart at a glance. */
+export function Medal({ prestige, size = 40, title }: { prestige: Prestige; size?: number; title?: string }) {
+  const [a, b] = MEDAL_RIBBON[prestige];
+  const stars = prestige === 'gold' ? [[-7, 3], [0, -4], [7, 3]] : prestige === 'silver' ? [[-4, 0], [4, 0]] : [[0, 0]];
+  const star = (cx: number, cy: number) => {
+    const pts = Array.from({ length: 10 }, (_, i) => {
+      const r = i % 2 ? 2 : 4.6;
+      const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      return `${(cx + Math.cos(ang) * r).toFixed(1)},${(cy + Math.sin(ang) * r).toFixed(1)}`;
+    });
+    return <polygon points={pts.join(' ')} fill="#fff8ec" stroke="var(--line)" stroke-width="0.9" stroke-linejoin="round" />;
+  };
+  return (
+    <svg class="medal" data-medal={prestige} viewBox="0 0 40 52" width={size} height={size * 1.3} role="img" aria-label={title ?? PRESTIGE_NAME[prestige]}>
+      <title>{title ?? PRESTIGE_NAME[prestige]}</title>
+      <path d="M9 1 L19 1 L22 22 L14 24 Z" fill={a} style={inkStyle(1.3)} />
+      <path d="M31 1 L21 1 L18 22 L26 24 Z" fill={b} style={inkStyle(1.3)} />
+      {prestige === 'gold' && <circle cx="20" cy="34" r="16" fill="none" stroke="var(--sun)" stroke-width="2" stroke-dasharray="1.5 3" stroke-linecap="round" />}
+      <circle cx="20" cy="34" r="13" fill={PRESTIGE_COLOR[prestige]} style={inkStyle(1.6)} />
+      <circle cx="20" cy="34" r="9.5" fill="none" stroke="var(--line)" stroke-width="0.8" opacity="0.45" />
+      <g transform="translate(20 34)">{stars.map(([x, y]) => star(x, y))}</g>
+      <path d="M11 28 Q14 24 18 23.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity="0.6" />
+    </svg>
+  );
 }
