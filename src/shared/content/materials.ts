@@ -19,6 +19,7 @@ export const MATERIALS: Record<string, MaterialDef> = {
   kobalt: { id: 'kobalt', name: 'Kobalt', kind: 'colorant', price: 12, colorFamily: 'blau', unlock: 'kobalt', description: 'Teuer, aber schon eine Prise ergibt ein tiefes Blau.' },
   steinzeugton: { id: 'steinzeugton', name: 'Steinzeugton', kind: 'clay', price: 3, unlock: 'steinzeug', description: 'Grauer, feiner Ton, der große Hitze verträgt.' },
   salz: { id: 'salz', name: 'Salz', kind: 'colorant', price: 4, colorFamily: 'braun', unlock: 'steinzeug', description: 'Grobes Salz. Ins heiße Feuer geworfen, bildet es eine ganz eigene Glasur.' },
+  mangan: { id: 'mangan', name: 'Mangan', kind: 'colorant', price: 10, colorFamily: 'lila', unlock: 'mangan', description: 'Violettbraunes Pulver – je mehr, desto dunkler.' },
   holz: { id: 'holz', name: 'Brennholz', kind: 'fuel', price: 1, description: 'Buchenscheite für den Ofen.' },
   kaolin: { id: 'kaolin', name: 'Kaolin', kind: 'clay', price: 6, locked: true, description: 'Weiße Porzellanerde. Noch weiß niemand, wo es welche gibt …' },
 };

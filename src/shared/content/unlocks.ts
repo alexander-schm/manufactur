@@ -1,4 +1,5 @@
 import { EXTRA_COLORS } from './colors';
+import { FRAMES } from './frames';
 
 export interface UnlockDef {
   id: string;
@@ -27,7 +28,12 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   steinzeug: { id: 'steinzeug', kind: 'feature', title: 'Steinzeug', text: 'Grauer Ton, heiß gebrannt, steinhart – und wertvoller.' },
   teekanne: { id: 'teekanne', kind: 'form', title: 'Teekannen', text: 'Mit Tülle und Deckel – die Königsdisziplin an der Scheibe.' },
   meisterstuecke: { id: 'meisterstuecke', kind: 'feature', title: 'Meisterstücke', text: 'Gönner aus der Stadt geben besondere Einzelstücke in Auftrag.' },
+  'muster-ranken': { id: 'muster-ranken', kind: 'pattern', title: 'Ranken', text: 'Ein neues Muster für deine Entwürfe.' },
+  'muster-karo': { id: 'muster-karo', kind: 'pattern', title: 'Karo', text: 'Ein neues Muster für deine Entwürfe.' },
+  mangan: { id: 'mangan', kind: 'feature', title: 'Mangan', text: 'Ein neuer Farbkörper: violett bis tiefbraun.' },
+  'kunde-sammlerin': { id: 'kunde-sammlerin', kind: 'customer', title: 'Frau von Scherbenfeld', text: 'Eine Sammlerin aus der Stadt schaut jetzt öfter vorbei.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };
 
+for (const f of Object.values(FRAMES)) UNLOCKS[f.unlock] = { id: f.unlock, kind: 'frame', title: `Rahmen: ${f.name}`, text: 'Ein neuer Rahmen für dein Meisterzeichen.' };
 for (const c of EXTRA_COLORS) UNLOCKS[c.unlock] = { id: c.unlock, kind: 'color', title: `Neue Farbe: ${c.name}`, text: 'Für Muster und Meisterzeichen.' };

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
 import { advance } from '../../src/shared/advance';
-import { getForm } from '../../src/shared/content';
+import { collectionEntries } from '../../src/shared/collection';
+import { EFFECTS, FRAMES, UNLOCKS, getForm } from '../../src/shared/content';
+import { DECOR } from '../../src/shared/village/decor';
+import { validateDesign } from '../../src/shared/design';
 import { shelfCapacity } from '../../src/shared/market';
 import { checkMilestones, MILESTONES, touchSeen } from '../../src/shared/progression';
 import type { GameState } from '../../src/shared/types';
-import { plainGame, T0 } from './helpers';
+import { manufakturGame, plainGame, T0 } from './helpers';
 
 const MIN = 60_000;
 const H = 60 * MIN;
@@ -125,5 +128,82 @@ describe('pacing playthrough', () => {
     const times = [T0, ...unlockTimes];
     for (let i = 1; i < times.length; i++) expect((times[i] - times[i - 1]) / MIN, `gap before unlock #${i}`).toBeLessThanOrEqual(8);
     expect((unlockTimes[unlockTimes.length - 1] - T0) / MIN).toBeGreaterThanOrEqual(25);
+  });
+});
+
+describe('milestone ladder (Manufaktur range)', () => {
+  it('every milestone unlock and decor exists', () => {
+    for (const m of MILESTONES) {
+      for (const u of m.unlocks) expect(UNLOCKS[u], u).toBeDefined();
+      for (const d of m.decor ?? []) expect(DECOR[d], d).toBeDefined();
+    }
+    for (const f of Object.values(FRAMES)) expect(UNLOCKS[f.unlock]).toBeDefined();
+    expect(Object.keys(FRAMES)).toEqual(['punkte', 'doppel', 'kranz', 'sonne', 'gold']);
+  });
+  it('ruf milestones fire and unlock their rewards', () => {
+    const s = plainGame(); s.ruf = 600;
+    const r = checkMilestones(s).state;
+    for (const id of ['ruf250', 'ruf400', 'ruf600']) expect(r.milestonesDone).toContain(id);
+    for (const u of ['rahmen-punkte', 'muster-ranken', 'kunde-sammlerin']) expect(r.unlocks).toContain(u);
+  });
+  it('collection milestones derive from the book size and stay done when it grows', () => {
+    const total = collectionEntries().length;
+    const s = manufakturGame();
+    s.collection = collectionEntries().slice(0, Math.ceil(total * 0.25)).map((e) => e.key);
+    const r = checkMilestones(s).state;
+    expect(r.milestonesDone).toContain('sammlung25');
+    expect(r.milestonesDone).not.toContain('sammlung50');
+    expect(r.unlocks).toContain('rahmen-doppel');
+    const full = manufakturGame(); full.collection = collectionEntries().map((e) => e.key);
+    const f = checkMilestones(full).state;
+    expect(f.decor).toContain('papierlampions');
+    expect(f.unlocks).toEqual(expect.arrayContaining(['muster-karo', 'rahmen-kranz']));
+    expect(f.milestonesDone).toContain('sammlung100');
+    // a book that later grows: shrink the collection, nothing is taken back
+    f.collection = f.collection.slice(0, 3);
+    expect(checkMilestones(f).state.milestonesDone).toContain('sammlung100');
+  });
+  it('first stoneware piece and body effects reward decor and mangan', () => {
+    const s = manufakturGame();
+    s.collection.push('becher|steinzeug|-');
+    const bodyEffect = Object.values(EFFECTS).find((e) => e.body === 'steinzeug')!;
+    s.glazes.push({ ...s.glazes[0], id: 'gx', effect: bodyEffect.id });
+    const r = checkMilestones(s);
+    expect(r.state.decor).toContain('steinzeugtopf');
+    expect(r.state.decorPlaced).toContain('steinzeugtopf');
+    expect(r.state.unlocks).toContain('mangan');
+    expect(r.events.some((e) => e.kind === 'unlock' && e.text === 'Neue Dekoration: Steinzeug-Vorratstopf')).toBe(true);
+    expect(r.state.milestonesDone).not.toContain('allStonewareEffects');
+    for (const e of Object.values(EFFECTS)) if (e.body === 'steinzeug' && e.id !== bodyEffect.id) r.state.glazes.push({ ...s.glazes[0], id: `g-${e.id}`, effect: e.id });
+    expect(checkMilestones(r.state).state.decor).toContain('glasurproben');
+  });
+  it('masterwork milestones follow prestige', () => {
+    const s = manufakturGame();
+    const rec = { id: 'm1', commissionId: 'c', patronName: 'X', design: s.designs[0], glazeColor: '#fff', effect: null, quality: 2 as const, met: 3, total: 3, prestige: 'bronze' as const, finishedAt: T0, acked: false };
+    s.masterworks = [rec];
+    const a = checkMilestones(s).state;
+    expect(a.decor).toContain('meisterbrief');
+    expect(a.decorPlaced).toContain('meisterbrief');
+    expect(a.milestonesDone).not.toContain('masterworkSilver');
+    a.masterworks.push({ ...rec, id: 'm2', prestige: 'silver' });
+    const b = checkMilestones(a).state;
+    expect(b.unlocks).toContain('rahmen-sonne');
+    expect(b.unlocks).not.toContain('rahmen-gold');
+    b.masterworks.push({ ...rec, id: 'm3', prestige: 'gold' });
+    expect(checkMilestones(b).state.unlocks).toContain('rahmen-gold');
+  });
+  it('frames and new patterns are gated', () => {
+    const s = manufakturGame();
+    const mark = { shape: 'circle' as const, letter: 'A', color: '#aa0000' };
+    const run = (st: GameState, frame: string) => applyAction(st, { type: 'setMakerMark', mark: { ...mark, frame } }, T0);
+    expect(run(s, 'nope')).toMatchObject({ ok: false, error: 'Unbekannter Rahmen' });
+    expect(run(s, 'kranz')).toMatchObject({ ok: false, error: 'Diesen Rahmen hast du noch nicht' });
+    const u = { ...s, unlocks: [...s.unlocks, 'rahmen-kranz'] };
+    const r = run(u, 'kranz');
+    expect(r.ok && r.state.makerMark.frame).toBe('kranz');
+    const plain = applyAction(s, { type: 'setMakerMark', mark }, T0);
+    expect(plain.ok && 'frame' in plain.state.makerMark).toBe(false);
+    expect(validateDesign({ ...s.designs[0], pattern: 'karo' }, s)).toBe('Dieses Muster ist noch nicht freigeschaltet');
+    expect(validateDesign({ ...s.designs[0], pattern: 'karo' }, { ...s, unlocks: [...s.unlocks, 'muster-karo'] })).toBeNull();
   });
 });

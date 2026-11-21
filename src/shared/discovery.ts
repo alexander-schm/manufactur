@@ -29,6 +29,7 @@ function colorantColor(r: RecipeInput): string | null {
       if (p <= 3) return reduced ? mix('#b9d6b0', '#8fb89a', t * 3) : mix('#e2c27a', '#c99a4a', t * 3);
       if (p <= 6) return mix('#a8673a', '#6e3a1e', (p - 4) / 2);
       return mix('#3a271d', '#1e1612', (p - 7) / 3);
+    case 'mangan': return mix('#b48ab0', '#4a2a3a', t);
     case 'salz': return mix('#d8c3a0', '#a88760', t);
     default: return null;
   }

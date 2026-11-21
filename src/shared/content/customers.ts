@@ -26,4 +26,5 @@ export const CUSTOMERS: readonly CustomerDef[] = [
   { name: 'Meisterin Ume', job: 'Teemeisterin', body: 'steinzeug', tastes: [{ form: 'teekanne' }, { form: 'becher', colorFamily: 'braun', simple: true }] },
   { name: 'Herr Bierhals', job: 'Braumeister', body: 'steinzeug', tastes: [{ form: 'krug', tall: true }, { form: 'krug', colorFamily: 'braun' }] },
   { name: 'Frau Dr. Salbei', job: 'Kräuterhändlerin', body: 'steinzeug', tastes: [{ form: 'vase', colorFamily: 'gruen' }, { form: 'schale', pattern: 'leaves' }] },
+  { name: 'Frau von Scherbenfeld', job: 'Sammlerin', unlock: 'kunde-sammlerin', tastes: [{ form: 'vase', tall: true }, { colorFamily: 'lila' }] },
 ];

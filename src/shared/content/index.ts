@@ -4,6 +4,7 @@ import { EXTRA_COLORS } from './colors';
 import { CUSTOMERS } from './customers';
 import { EFFECTS } from './effects';
 import { FORMS } from './forms';
+import { FRAMES } from './frames';
 import { MATERIALS } from './materials';
 import { NAMES, PERSONALITIES } from './names';
 import { PATRONS } from './patrons';
@@ -12,8 +13,9 @@ import { TIERS, TIER_ORDER } from './tiers';
 import { TRAITS } from './traits';
 import { UNLOCKS } from './unlocks';
 
-export { BODIES, EXTRA_COLORS, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PATRONS, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
+export { BODIES, EXTRA_COLORS, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, FRAMES, MATERIALS, NAMES, PATRONS, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
 export type { FormDef } from './forms';
+export type { FrameDef } from './frames';
 export type { MaterialDef } from './materials';
 export type { StationDef } from './stations';
 export type { TraitDef } from './traits';

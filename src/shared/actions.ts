@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { BODIES, EFFECTS, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, tierAtLeast, type RecipeInput } from './content';
+import { BODIES, EFFECTS, FRAMES, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, tierAtLeast, type RecipeInput } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
@@ -279,7 +279,12 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       const m = a.mark;
       if (!m || !['circle', 'heart', 'star', 'leaf'].includes(m.shape) || !/^[A-ZÄÖÜ]$/.test(m.letter) || !/^#[0-9a-f]{6}$/i.test(m.color)) fail('Ungültige Signatur');
       if (m.shape !== 'circle' && !s.unlocks.includes('zeichen')) fail('Diese Zeichenform ist noch nicht freigeschaltet');
-      s.makerMark = { shape: m.shape, letter: m.letter, color: m.color };
+      if (m.frame !== undefined) {
+        const frame = own(FRAMES, m.frame);
+        if (!frame) return fail('Unbekannter Rahmen');
+        if (!s.unlocks.includes(frame.unlock)) return fail('Diesen Rahmen hast du noch nicht');
+        s.makerMark = { shape: m.shape, letter: m.letter, color: m.color, frame: frame.id };
+      } else s.makerMark = { shape: m.shape, letter: m.letter, color: m.color };
       return;
     }
     case 'placeDecor': {

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { applyAction } from '../../src/shared/actions';
 import { advance } from '../../src/shared/advance';
+import { generateCommission } from '../../src/shared/masterwork';
 import { getStationDef } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
 import { manufakturGame, plainGame, T0, withStanding } from './helpers';
@@ -55,6 +57,43 @@ describe('advance', () => {
     expect(total).toBeLessThan(1000);
     expect(goodsCount(s)).toBeLessThanOrEqual(shelfCap(s));
     expect(s.taler).toBeGreaterThan(base.taler);
+  });
+  it('[Review Focus 2] 30 days at the Manufaktur stay fast and solvent', () => {
+    const s = manufakturGame();
+    for (const st of s.stations) if (['wheel', 'prepBench', 'glazeTable'].includes(st.kind)) st.level = 7;
+    const stone = { ...structuredClone(s.designs[0]), id: 'sc', name: 'Steinbecher', body: 'steinzeug' as const, glazeId: 'klar-steinzeug' };
+    s.designs.push(stone);
+    s.standing = { designId: stone.id, batchSize: 6, autoBuy: true };
+    s.stallDesignIds = [s.designs[0].id, stone.id];
+    s.keepStock = { steinzeugton: 200, glasurbasis: 100 };
+    s.commission = generateCommission(s);
+    const started = applyAction(s, { type: 'startMasterwork', designId: stone.id }, T0);
+    expect(started.ok).toBe(true);
+    const base = started.ok ? started.state : s;
+    expect(base.batches.some((b) => b.masterwork)).toBe(true);
+    const end = T0 + 30 * 24 * H;
+    advance(base, T0 + 2 * H, 3000); // warm-up so JIT compilation isn't measured
+    let cur = base;
+    const chunks: number[] = [];
+    const t0 = performance.now();
+    while (cur.lastTick < end) {
+      const c = performance.now();
+      cur = advance(cur, end, 3000);
+      chunks.push(performance.now() - c);
+      expect(cur.taler).toBeGreaterThanOrEqual(0);
+    }
+    const total = performance.now() - t0;
+    const median = [...chunks].sort((a, b) => a - b)[Math.floor(chunks.length / 2)];
+    expect(median).toBeLessThan(20);
+    // the Manufaktur (bays, level-7 stations, a stall selling every minute) simulates ~6x the events of the Werkstatt test,
+    // so the total bound scales with it; the per-3000-event chunk bound above is the real server limit
+    expect(chunks.length).toBeGreaterThan(30);
+    expect(total).toBeLessThan(3000);
+    expect(cur.taler).toBeGreaterThanOrEqual(0);
+    expect(cur.masterworks.length).toBeGreaterThanOrEqual(1);
+    expect(goodsCount(cur)).toBeLessThanOrEqual(shelfCap(cur));
+    expect(cur.milestonesDone).toContain('firstMasterwork');
+    expect(cur.decor).toContain('meisterbrief');
   });
   it('[Review Focus 1] without a stall, a full shelf blocks production but loses nothing', () => {
     const s = advance(withStanding(), T0 + 24 * H);
