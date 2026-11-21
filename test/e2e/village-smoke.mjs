@@ -103,22 +103,111 @@ const sA = (await api(A, 'GET', '/api/state')).json.state, sB = (await api(B, 'G
 if (!sA.decor.length || !sB.decor.length) fail('decor reward missing');
 console.log(`joint order done: decor ${sA.decor.join(',')}; Taler A ${Math.round(taler0.A)}→${Math.round(sA.taler)}, B ${Math.round(taler0.B)}→${Math.round(sB.taler)}`);
 
+// --- great kiln and grand projects ---
+const act = async (p, action) => {
+  const s = (await api(p, 'GET', '/api/state')).json.state;
+  const r = await api(p, 'POST', '/api/action', { action, version: s.version });
+  if (r.status !== 200) fail(`${action.type}: ${r.status} ${JSON.stringify(r.json)}`);
+};
+for (const p of [A, B]) {
+  const g = await api(p, 'POST', '/api/dev/grant', { taler: 400000, ruf: 400 });
+  if (g.status !== 200) fail('grant ' + g.status);
+}
+await act(A, { type: 'upgradeTier' });
+v = (await api(A, 'GET', '/api/village')).json.village;
+if (!v.buildings.includes('gemeinschaftsofen')) fail('kiln missing');
+
+const cupsOf = (s, id) => s.goods.filter((g) => g.designId === id).reduce((n, g) => n + g.count, 0);
+const kilnPlayer = async (p, wood) => {
+  let s = (await api(p, 'GET', '/api/state')).json.state;
+  const id = s.designs[0].id;
+  for (let i = 0; i < 4 && cupsOf(s, id) < 6; i++) {
+    await api(p, 'POST', '/api/dev/warp', { minutes: 180 });
+    do { s = (await api(p, 'GET', '/api/state')).json; } while (s.catchingUp);
+    s = s.state;
+  }
+  if (cupsOf(s, id) < 6) fail('not enough cups for the kiln');
+  if ((s.materials.holz ?? 0) < wood) await act(p, { type: 'buyMaterial', material: 'holz', amount: Math.ceil(wood - (s.materials.holz ?? 0)) });
+  await vact(p, { type: 'loadKiln', designId: id, count: 6, wood });
+  s = (await api(p, 'GET', '/api/state')).json.state;
+  return { id, after: cupsOf(s, id) };
+};
+const kA = await kilnPlayer(A, 12), kB = await kilnPlayer(B, 36);
+const w = await api(A, 'POST', '/api/dev/village-warp', { minutes: 24 * 60 + 130 });
+if (w.status !== 200) fail('village-warp ' + w.status);
+for (const [p, k] of [[A, kA], [B, kB]]) {
+  let ok = false;
+  for (let i = 0; i < 10 && !ok; i++) {
+    const s = (await api(p, 'GET', '/api/state')).json.state;
+    ok = cupsOf(s, k.id) >= k.after + 6;
+    if (!ok) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!ok) fail('kiln cups not returned');
+}
+v = (await api(A, 'GET', '/api/village')).json.village;
+if (v.lastFiring?.pieces !== 12) fail('lastFiring.pieces ' + v.lastFiring?.pieces);
+if (!v.news.some((n) => n.text.includes('abgekühlt'))) fail('no cooled-down news');
+console.log('great kiln: ok, 12 pieces fired');
+
+if (v.projects.offered.length < 1) fail('no projects offered');
+const projectId = v.projects.offered[0];
+const proj = async (p, part, count, source = 'store') => api(p, 'POST', '/api/village/action', { action: { type: 'contributeProject', projectId, part, count, source } });
+const projOk = async (p, part, count, source) => { const r = await proj(p, part, count, source); if (r.status !== 200) fail(`contributeProject: ${r.status} ${JSON.stringify(r.json)}`); return r.json.village; };
+const stageOf = async () => (await api(A, 'GET', '/api/village')).json.village.projects.active;
+const firstMat = (await (async () => {
+  // before the project starts, the stage is not instantiated yet: start it with one unit of the first material part
+  for (let part = 0; part < 4; part++) { const r = await proj(A, part, 1); if (r.status === 200) return part; if (!/Dafür|Ersatz|Ware/.test(JSON.stringify(r.json))) fail('start project: ' + JSON.stringify(r.json)); }
+  fail('no material part to start the project');
+})());
+let act1 = await stageOf();
+if (act1?.projectId !== projectId) fail('project not active: ' + JSON.stringify(act1));
+const talerIdx = act1.parts.findIndex((x) => x.kind === 'taler');
+await projOk(B, talerIdx, 1000, 'own');
+// A fills material parts up to near the 70 % cap, then the Taler remainder must be refused
+const nParts = () => act1.parts.length;
+for (let part = 0; part < nParts(); part++) {
+  act1 = await stageOf();
+  const p = act1.parts[part];
+  if (p.kind !== 'material') continue;
+  const size = p.count, left = size - p.filled;
+  const share = act1.parts.reduce((t, q) => t + ((q.by[idA] ?? 0) / (q.kind === 'taler' ? q.amount : q.count)) / nParts(), 0);
+  let n = Math.min(left, Math.floor((0.7 - share) * size * nParts() + 1e-9));
+  while (n > 0) { const r = await proj(A, part, n); if (r.status === 200) break; n = Math.floor(n / 2); }
+}
+act1 = await stageOf();
+const tp = act1.parts[talerIdx];
+const r70 = await proj(A, talerIdx, tp.amount - tp.filled, 'own');
+if (r70.status !== 400 || !String(r70.json?.error ?? JSON.stringify(r70.json)).includes('70 %')) fail('70 % cap not enforced: ' + r70.status + ' ' + JSON.stringify(r70.json));
+console.log('project: started', projectId, 'stage', act1.stage, '- 70 % cap enforced');
+
 // screenshots: the village map, and B's shelf with A's gifted cups
 const giftCups = sA.goods.find((g) => !g.designId.startsWith('f:') && g.count >= 3);
 if (giftCups) await vact(A, { type: 'gift', to: idB, give: { kind: 'goods', designId: giftCups.designId, quality: giftCups.quality, effect: giftCups.effect, count: 3 } });
 await B.reload({ waitUntil: 'networkidle' });
 await B.waitForSelector('.scene');
-for (const sel of ['text=Weiter töpfern', 'text=Juhu!', 'text=Juhu!', 'text=Juhu!']) { const b = B.locator(sel); if (await b.count()) await b.first().click().catch(() => {}); }
+for (let i = 0; i < 12 && (await B.locator('.modal-backdrop').count()); i++) {
+  const b = B.locator('.modal-backdrop button').first();
+  if (!(await b.count())) break;
+  await b.click().catch(() => {});
+  await B.waitForTimeout(250);
+}
 await B.click('[aria-label="Dorf"]');
 await B.waitForSelector('.village-map');
 await B.waitForTimeout(1200);
 await B.screenshot({ path: 'docs/screens/village-live.png' });
+await B.screenshot({ path: 'docs/screens/village-lg-live.png' });
 await B.click('role=tab[name="Großaufträge"]');
 await B.waitForTimeout(600);
 await B.screenshot({ path: 'docs/screens/village-joint.png' });
 await B.click('role=tab[name="Tauschbrett"]');
 await B.waitForTimeout(400);
 await B.screenshot({ path: 'docs/screens/village-trade.png' });
+await B.click('role=tab[name="Dorfprojekt"]');
+await B.waitForTimeout(600);
+await B.screenshot({ path: 'docs/screens/village-lg-project.png' });
+await B.click('role=tab[name="Gemeinschaftsofen"]');
+await B.waitForTimeout(600);
+await B.screenshot({ path: 'docs/screens/village-lg-kiln.png' });
 if (errors.length) fail('page errors: ' + errors.join(' | '));
 console.log('VILLAGE SMOKE OK');
 await browser.close();

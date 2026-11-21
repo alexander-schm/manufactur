@@ -36,12 +36,14 @@ Entwickler-Seiten (nur im Dev-Modus):
 - `/#pots`: Töpferware
 - `/#people`: Leute
 - `/#scene`: Werkstatt
+- `/#village-sites`: Dorfprojekte und Gemeinschaftsofen
 - `/#game&panel=orders`: Spielbildschirm mit Testdaten
 
 Entwickler-API (nur mit `DEV_FAST=1`, sonst 404; angemeldet):
 
 - `POST /api/dev/warp { minutes }`: lässt so viel Spielzeit vergehen
 - `POST /api/dev/grant { taler?, ruf? }`: schreibt Taler und Ruf gut (je 0…10 000 000), z. B. um die Manufaktur zu testen
+- `POST /api/dev/village-warp { minutes }`: lässt im Dorf (Gemeinschaftsofen, Projekte) so viel Zeit vergehen
 
 ## Testen
 
@@ -75,6 +77,9 @@ Datenbank-Migrationen nach einem Update: `npx wrangler d1 migrations apply manuf
 - Tauschbrett, Geschenke, Wünsche, Mit-anpacken (bis zu 3× am Tag pro Freund) und ein Gästebuch.
 - Großaufträge gehen nur gemeinsam (mindestens zwei Leute). Alle bekommen einen Anteil, auch wer gerade nicht da ist. Material, das niemand hat, gibt es im Dorfladen zum dreifachen Preis.
 - Alle zwei Großaufträge entsteht ein Dorfgebäude: Tongrube, Markthalle, Glasurbibliothek, Gildenhaus.
+- Großaufträge gehen weiter (auch mit Steinzeug, Porzellan, Fliesen und Stücken aus dem Gemeinschaftsofen, mit Irdenware-Ersatz zum dreifachen Preis). Jeder geschaffte Auftrag und jede Bauphase hebt die Dorfstufe (+2 % Belohnung pro Stufe, höchstens +40 %).
+- Gemeinschaftsofen ab der ersten Manufaktur im Dorf: einräumen, nach 24 Stunden oder wenn voll brennt er zwei Stunden; Ascheanflug, Flammenspur und Ascheglasur gibt es nur hier.
+- Dorfprojekte (Dorfbrunnen, Glockenturm, Museum, Kaolingrube, Rathaus) mit je drei Stufen; niemand darf mehr als 70 % einer Bauphase geben.
 - Technisch: ein Durable Object pro Dorf (`VillageDO`), das alle Dorf-Aktionen nacheinander abarbeitet. Die Werkstätten bleiben in D1.
 
 ## Freunde einladen
