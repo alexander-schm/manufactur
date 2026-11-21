@@ -12,7 +12,11 @@ import { mockEndgame } from '../../src/client/dev/mockEndgame';
 import { GreatKilnPanel } from '../../src/client/panels/village/GreatKilnPanel';
 import { MuseumView } from '../../src/client/panels/village/MuseumView';
 import { ProjectCard, ProjectPanel } from '../../src/client/panels/village/ProjectPanel';
-import { MarketDayBanner, mapTarget } from '../../src/client/panels/village/VillagePanel';
+import { MarketDayBanner, mapTarget, VillagePanel } from '../../src/client/panels/village/VillagePanel';
+import { clockOffset, now, serverState } from '../../src/client/store';
+import { T } from '../../src/client/strings';
+import { village } from '../../src/client/villageStore';
+import { KILN_WAIT_MS } from '../../src/shared/village/kilnRules';
 import { GREAT_KILN_CAPACITY } from '../../src/shared/village/kilnRules';
 import { maxProjectUnits, partSize } from '../../src/shared/village/projects';
 
@@ -241,6 +245,29 @@ describe('village long-goal panels', () => {
     expect(mapTarget(v, 'glockenturm')).toBe('project');
     expect(mapTarget(v, 'museum')).toBe('museum');
     expect(mapTarget(v, 'tongrube')).toBeNull();
+  });
+
+  it('a museum deep link opens the museum once it is built and the project tab before', () => {
+    const at = (v: ReturnType<typeof mockVillage>) => { village.value = v; serverState.value = s0(); now.value = T0; clockOffset.value = 0; return render(<VillagePanel tab="museum" />); };
+    try {
+      const unbuilt = at(mockVillage(3, ['gemeinschaftsofen'], T0, { offered: ['museum', 'rathaus'] }));
+      expect(unbuilt).toContain('data-project-offer="museum"');
+      expect(unbuilt).not.toContain('class="museum-title"');
+      const built = at(mockVillage(3, ['gemeinschaftsofen'], T0, { levels: { museum: 1 } }));
+      expect(built).toContain(T.vl.museumTitle('I'));
+      expect(built).not.toContain('data-project-offer=');
+    } finally { village.value = null; serverState.value = null; }
+  });
+
+  it('the map runs on server time like the panels', () => {
+    village.value = mockVillage(3, ['gemeinschaftsofen'], T0, { kiln: 'loading' });
+    now.value = T0;
+    try {
+      clockOffset.value = 0;
+      expect(render(<VillagePanel />)).toContain('data-kiln="loading"');
+      clockOffset.value = KILN_WAIT_MS;
+      expect(render(<VillagePanel />)).toContain('data-kiln="firing"');
+    } finally { village.value = null; clockOffset.value = 0; }
   });
 
   it('the market-day banner shows while the Glockenturm rings', () => {

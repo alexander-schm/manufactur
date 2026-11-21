@@ -36,7 +36,8 @@ export function MarketDayBanner({ s, now: t }: { s: GameState; now: number }) {
 }
 
 export function VillagePanel({ tab: initial }: { tab?: string }) {
-  const [tab, setTab] = useState<VillageTab>(TABS.includes(initial as VillageTab) ? (initial as VillageTab) : 'joint');
+  // a museum deep link lands on the project tab when the museum is not built yet
+  const [tab, setTab] = useState<VillageTab>(initial === 'museum' ? 'project' : TABS.includes(initial as VillageTab) ? (initial as VillageTab) : 'joint');
   const [visit, setVisit] = useState<{ state: GameState; member: Member } | null>(null);
   const [museum, setMuseum] = useState(initial === 'museum');
   const body = useRef<HTMLDivElement>(null);
@@ -46,6 +47,8 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
   useEffect(() => { if (scrollTo && body.current) { body.current.scrollIntoView?.({ block: 'start' }); setScrollTo(false); } }, [scrollTo, tab, village.value]);
   useEffect(() => { if (tab === 'news') markNewsSeen(); }, [tab, village.value]);
   const v = village.value, meId = me.value?.playerId ?? '', s = view.value;
+  const museumBuilt = (v?.projects.levels.museum ?? 0) > 0;
+  useEffect(() => { if (museum && v && !museumBuilt) { setMuseum(false); setScrollTo(true); } }, [museum, v, museumBuilt]);
   if (!v) return <p class="muted">Das Dorf wird geladen …</p>;
   const hasKiln = v.buildings.includes('gemeinschaftsofen');
   const shown = tab === 'kiln' && !hasKiln ? 'joint' : tab;
@@ -64,7 +67,7 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
     );
   }
 
-  if (museum) {
+  if (museum && museumBuilt) {
     return (
       <div>
         <Button small variant="quiet" onClick={() => setMuseum(false)}>{T.vl.back}</Button>
@@ -80,10 +83,11 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
     else { const d = BUILDINGS[id] ?? PROJECTS[id]; if (d) toast(`${d.name}: ${d.description}`); }
   }
 
+  const t = now.value + clockOffset.value; // server time, like the panels below
   return (
     <div class="village-panel">
-      {s && <MarketDayBanner s={s} now={now.value + clockOffset.value} />}
-      <VillageMap village={v} meId={meId} now={now.value} onHouse={openHouse} onBoard={() => setTab('trade')} onBuilding={onBuilding} />
+      {s && <MarketDayBanner s={s} now={t} />}
+      <VillageMap village={v} meId={meId} now={t} onHouse={openHouse} onBoard={() => setTab('trade')} onBuilding={onBuilding} />
       {v.members.length < 2 && (
         <div class="invite-hint">
           <strong>Allein ist’s schön – zusammen noch schöner!</strong> Großaufträge gibt es ab zwei Leuten. Schick deinen Freunden diesen Link:
