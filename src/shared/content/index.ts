@@ -6,12 +6,13 @@ import { EFFECTS } from './effects';
 import { FORMS } from './forms';
 import { MATERIALS } from './materials';
 import { NAMES, PERSONALITIES } from './names';
+import { PATRONS } from './patrons';
 import { STATIONS } from './stations';
 import { TIERS, TIER_ORDER } from './tiers';
 import { TRAITS } from './traits';
 import { UNLOCKS } from './unlocks';
 
-export { BODIES, EXTRA_COLORS, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
+export { BODIES, EXTRA_COLORS, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PATRONS, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
 export type { FormDef } from './forms';
 export type { MaterialDef } from './materials';
 export type { StationDef } from './stations';
@@ -23,6 +24,7 @@ export type { BodyDef } from './bodies';
 export type { TierDef } from './tiers';
 export type { UnlockDef } from './unlocks';
 export type { CustomerDef } from './customers';
+export type { PatronDef } from './patrons';
 
 /** Own-property lookup: never resolves prototype keys like "__proto__" or "constructor". */
 export function own<T>(table: Record<string, T>, id: unknown): T | undefined {

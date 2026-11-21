@@ -28,6 +28,7 @@ describe('tiers', () => {
     expect(r.state.unlocks).toEqual(expect.arrayContaining(['steinzeug', 'teekanne', 'meisterstuecke']));
     expect(r.state.milestonesDone).toContain('tierManufaktur');
     expect(r.state.glazes.some((g) => g.id === 'klar-steinzeug' && g.body === 'steinzeug')).toBe(true);
+    expect(r.state.commission).not.toBeNull();
   });
   it('upgradeTier needs Ruf and Taler, and stops at the top tier', () => {
     const s = plainGame(); s.ruf = 299; s.taler = 1e6;

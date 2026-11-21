@@ -52,7 +52,16 @@ export function stationSpeed(state: GameState, station: Station, stage: Stage, n
   return speed;
 }
 
+const HOUR = 3_600_000;
+/** A masterwork's fixed time per stage (18 h in all): no workers, boosts or touches shorten it. */
+export const MASTERWORK_STAGE_MS: Record<Stage, number> = {
+  prepare: 1 * HOUR, form: 4 * HOUR, dry: 3 * HOUR, bisque: 3 * HOUR, glaze: 3 * HOUR, glazeFire: 4 * HOUR,
+};
+/** Share of the kiln a masterwork takes up. */
+export const MASTERWORK_KILN_SHARE = 0.5;
+
 export function stageDurationMs(state: GameState, batch: Batch, station: Station, now: number): number {
+  if (batch.masterwork) return MASTERWORK_STAGE_MS[batch.stage];
   const speed = stationSpeed(state, station, batch.stage, now) * (batch.touch ?? 1);
   // harder designs take longer at the wheel and the glaze table (spec §4.3)
   let difficulty = 1;
@@ -107,8 +116,8 @@ export function baysOf(st: Station): number {
 }
 
 /** Kiln space a batch takes up. */
-export function kilnLoad(_s: GameState, b: Batch): number {
-  return b.count;
+export function kilnLoad(s: GameState, b: Batch): number {
+  return b.masterwork ? Math.ceil(kilnCapacity(s) * MASTERWORK_KILN_SHARE) : b.count;
 }
 
 export function kilnCapacity(state: GameState): number {
@@ -124,28 +133,38 @@ export function startNewBatch(state: GameState, design: Design, count: number, a
   if (!Number.isInteger(count) || count < 1) return 'Ungültige Stückzahl';
   if (count > kilnCapacity(state)) return `Höchstens ${kilnCapacity(state)} Stück pro Charge (Ofengröße)`;
   const need = batchMaterials(state, design, count);
+  const cost = missingMaterialCost(state, need);
+  if (cost > 0 && !autoBuy) return 'Nicht genug Material';
+  if (cost > state.taler) return 'Nicht genug Taler für das Material';
+  state.taler -= cost;
+  useMaterials(state, need);
+  state.batches.push({
+    id: newIdFn('b'), designId: design.id, count, stage: 'prepare', stationId: null, startedAt: null, durationMs: 0,
+    quality: batchQuality(state, design, productionWorkers(state)),
+  });
+  return null;
+}
+
+/** Shop price of whatever part of `need` is not in stock. */
+export function missingMaterialCost(state: GameState, need: Record<string, number>): number {
   let cost = 0;
   for (const [m, n] of Object.entries(need)) {
     const missing = n - (state.materials[m] ?? 0);
-    if (missing > 0) {
-      if (!autoBuy) return 'Nicht genug Material';
-      cost += missing * shopPrice(state, m);
-    }
+    if (missing > 0) cost += missing * shopPrice(state, m);
   }
-  if (cost > state.taler) return 'Nicht genug Taler für das Material';
-  state.taler -= cost;
-  for (const [m, n] of Object.entries(need)) {
-    const have = state.materials[m] ?? 0;
-    state.materials[m] = Math.max(0, have - n);
-  }
-  const workers = state.workers.filter((w) => {
+  return cost;
+}
+
+/** Takes `need` out of stock (the missing part counts as bought and used at once). */
+export function useMaterials(state: GameState, need: Record<string, number>): void {
+  for (const [m, n] of Object.entries(need)) state.materials[m] = Math.max(0, (state.materials[m] ?? 0) - n);
+}
+
+/** Workers whose hands shape a piece's quality: at the prep bench, the wheel and the glaze table. */
+export function productionWorkers(state: GameState): Worker[] {
+  return state.workers.filter((w) => {
     const st = state.stations.find((s) => s.id === w.stationId);
-    return st && (st.kind === 'prepBench' || st.kind === 'wheel' || st.kind === 'glazeTable');
+    return !!st && (st.kind === 'prepBench' || st.kind === 'wheel' || st.kind === 'glazeTable');
   });
-  state.batches.push({
-    id: newIdFn('b'), designId: design.id, count, stage: 'prepare', stationId: null, startedAt: null, durationMs: 0,
-    quality: batchQuality(state, design, workers),
-  });
-  return null;
 }
 

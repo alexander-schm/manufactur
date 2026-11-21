@@ -2,6 +2,7 @@ import { recordCollection } from './collection';
 import { bodyOf, getStationDef, getTrait, own } from './content';
 import { SPECIALTIES } from './village/specialties';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
+import { finishMasterwork } from './masterwork';
 import { addOrder, nextOrderTime } from './orders';
 import { applyMilestones } from './progression';
 import { baysOf, kilnCapacity, kilnLoad, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
@@ -75,8 +76,15 @@ function canStartOn(s: GameState, st: Station, b: Batch): boolean {
 
 export function startWork(s: GameState, t: number): void {
   restock(s);
-  // standing order: keep the pipeline fed
-  if (s.standing && s.batches.length < standingPipeline(s) && !s.batches.some((b) => b.stage === 'prepare')) {
+  // standing order: keep the pipeline fed (the masterwork does not count)
+  let pipeline = 0;
+  let prepWaits = false;
+  for (const b of s.batches) {
+    if (b.masterwork) continue;
+    pipeline++;
+    if (b.stage === 'prepare') prepWaits = true;
+  }
+  if (s.standing && pipeline < standingPipeline(s) && !prepWaits) {
     const design = s.designs.find((d) => d.id === s.standing!.designId);
     if (design) startNewBatch(s, design, s.standing.batchSize, s.standing.autoBuy, (p) => newId(s, p));
     else s.standing = null;
@@ -84,19 +92,24 @@ export function startWork(s: GameState, t: number): void {
   let waiting = false;
   for (const b of s.batches) if (!isRunning(b) && !b.blocked) { waiting = true; break; }
   if (!waiting) return;
+  // the masterwork gets the first free bay
+  for (const b of s.batches) if (b.masterwork && !isRunning(b)) { tryStart(s, b, t); break; }
   // later stages first so the pipeline drains
   for (let i = STAGES.length - 1; i >= 0; i--) {
     const stage = STAGES[i];
-    const kind = stationForStage(stage);
     for (const b of s.batches) {
       if (b.stage !== stage || isRunning(b) || b.blocked) continue;
-      const st = stationsOfKind(s, kind).find((x) => canStartOn(s, x, b));
-      if (!st) continue;
-      b.stationId = st.id;
-      b.startedAt = t;
-      b.durationMs = stageDurationMs(s, b, st, t);
+      tryStart(s, b, t);
     }
   }
+}
+
+function tryStart(s: GameState, b: Batch, t: number): void {
+  const st = stationsOfKind(s, stationForStage(b.stage)).find((x) => canStartOn(s, x, b));
+  if (!st) return;
+  b.stationId = st.id;
+  b.startedAt = t;
+  b.durationMs = stageDurationMs(s, b, st, t);
 }
 
 function blockedNeed(s: GameState): number {
@@ -140,6 +153,8 @@ function sell(s: GameState, from: number, to: number): void {
 }
 
 function finishBatch(s: GameState, b: Batch): boolean {
+  // a masterwork leaves the kiln at once: it never waits for shelf space
+  if (b.masterwork) { finishMasterwork(s, b, endOf(b)); return true; }
   if (goodsTotal(s) + b.count > shelfCapacity(s)) { b.blocked = true; return false; }
   const design = s.designs.find((d) => d.id === b.designId);
   let effect: string | null = null;

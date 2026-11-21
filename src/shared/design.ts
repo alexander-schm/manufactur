@@ -1,11 +1,25 @@
 import { BODIES, FORMS, bodyAvailable, bodyOf, getBody, getTier, own } from './content';
 import { designDifficultyOf } from './production';
-import type { Design, GameState, GlazeRecipe, Taste } from './types';
+import type { Design, GameState, GlazeRecipe, PatternKind, Taste } from './types';
 
 export type ColorFamily = 'rot' | 'blau' | 'gruen' | 'gelb' | 'braun' | 'weiss' | 'schwarz' | 'lila';
 
 export const COLOR_FAMILY_NAMES: Record<ColorFamily, string> = {
   rot: 'Rot', blau: 'Blau', gruen: 'Grün', gelb: 'Gelb', braun: 'Braun', weiss: 'Weiß', schwarz: 'Schwarz', lila: 'Lila',
+};
+
+export const PATTERN_TEXT: Record<PatternKind, string> = {
+  none: 'ohne Muster', stripes: 'mit Streifen', dots: 'mit Punkten', waves: 'mit Wellen', leaves: 'mit Blättern',
+};
+
+/** The unlock a pattern needs, or null when every workshop has it. */
+export const PATTERN_UNLOCK: Record<PatternKind, string | null> = {
+  none: null, stripes: null, dots: null, waves: 'patterns2', leaves: 'patterns2',
+};
+
+export const patternUnlocked = (state: GameState, p: PatternKind): boolean => {
+  const u = PATTERN_UNLOCK[p];
+  return u === null || state.unlocks.includes(u);
 };
 
 export const designDifficulty = designDifficultyOf;
@@ -92,8 +106,8 @@ export function validateDesign(d: Design, state: GameState): string | null {
   const glaze = state.glazes.find((g) => g.id === d.glazeId);
   if (!glaze) return 'Diese Glasur kennst du noch nicht';
   if (bodyOf(glaze) !== bodyId) return `Diese Glasur ist für ${getBody(bodyOf(glaze)).name} – für ${getBody(bodyId).name} brauchst du eine eigene`;
-  if (!['none', 'stripes', 'dots', 'waves', 'leaves'].includes(d.pattern)) return 'Unbekanntes Muster';
-  if ((d.pattern === 'waves' || d.pattern === 'leaves') && !state.unlocks.includes('patterns2')) return 'Dieses Muster ist noch nicht freigeschaltet';
+  if (own(PATTERN_UNLOCK, d.pattern) === undefined) return 'Unbekanntes Muster';
+  if (!patternUnlocked(state, d.pattern)) return 'Dieses Muster ist noch nicht freigeschaltet';
   if (!HEX.test(d.patternColor)) return 'Ungültige Musterfarbe';
   return null;
 }

@@ -1,8 +1,9 @@
 import { advance } from './advance';
-import { BODIES, EFFECTS, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, type RecipeInput } from './content';
+import { BODIES, EFFECTS, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, tierAtLeast, type RecipeInput } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
+import { COMMISSION_SWAP_COST, generateCommission, masterworkInProgress, startMasterwork } from './masterwork';
 import { pieceValue } from './market';
 import { orderReward } from './orders';
 import { kilnCapacity, startNewBatch } from './production';
@@ -36,11 +37,15 @@ export type Action =
   | { type: 'placeDecor'; id: string }
   | { type: 'removeDecor'; id: string }
   | { type: 'ackAway' }
-  | { type: 'ackMilestone'; id: string };
+  | { type: 'ackMilestone'; id: string }
+  | { type: 'startMasterwork'; designId: string }
+  | { type: 'swapCommission' }
+  | { type: 'ackMasterwork'; id: string };
 
 export type ActionType = Action['type'];
 export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'setKeepStock', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'upgradeTier', 'buildStation', 'saveDesign',
-  'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'placeDecor', 'removeDecor', 'ackAway', 'ackMilestone'];
+  'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'placeDecor', 'removeDecor', 'ackAway', 'ackMilestone',
+  'startMasterwork', 'swapCommission', 'ackMasterwork'];
 
 export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
 export type ActionResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: string };
@@ -167,6 +172,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       for (const b of Object.values(BODIES)) {
         if (b.tier === next!.id && b.starterGlaze && !s.glazes.some((g) => g.id === b.starterGlaze!.id)) s.glazes.push(structuredClone(b.starterGlaze));
       }
+      if (tierAtLeast(s, 'manufaktur') && !s.commission) s.commission = generateCommission(s);
       return;
     }
     case 'buildStation': {
@@ -252,8 +258,10 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'handTouch': {
       const st = s.stations.find((x) => x.id === a.stationId) ?? fail('Unbekannte Station');
       if ((s.cooldowns[st.id] ?? 0) > now) fail('Deine Hände brauchen noch eine Pause');
-      const running = s.batches.filter((x) => x.stationId === st.id && x.startedAt !== null && !x.blocked);
-      if (running.length === 0) fail('Hier läuft gerade nichts');
+      const here = s.batches.filter((x) => x.stationId === st.id && x.startedAt !== null && !x.blocked);
+      if (here.length === 0) fail('Hier läuft gerade nichts');
+      const running = here.filter((x) => !x.masterwork);
+      if (running.length === 0) fail('Ein Meisterstück lässt sich nicht hetzen');
       for (const b of running) {
         const remaining = Math.max(0, b.startedAt! + b.durationMs - now);
         b.durationMs = Math.round(now - b.startedAt! + remaining / HAND_TOUCH_SPEED);
@@ -291,6 +299,25 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'ackMilestone':
       if (s.milestonesDone.includes(a.id) && !s.milestonesAcked.includes(a.id)) s.milestonesAcked.push(a.id);
       return;
+    case 'startMasterwork': {
+      const d = s.designs.find((x) => x.id === a.designId) ?? fail('Unbekannter Entwurf');
+      const err = startMasterwork(s, d);
+      if (err) fail(err);
+      return;
+    }
+    case 'swapCommission': {
+      if (!tierAtLeast(s, 'manufaktur')) fail('Meisterstücke gibt es ab der Manufaktur');
+      if (masterworkInProgress(s)) fail('Während ein Meisterstück entsteht, bleibt der Auftrag');
+      if (COMMISSION_SWAP_COST > s.taler) fail('Nicht genug Taler');
+      s.taler -= COMMISSION_SWAP_COST;
+      s.commission = generateCommission(s);
+      return;
+    }
+    case 'ackMasterwork': {
+      const m = s.masterworks.find((x) => x.id === a.id);
+      if (m) m.acked = true;
+      return;
+    }
     case 'experiment': {
       needUnlock(s, 'studio', 'Glasurversuche gibt es ab dem Entwurfsstudio');
       const err = validateRecipe(a.recipe, s);

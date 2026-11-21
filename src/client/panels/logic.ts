@@ -1,11 +1,9 @@
 import type { Action } from '../../shared/actions';
-import { COLOR_FAMILY_NAMES, appeal, glazeForDesign, type ColorFamily } from '../../shared/design';
+import { COLOR_FAMILY_NAMES, PATTERN_TEXT, appeal, glazeForDesign, type ColorFamily } from '../../shared/design';
 import { ownDesigns } from '../../shared/village/apply';
 import { FORMS, getStationDef, getTrait } from '../../shared/content';
 import { orderReward } from '../../shared/orders';
 import type { Design, GameState, GoodsStack, Order, Taste } from '../../shared/types';
-
-const PATTERN_TEXT: Record<string, string> = { stripes: 'mit Streifen', dots: 'mit Punkten', waves: 'mit Wellen', leaves: 'mit Blättern', none: 'ohne Muster' };
 
 export function describeTaste(taste: Taste, form: string, count: number): string {
   const parts = [`${count} ${count === 1 ? FORMS[form].name : FORMS[form].plural}`];
