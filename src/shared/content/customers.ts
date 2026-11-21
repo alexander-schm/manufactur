@@ -1,6 +1,11 @@
-import type { Taste } from '../types';
+import type { BodyId, Taste } from '../types';
 
-export interface CustomerDef { name: string; job: string; tastes: Taste[] }
+export interface CustomerDef { name: string; job: string; tastes: Taste[];
+  /** orders from this customer must be delivered in this clay body */
+  body?: BodyId;
+  /** customer only appears once this unlock is held */
+  unlock?: string;
+}
 
 /** Archetypes; one of their tastes is chosen per order. */
 export const CUSTOMERS: readonly CustomerDef[] = [
@@ -18,4 +23,7 @@ export const CUSTOMERS: readonly CustomerDef[] = [
   { name: 'Meister Hobel', job: 'Schreiner', tastes: [{ form: 'becher', simple: true }, { colorFamily: 'braun' }] },
   { name: 'Fräulein Lavendel', job: 'Teehaus-Besitzerin', tastes: [{ form: 'becher', colorFamily: 'lila' }, { form: 'schale', colorFamily: 'gruen' }] },
   { name: 'Wachtmeister Strenge', job: 'Dorfpolizist', tastes: [{ form: 'becher', colorFamily: 'blau', simple: true }] },
+  { name: 'Meisterin Ume', job: 'Teemeisterin', body: 'steinzeug', tastes: [{ form: 'teekanne' }, { form: 'becher', colorFamily: 'braun', simple: true }] },
+  { name: 'Herr Bierhals', job: 'Braumeister', body: 'steinzeug', tastes: [{ form: 'krug', tall: true }, { form: 'krug', colorFamily: 'braun' }] },
+  { name: 'Frau Dr. Salbei', job: 'Kräuterhändlerin', body: 'steinzeug', tastes: [{ form: 'vase', colorFamily: 'gruen' }, { form: 'schale', pattern: 'leaves' }] },
 ];

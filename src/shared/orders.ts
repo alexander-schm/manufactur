@@ -1,8 +1,8 @@
-import { CUSTOMERS, FORMS, getForm } from './content';
+import { CUSTOMERS, FORMS, bodyAvailable, getBody, getForm } from './content';
 import { appeal } from './design';
 import { newId } from './ids';
 import { nextRandom, pick, randInt } from './rng';
-import type { Design, GameState, GlazeRecipe, GoodsStack, Order, Taste } from './types';
+import type { Design, GameState, GlazeRecipe, GoodsStack, Order, Taste, Tier } from './types';
 
 export const ORDER_REFILL_MS = 4 * 60_000;
 /** faster refill while fewer than MIN_ORDERS are open */
@@ -11,6 +11,10 @@ export const MIN_ORDERS = 3;
 export const MAX_ORDERS = 5;
 export const TIER_MUL: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.4, 3: 2 };
 
+export const BODY_ORDER_PREMIUM = 1.25;
+/** chance that a new order comes from a customer who wants a clay body */
+export const TIER_ORDER_SHARE: Record<Tier, number> = { werkstatt: 0, manufaktur: 0.5, hofmanufaktur: 0.6 };
+
 function unlockedForms(state: GameState): string[] {
   return Object.values(FORMS).filter((f) => state.unlocks.includes(f.unlock)).map((f) => f.id);
 }
@@ -18,7 +22,19 @@ function unlockedForms(state: GameState): string[] {
 /** Generate a new order from the state's rng. Does not mutate state except nextId; returns the advanced rng. */
 export function generateOrder(state: GameState): [Order, number] {
   let r = state.rng;
-  let cust; [cust, r] = pick(r, CUSTOMERS);
+  const plain = CUSTOMERS.filter((c) => !c.body && (!c.unlock || state.unlocks.includes(c.unlock)));
+  const fancy = [];
+  for (const c of CUSTOMERS) {
+    if (!c.body || !bodyAvailable(state, c.body) || (c.unlock && !state.unlocks.includes(c.unlock))) continue;
+    fancy.push(c);
+    if (getBody(c.body).tier === state.tier) fancy.push(c);
+  }
+  let pool = plain;
+  if (fancy.length > 0) {
+    let share; [share, r] = nextRandom(r);
+    if (share < TIER_ORDER_SHARE[state.tier]) pool = fancy;
+  }
+  let cust; [cust, r] = pick(r, pool);
   let taste: Taste; [taste, r] = pick(r, cust.tastes);
   taste = { ...taste };
   const forms = unlockedForms(state);
@@ -28,6 +44,7 @@ export function generateOrder(state: GameState): [Order, number] {
   else [form, r] = pick(r, forms);
   let count; [count, r] = randInt(r, 3, 8);
   count += Math.floor(state.ruf / 40);
+  count = Math.round(count * (getForm(form).orderCountMul ?? 1));
   let q; [q, r] = nextRandom(r);
   const minQuality: 1 | 2 | 3 = state.ruf >= 60 && q < 0.2 ? 3 : state.ruf >= 15 && q < 0.4 ? 2 : 1;
   let seedV; [seedV, r] = nextRandom(r);
@@ -35,9 +52,11 @@ export function generateOrder(state: GameState): [Order, number] {
   const order: Order = {
     id: `o${state.nextId}`, customerSeed: Math.floor(seedV * 0xffffffff) >>> 0, customerName: cust.name, customerJob: cust.job,
     taste, form, count, minQuality,
-    rewardTaler: Math.round(base * 1.3), rewardRuf: 1 + Math.floor(count / 3) + (minQuality - 1),
+    rewardTaler: Math.round(base * 1.3 * (cust.body ? getBody(cust.body).valueMul * BODY_ORDER_PREMIUM : 1)),
+    rewardRuf: 1 + Math.floor(count / 3) + (minQuality - 1) + (cust.body ? getBody(cust.body).rufBonus : 0),
     bonusDeadline: null,
   };
+  if (cust.body) order.body = cust.body;
   return [order, r];
 }
 

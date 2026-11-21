@@ -1,5 +1,5 @@
 import { EFFECTS, bodyOf, getBody, getForm, getStationDef, own } from './content';
-import type { GameState, GoodsStack } from './types';
+import type { Design, GameState, GoodsStack } from './types';
 
 export const QUALITY_MUL: Record<1 | 2 | 3, number> = { 1: 0.8, 2: 1, 3: 1.3 };
 export const STALL_PRICE_FACTOR = 0.8;
@@ -20,30 +20,36 @@ export function stallRate(state: GameState): number {
   return getStationDef('marketStall').capacity![st.level - 1];
 }
 
-function formOf(state: GameState, designId: string): string | undefined {
+function designOf(state: GameState, designId: string): Design | undefined {
   const ds = state.designs;
-  for (let i = 0; i < ds.length; i++) if (ds[i].id === designId) return ds[i].form;
+  for (let i = 0; i < ds.length; i++) if (ds[i].id === designId) return ds[i];
   return undefined;
 }
 
 /**
- * Pieces per form the stall may sell: everything above what open orders of that form need.
- * Written with plain arrays — this runs inside the catch-up loop.
+ * Pieces per (form, body) group the stall may sell: everything above what open orders of that group need.
+ * An order without a body reserves earthenware. Written with parallel plain arrays — this runs inside the catch-up loop.
  */
-function sellableByForm(state: GameState): { forms: string[]; left: number[] } {
+function sellableByGroup(state: GameState): { forms: string[]; bodies: string[]; left: number[] } {
   const forms: string[] = [];
+  const bodies: string[] = [];
   const left: number[] = [];
   for (const g of state.goods) {
-    const f = formOf(state, g.designId);
-    if (f === undefined) continue;
-    const i = forms.indexOf(f);
-    if (i < 0) { forms.push(f); left.push(g.count); } else left[i] += g.count;
+    const d = designOf(state, g.designId);
+    if (d === undefined) continue;
+    const i = groupIndex(forms, bodies, d.form, bodyOf(d));
+    if (i < 0) { forms.push(d.form); bodies.push(bodyOf(d)); left.push(g.count); } else left[i] += g.count;
   }
   for (const o of state.orders) {
-    const i = forms.indexOf(o.form);
+    const i = groupIndex(forms, bodies, o.form, o.body ?? 'irdenware');
     if (i >= 0) left[i] = Math.max(0, left[i] - o.count);
   }
-  return { forms, left };
+  return { forms, bodies, left };
+}
+
+function groupIndex(forms: string[], bodies: string[], form: string, body: string): number {
+  for (let i = 0; i < forms.length; i++) if (forms[i] === form && bodies[i] === body) return i;
+  return -1;
 }
 
 /** Pieces offered at the stall at all (ignoring the order reserve) — cheap. */
@@ -56,11 +62,13 @@ function offeredCount(state: GameState): number {
 /** How many pieces the stall can sell right now (offered designs, minus the order reserve). */
 export function stallStock(state: GameState): number {
   if (offeredCount(state) === 0) return 0;
-  const b = sellableByForm(state);
+  const b = sellableByGroup(state);
   const offered = b.forms.map(() => 0);
   for (const g of state.goods) {
     if (!state.stallDesignIds.includes(g.designId)) continue;
-    const i = b.forms.indexOf(formOf(state, g.designId)!);
+    const d = designOf(state, g.designId);
+    if (d === undefined) continue;
+    const i = groupIndex(b.forms, b.bodies, d.form, bodyOf(d));
     if (i >= 0) offered[i] += g.count;
   }
   let n = 0;
@@ -86,12 +94,14 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
   if (n >= stock) { n = stock; state.stallCarry = 0; }
   let sold = 0;
   let taler = 0;
-  const budget = sellableByForm(state);
+  const budget = sellableByGroup(state);
   const order = state.goods.filter((g) => state.stallDesignIds.includes(g.designId));
   if (order.length > 1) order.sort((a, b) => a.quality - b.quality);
   for (const g of order) {
     if (sold >= n) break;
-    const i = budget.forms.indexOf(formOf(state, g.designId)!);
+    const d = designOf(state, g.designId);
+    if (d === undefined) continue;
+    const i = groupIndex(budget.forms, budget.bodies, d.form, bodyOf(d));
     if (i < 0) continue;
     const k = Math.min(g.count, n - sold, budget.left[i]);
     if (k <= 0) continue;

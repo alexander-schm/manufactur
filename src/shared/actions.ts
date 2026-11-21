@@ -202,6 +202,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       const order = s.orders.find((o) => o.id === a.orderId) ?? fail('Diesen Auftrag gibt es nicht mehr');
       const design = s.designs.find((d) => d.id === a.designId) ?? fail('Unbekannter Entwurf');
       if (design.form !== order.form) fail('Das ist die falsche Form');
+      if (order.body && bodyOf(design) !== order.body) fail(`Das muss ${getBody(order.body).name} sein`);
       if (a.quality < order.minQuality) fail('Die Qualität reicht nicht');
       const stack = s.goods.find((g) => g.designId === a.designId && g.quality === a.quality && g.effect === a.effect);
       if (!stack || stack.count < order.count) fail('Davon hast du nicht genug im Regal');

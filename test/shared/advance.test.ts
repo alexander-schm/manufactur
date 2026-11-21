@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
 import { getStationDef } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
-import { plainGame, T0, withStanding } from './helpers';
+import { manufakturGame, plainGame, T0, withStanding } from './helpers';
 
 const MIN = 60_000;
 const H = 60 * MIN;
@@ -95,6 +95,18 @@ describe('market stall reserve', () => {
     const left = after.goods.reduce((n, g) => n + g.count, 0);
     expect(left).toBeGreaterThanOrEqual(Math.min(reserved, after.orders.filter((o) => o.form === 'becher').reduce((n, o) => n + o.count, 0)));
     expect(after.stats.sold).toBeLessThanOrEqual(3);
+  });
+  it('[Review Focus 4] the stall keeps stoneware for a stoneware order but may sell earthenware of the same form', () => {
+    const s = manufakturGame();
+    s.designs.push({ ...s.designs[0], id: 'sc', body: 'steinzeug', glazeId: 'klar-steinzeug' });
+    s.stallDesignIds = [s.designs[0].id, 'sc'];
+    s.orders = [{ ...s.orders[0], form: 'becher', body: 'steinzeug', count: 5 }];
+    s.goods = [{ designId: 'sc', quality: 2, effect: null, count: 5 }, { designId: s.designs[0].id, quality: 2, effect: null, count: 5 }];
+    s.standing = null;
+    s.lastOrderAt = T0 + 10 * H;
+    const after = advance(s, T0 + 30 * MIN);
+    expect(after.goods.find((g) => g.designId === 'sc')?.count).toBe(5);
+    expect(after.goods.find((g) => g.designId === s.designs[0].id)?.count ?? 0).toBeLessThan(5);
   });
   it('does not spin when everything is reserved and the shelf is full', () => {
     const s = withStanding();

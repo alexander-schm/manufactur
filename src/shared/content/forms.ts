@@ -1,4 +1,4 @@
-import type { ProfileParams } from '../types';
+import type { ProfileParams, Tier } from '../types';
 
 export interface FormDef {
   id: string;
@@ -12,6 +12,10 @@ export interface FormDef {
   flat: boolean;
   handleAllowed: boolean;
   profileDefaults: ProfileParams;
+  /** earliest workshop tier that offers the form (informational; the unlock gates it) */
+  tier?: Tier;
+  /** multiplies the pieces an order of this form asks for */
+  orderCountMul?: number;
 }
 
 export const FORMS: Record<string, FormDef> = {
@@ -25,4 +29,6 @@ export const FORMS: Record<string, FormDef> = {
     profileDefaults: { height: 0.75, belly: 0.7, neck: 0.25, foot: 0.4, rim: 0.4 } },
   krug: { id: 'krug', name: 'Krug', plural: 'Krüge', clayPerPiece: 2.5, baseValue: 22, baseDifficulty: 1.6, unlock: 'krug', flat: false, handleAllowed: true,
     profileDefaults: { height: 0.65, belly: 0.6, neck: 0.45, foot: 0.5, rim: 0.55 } },
+  teekanne: { id: 'teekanne', name: 'Teekanne', plural: 'Teekannen', clayPerPiece: 3, baseValue: 40, baseDifficulty: 1.8, unlock: 'teekanne', tier: 'manufaktur', flat: false, handleAllowed: true,
+    profileDefaults: { height: 0.5, belly: 0.75, neck: 0.35, foot: 0.45, rim: 0.3 } },
 };
