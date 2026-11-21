@@ -3,7 +3,7 @@ import { BODIES, EFFECTS, FRAMES, bodyOf, getBody, getForm, getStationDef, MATER
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
-import { COMMISSION_SWAP_COST, generateCommission, masterworkInProgress, startMasterwork } from './masterwork';
+import { COMMISSION_SWAP_COST, generateCommission, masterworkBusy, startMasterwork } from './masterwork';
 import { pieceValue } from './market';
 import { orderReward } from './orders';
 import { kilnCapacity, startNewBatch } from './production';
@@ -314,7 +314,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     }
     case 'swapCommission': {
       if (!tierAtLeast(s, 'manufaktur')) fail('Meisterstücke gibt es ab der Manufaktur');
-      if (masterworkInProgress(s)) fail('Während ein Meisterstück entsteht, bleibt der Auftrag');
+      if (masterworkBusy(s)) fail('Während ein Meisterstück entsteht, bleibt der Auftrag');
       if (COMMISSION_SWAP_COST > s.taler) fail('Nicht genug Taler');
       s.taler -= COMMISSION_SWAP_COST;
       s.commission = generateCommission(s);

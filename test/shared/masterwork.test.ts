@@ -5,7 +5,7 @@ import { collectionKey } from '../../src/shared/collection';
 import { FORMS, PATRONS, bodyOf, getTier } from '../../src/shared/content';
 import { colorFamily, validateDesign } from '../../src/shared/design';
 import {
-  COMMISSION_SWAP_COST, MASTERWORK_QUALITY_BONUS, PRESTIGE_MUL, finishMasterwork, criteriaMet, describeCriterion, generateCommission, masterworkInProgress, predictMasterwork, prestigeFor,
+  COMMISSION_SWAP_COST, MASTERWORK_QUALITY_BONUS, PRESTIGE_MUL, finishMasterwork, criteriaMet, describeCriterion, generateCommission, masterworkBusy, masterworkInProgress, predictMasterwork, prestigeFor,
 } from '../../src/shared/masterwork';
 import { MASTERWORK_KILN_SHARE, batchQuality, kilnCapacity, kilnLoad, productionWorkers } from '../../src/shared/production';
 import { newId } from '../../src/shared/state';
@@ -380,5 +380,77 @@ describe('masterworks', () => {
     const a = ok(s, { type: 'upgradeTier' });
     expect(a.commission).not.toBeNull();
     expect(a.commission!.criteria.length).toBe(3);
+  });
+});
+
+describe('masterworks and the great kiln', () => {
+  const fakeRecord = (s: GameState) => ({ id: 'x', commissionId: 'c', patronName: 'p', design: s.designs[0], glazeColor: '#fff', effect: null, quality: 2 as const, met: 3, total: 3, prestige: 'silver' as const, finishedAt: 0, acked: true });
+  const KILN_FX = ['ascheanflug', 'flammenspur', 'ascheglasur'];
+
+  it('criteriaMet accepts either the glaze effect or the kiln effect', () => {
+    const s = manufakturGame();
+    s.glazes.push(structuredClone(OELFLECK));
+    const d = stonewareBecher(s);
+    d.glazeId = 'oel';
+    const c: Commission = { ...generateCommission(s), criteria: [{ kind: 'effect', effect: 'oelfleck' }, { kind: 'effect', effect: 'ascheglasur' }] };
+    expect(criteriaMet(s, d, c)).toEqual([true, false]);
+    expect(criteriaMet(s, d, c, 'ascheglasur')).toEqual([true, true]);
+    expect(criteriaMet(s, d, c, 'flammenspur')).toEqual([true, false]);
+    d.glazeId = 'klar-steinzeug';
+    expect(criteriaMet(s, d, c, 'ascheglasur')).toEqual([false, true]);
+  });
+
+  it('commissions name a great-kiln effect only with a kiln in the village and the effect found', () => {
+    const setup = (seed: number, kiln: boolean, found: boolean) => {
+      const s = manufakturGame(seed);
+      s.glazes.push(structuredClone(OELFLECK));
+      s.masterworks = [fakeRecord(s), fakeRecord(s), fakeRecord(s)];
+      if (found) s.collection.push('becher|irdenware|flammenspur');
+      s.village = { villageId: 'v', specialty: null, buildings: kiln ? ['gemeinschaftsofen'] : [], helpBoostUntil: 0, trickleCarry: 0, members: 2 };
+      return s;
+    };
+    const kilnEffects = (c: Commission) => c.criteria.filter((x) => x.kind === 'effect' && KILN_FX.includes(x.effect));
+    let flammenspur = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      expect(kilnEffects(generateCommission(setup(seed, false, true)))).toEqual([]);
+      expect(kilnEffects(generateCommission(setup(seed, true, false)))).toEqual([]);
+      // no rng is drawn without kiln or find: the sequence is unchanged
+      const a = setup(seed, false, true), b = setup(seed, true, false), base = setup(seed, false, false);
+      generateCommission(a); generateCommission(b); generateCommission(base);
+      expect(a.rng).toBe(base.rng);
+      expect(b.rng).toBe(base.rng);
+      const found = kilnEffects(generateCommission(setup(seed, true, true)));
+      expect(found.every((x) => x.kind === 'effect' && x.effect === 'flammenspur')).toBe(true);
+      if (found.length > 0) flammenspur++;
+    }
+    expect(flammenspur).toBeGreaterThan(20);
+    expect(flammenspur).toBeLessThan(90);
+    // too early in the patron line: no kiln wishes
+    for (let seed = 1; seed <= 50; seed++) {
+      const s = setup(seed, true, true);
+      s.masterworks = s.masterworks.slice(0, 2);
+      expect(kilnEffects(generateCommission(s))).toEqual([]);
+    }
+    // without a kiln the commissions for a fixed seed are exactly what they were before
+    const s = setup(11, false, true);
+    const criteria = [0, 1, 2, 3].map(() => generateCommission(s).criteria);
+    expect(criteria).toEqual([
+      [{ kind: 'form', form: 'krug' }, { kind: 'tall', tall: true }, { kind: 'pattern', pattern: 'leaves' }, { kind: 'color', colorFamily: 'gelb' }],
+      [{ kind: 'form', form: 'teller' }, { kind: 'pattern', pattern: 'waves' }, { kind: 'color', colorFamily: 'gelb' }],
+      [{ kind: 'form', form: 'becher' }, { kind: 'tall', tall: true }, { kind: 'pattern', pattern: 'leaves' }, { kind: 'color', colorFamily: 'gelb' }],
+      [{ kind: 'form', form: 'vase' }, { kind: 'tall', tall: true }, { kind: 'pattern', pattern: 'leaves' }, { kind: 'color', colorFamily: 'gelb' }],
+    ]);
+    expect(s.rng).toBe(624259381);
+  });
+
+  it('a masterwork in the great kiln blocks starting another and swapping the commission', () => {
+    const s = manufakturGame();
+    s.commission = generateCommission(s);
+    s.kilnMasterwork = { designId: s.designs[0].id, firingId: 'k1' };
+    expect(masterworkBusy(s)).toBe(true);
+    expect(rejected(s, { type: 'startMasterwork', designId: s.designs[0].id })).toMatch(/schon ein Meisterstück/);
+    expect(rejected(s, { type: 'swapCommission' })).toMatch(/bleibt der Auftrag/);
+    s.kilnMasterwork = null;
+    expect(masterworkBusy(s)).toBe(false);
   });
 });

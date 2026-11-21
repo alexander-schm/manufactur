@@ -1,6 +1,7 @@
 import { EFFECTS, FORMS, GREAT_KILN_EFFECTS } from '../content';
 import { fmtTaler } from '../format';
 import { batchMaterials, batchQuality, missingMaterialCost, productionWorkers, qualityTier, useMaterials } from '../production';
+import { MASTERWORK_QUALITY_BONUS, payMasterwork } from '../masterwork';
 import { nextRandom } from '../rng';
 import { buyError } from '../shop';
 import type { Design, GameState } from '../types';
@@ -37,33 +38,73 @@ export function kilnCost(s: GameState, design: Design, pieces: number, wood: num
   return { need, taler: missingMaterialCost(s, need) };
 }
 
-/** Put pieces into the great kiln, paying everything up front. Mutates both states. */
-export function loadKiln(v: VillageState, actor: GameState, me: Member, designId: string, count: number, wood: number, now: number): string | null {
+/** Whether the kiln stands and is open for loading; a German error or null. */
+function kilnClosed(v: VillageState): string | null {
   if (!v.buildings.includes('gemeinschaftsofen')) return 'Den Gemeinschaftsofen gibt es erst, wenn jemand im Dorf die Manufaktur erreicht hat';
+  if (v.greatKiln.doneAt !== null) return 'Der Ofen brennt gerade – danach kannst du wieder einräumen';
+  return null;
+}
+
+/** Whether `count` more pieces of this member fit into the kiln; a German error or null. */
+function roomError(v: VillageState, me: Member, count: number): string | null {
   const k = v.greatKiln;
-  if (k.doneAt !== null) return 'Der Ofen brennt gerade – danach kannst du wieder einräumen';
-  const design = actor.designs.find((d) => d.id === designId);
-  if (!design) return 'Diesen Entwurf gibt es nicht';
-  if (design.origin) return 'Geschenkte Stücke kannst du nicht nachmachen';
   const mine = shareLeft(k, me.playerId);
   if (count > mine) return `Dein Platz im Ofen reicht noch für ${Math.max(0, mine)} Stück`;
   const room = GREAT_KILN_CAPACITY - kilnPieces(k);
   if (count > room) return `Der Ofen hat nur noch Platz für ${room} Stück`;
+  return null;
+}
+
+/** Add a paid load and start (or bring forward) the wait until the kiln is lit. */
+function pushLoad(v: VillageState, actor: GameState, me: Member, design: Design, count: number, wood: number, qualityScore: number, now: number, masterwork: boolean): void {
+  const k = v.greatKiln;
+  const { origin: _origin, ...travelling } = structuredClone(design);
+  const glazeColor = actor.glazes.find((g) => g.id === design.glazeId)?.color ?? '#e9c9a6';
+  k.loads.push({
+    playerId: me.playerId, design: travelling, glazeColor, count, wood, qualityScore, makerName: me.name, makerMark: me.makerMark,
+    ...(masterwork ? { masterwork: true } : {}),
+  });
+  if (k.firesAt === null) k.firesAt = now + KILN_WAIT_MS;
+  if (kilnPieces(k) === GREAT_KILN_CAPACITY) k.firesAt = now;
+}
+
+/** Put pieces into the great kiln, paying everything up front. Mutates both states. */
+export function loadKiln(v: VillageState, actor: GameState, me: Member, designId: string, count: number, wood: number, now: number): string | null {
+  const closed = kilnClosed(v);
+  if (closed) return closed;
+  const design = actor.designs.find((d) => d.id === designId);
+  if (!design) return 'Diesen Entwurf gibt es nicht';
+  if (design.origin) return 'Geschenkte Stücke kannst du nicht nachmachen';
+  const room = roomError(v, me, count);
+  if (room) return room;
   if (wood < count * KILN_WOOD_MIN || wood > count * KILN_WOOD_MAX) return `Pro Stück braucht es ${KILN_WOOD_MIN} bis ${KILN_WOOD_MAX} Holz`;
   const cost = kilnCost(actor, design, count, wood);
   if (typeof cost === 'string') return cost;
   if (cost.taler > actor.taler) return `Dafür brauchst du ${fmtTaler(cost.taler)} Taler`;
   actor.taler = Math.round((actor.taler - cost.taler) * 100) / 100;
   useMaterials(actor, cost.need);
-  const { origin: _origin, ...travelling } = structuredClone(design);
-  const glazeColor = actor.glazes.find((g) => g.id === design.glazeId)?.color ?? '#e9c9a6';
-  k.loads.push({
-    playerId: me.playerId, design: travelling, glazeColor, count, wood,
-    qualityScore: batchQuality(actor, design, productionWorkers(actor)), makerName: me.name, makerMark: me.makerMark,
-  });
-  if (k.firesAt === null) k.firesAt = now + KILN_WAIT_MS;
-  if (kilnPieces(k) === GREAT_KILN_CAPACITY) k.firesAt = now;
+  pushLoad(v, actor, me, design, count, wood, batchQuality(actor, design, productionWorkers(actor)), now, false);
   addNews(v, `${me.name} hat ${count} ${FORMS[design.form]?.plural ?? 'Stücke'} in den Gemeinschaftsofen geräumt.`, null, now);
+  return null;
+}
+
+/**
+ * Put the commission's masterwork into the great kiln instead of the workshop: fee, materials and wood are paid
+ * up front, the fire decides its effect. It still counts as the one masterwork under way. Mutates both states.
+ */
+export function loadKilnMasterwork(v: VillageState, actor: GameState, me: Member, designId: string, wood: number, now: number): string | null {
+  const closed = kilnClosed(v);
+  if (closed) return closed;
+  const design = actor.designs.find((d) => d.id === designId);
+  if (!design) return 'Diesen Entwurf gibt es nicht';
+  const room = roomError(v, me, 1);
+  if (room) return room;
+  if (wood < KILN_WOOD_MIN || wood > KILN_WOOD_MAX) return `Ein Meisterstück braucht ${KILN_WOOD_MIN} bis ${KILN_WOOD_MAX} Holz`;
+  const err = payMasterwork(actor, design, { holz: wood });
+  if (err) return err;
+  pushLoad(v, actor, me, design, 1, wood, batchQuality(actor, design, productionWorkers(actor)) + MASTERWORK_QUALITY_BONUS, now, true);
+  actor.kilnMasterwork = { designId: design.id, firingId: v.greatKiln.firingId };
+  addNews(v, `${me.name} hat ein Meisterstück in den Gemeinschaftsofen gestellt.`, null, now);
   return null;
 }
 
@@ -101,9 +142,16 @@ export function tickGreatKiln(v: VillageState, now: number): Delivery[] {
   const heat = k.heat ?? 0;
   const byPlayer = new Map<string, KilnReturn[]>();
   let best: { report: NonNullable<KilnFiringReport['best']>; maker: string } | null = null;
+  const deliveries: Delivery[] = [];
   for (const load of k.loads) {
-    // masterwork loads come back through their own path (Task 5)
-    if (load.masterwork) continue;
+    // a masterwork is judged in its owner's workshop, with whatever the fire gave it
+    if (load.masterwork) {
+      const [effect, rng] = rollKilnEffect(v.rng, heat, true);
+      v.rng = rng;
+      const qualityScore = Math.min(100, load.qualityScore + KILN_QUALITY_BONUS * heat);
+      deliveries.push({ to: load.playerId, delta: { kilnMasterwork: { design: load.design, qualityScore, effect, at: k.doneAt } } });
+      continue;
+    }
     const quality = qualityTier(Math.min(100, load.qualityScore + KILN_QUALITY_BONUS * heat));
     const counts = new Map<string | null, number>();
     for (let i = 0; i < load.count; i++) {
@@ -123,7 +171,7 @@ export function tickGreatKiln(v: VillageState, now: number): Delivery[] {
   }
   const contributors = [...new Set(k.loads.map((l) => l.playerId))];
   const pieces = kilnPieces(k);
-  const deliveries: Delivery[] = [...byPlayer].map(([to, kilnGoods]) => ({ to, delta: { kilnGoods } }));
+  deliveries.push(...[...byPlayer].map(([to, kilnGoods]) => ({ to, delta: { kilnGoods } })));
   let text = `Der Gemeinschaftsofen ist abgekühlt: ${pieces} Stücke von ${contributors.length} Leuten.`;
   if (best) {
     const { report, maker } = best;

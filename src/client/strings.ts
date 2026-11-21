@@ -59,6 +59,7 @@ export const T = {
     doneClose: 'Wunderbar!',
     card: 'Gönner geben besondere Einzelstücke in Auftrag.',
     cardBusy: 'Gerade entsteht ein Meisterstück.',
+    inGreatKiln: 'Dein Meisterstück brennt im Gemeinschaftsofen.',
     visitTitle: (name: string) => `Meisterstücke von ${name}`,
   },
   kilnTooCold: (body: string) => `${body} muss heiß gebrannt werden – dein Ofen braucht dafür Stufe 2`,

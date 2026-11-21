@@ -33,6 +33,11 @@ export function GamePage() {
     if (endgame && location.hash.includes('celebrate')) s.milestonesAcked = s.milestonesAcked.filter((id) => id !== 'tierManufaktur');
     // dev-only: #game&endgame&mwdone — the gold masterwork has just left the kiln
     if (endgame && location.hash.includes('mwdone')) for (const m of s.masterworks) if (m.prestige === 'gold') m.acked = false;
+    // dev-only: #game&endgame&mwkiln — the masterwork stands in the village's great kiln instead of the workshop
+    if (endgame && location.hash.includes('mwkiln')) {
+      const mw = s.batches.find((b) => b.masterwork);
+      if (mw) { s.batches = s.batches.filter((b) => b !== mw); s.kilnMasterwork = { designId: mw.designId, firingId: 'k-dev' }; }
+    }
     serverState.value = s;
     me.value = { playerId: 'dev', name: 'Alex', villageName: 'Tonhausen', inviteCode: 'TON234' };
     startClock();

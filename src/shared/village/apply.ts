@@ -1,5 +1,6 @@
 import { bodyOf, MATERIALS, own } from '../content';
 import { recordCollection } from '../collection';
+import { finishKilnMasterwork } from '../masterwork';
 import { MAX_DESIGNS } from '../actions';
 import { newId } from '../ids';
 import { grantDecor } from './decor';
@@ -7,7 +8,7 @@ import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
 import { lendAHand } from './help';
 import { SUBSTITUTE_FACTOR } from './goods';
-import { loadKiln } from './kiln';
+import { loadKiln, loadKilnMasterwork } from './kiln';
 import { completeJointOrder, contributeTo, ensureJointOrders, isComplete, maxContribution } from './joint';
 import { addNews, validateVillageAction, vid } from './state';
 import { tickVillage } from './tick';
@@ -83,6 +84,7 @@ export function applyDelta(state: GameState, d: WorkshopDelta): GameState {
   for (const t of d.goods ?? []) importStack(s, t);
   for (const id of d.decor ?? []) grantDecor(s, id);
   for (const r of d.kilnGoods ?? []) receiveKilnGoods(s, r);
+  if (d.kilnMasterwork) finishKilnMasterwork(s, d.kilnMasterwork);
   if (d.helpBoostUntil !== undefined || d.village) {
     s.village ??= { villageId: d.village?.villageId ?? '', specialty: null, buildings: [], helpBoostUntil: 0, trickleCarry: 0, members: 1 };
     if (d.helpBoostUntil !== undefined) s.village.helpBoostUntil = Math.max(s.village.helpBoostUntil, d.helpBoostUntil);
@@ -233,6 +235,12 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
       const err = loadKiln(v, actor, me, a.designId, a.count, a.wood, now);
       if (err) return err;
       events.push('Eingeräumt – jetzt heißt es warten, bis der Ofen brennt.');
+      break;
+    }
+    case 'loadKilnMasterwork': {
+      const err = loadKilnMasterwork(v, actor, me, a.designId, a.wood, now);
+      if (err) return err;
+      events.push('Dein Meisterstück steht im Gemeinschaftsofen – das Feuer entscheidet mit.');
       break;
     }
     default:

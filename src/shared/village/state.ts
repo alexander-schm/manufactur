@@ -1,6 +1,6 @@
 import { MATERIALS, own } from '../content';
 import { assignSpecialty } from './specialties';
-import { KILN_MEMBER_SHARE, KILN_WOOD_MAX } from './kilnRules';
+import { KILN_MEMBER_SHARE, KILN_WOOD_MAX, KILN_WOOD_MIN } from './kilnRules';
 import type { Tier } from '../types';
 import { STICKERS, VILLAGE_ACTION_TYPES, type GiveRef, type GreatKiln, type Member, type VillageAction, type VillageState } from './types';
 
@@ -133,6 +133,9 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
       if (!isCount(a.count, KILN_MEMBER_SHARE) || !isCount(a.wood, KILN_MEMBER_SHARE * KILN_WOOD_MAX)) return 'Ungültige Menge';
       return null;
     case 'loadKilnMasterwork':
+      if (typeof a.designId !== 'string') return 'Unbekannter Entwurf';
+      if (!isCount(a.wood, KILN_WOOD_MAX) || a.wood < KILN_WOOD_MIN) return `Ein Meisterstück braucht ${KILN_WOOD_MIN} bis ${KILN_WOOD_MAX} Holz`;
+      return null;
     case 'contributeProject':
       return 'Noch nicht verfügbar';
     case 'help':

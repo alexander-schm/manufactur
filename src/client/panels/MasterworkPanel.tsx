@@ -1,9 +1,10 @@
 import { useState } from 'preact/hooks';
 import { makeCharacter } from '../../shared/character';
-import { COMMISSION_SWAP_COST, MASTERWORK_MATERIAL_PIECES, describeCriterion, masterworkInProgress, predictMasterwork, PRESTIGE_NAME } from '../../shared/masterwork';
+import { COMMISSION_SWAP_COST, MASTERWORK_MATERIAL_PIECES, describeCriterion, masterworkBusy, masterworkInProgress, predictMasterwork, PRESTIGE_NAME } from '../../shared/masterwork';
 import { batchMaterials, MASTERWORK_STAGE_MS, missingMaterialCost } from '../../shared/production';
 import { STAGES, type Batch, type Commission, type Design, type GameState, type MasterworkRecord } from '../../shared/types';
 import { ownDesigns } from '../../shared/village/apply';
+import { BUILDINGS } from '../../shared/village/buildings';
 import { Character } from '../art/character/Character';
 import { Pot } from '../art/Pot';
 import { Medal } from '../art/workshop/Plinth';
@@ -20,7 +21,7 @@ function Fit({ ok }: { ok: boolean }) {
 
 /** The patron's letter: who they are, what they wish for (ticked against the picked design), price and reward. */
 function CommissionCard({ s, c, met }: { s: GameState; c: Commission; met: boolean[] | null }) {
-  const busy = !!masterworkInProgress(s);
+  const busy = masterworkBusy(s);
   return (
     <Paper tape class="mw-letter" style={{ borderRadius: '6px 14px 8px 12px / 12px 6px 14px 8px' }}>
       <div class="mw-patron">
@@ -94,6 +95,22 @@ function InProgress({ s, b }: { s: GameState; b: Batch }) {
   );
 }
 
+function InGreatKiln({ s, designId }: { s: GameState; designId: string }) {
+  const d = s.designs.find((x) => x.id === designId);
+  return (
+    <section class="panel-section mw-progress mw-great-kiln">
+      <h3>{BUILDINGS.gemeinschaftsofen.name}</h3>
+      <div class="card card-row">
+        {d && <DesignPot s={s} d={d} size={56} />}
+        <div class="grow">
+          {d && <strong>{d.name}</strong>}
+          <div>{T.mw.inGreatKiln}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function RecordItem({ r }: { r: MasterworkRecord }) {
   return (
     <div class="mw-record" data-record={r.id}>
@@ -113,14 +130,16 @@ export function MasterworkShelf({ records }: { records: MasterworkRecord[] }) {
 export function MasterworkPanel({ s }: { s: GameState }) {
   const c = s.commission;
   const designs = ownDesigns(s);
-  const busy = masterworkInProgress(s);
+  const inWorkshop = masterworkInProgress(s);
+  const busy = masterworkBusy(s);
   const best = [...designs].sort((a, b) => predictMasterwork(s, b).met.filter(Boolean).length - predictMasterwork(s, a).met.filter(Boolean).length)[0];
   const [pickedId, setPicked] = useState<string | undefined>(best?.id);
   const picked = designs.find((d) => d.id === pickedId) ?? best;
   const price = c && picked ? c.costTaler + missingMaterialCost(s, batchMaterials(s, picked, MASTERWORK_MATERIAL_PIECES)) : 0;
   return (
     <div class="masterwork">
-      {busy && <InProgress s={s} b={busy} />}
+      {inWorkshop && <InProgress s={s} b={inWorkshop} />}
+      {s.kilnMasterwork && <InGreatKiln s={s} designId={s.kilnMasterwork.designId} />}
       {c && <CommissionCard s={s} c={c} met={picked ? predictMasterwork(s, picked).met : null} />}
       {c && (
         <section class="panel-section">
@@ -131,7 +150,7 @@ export function MasterworkPanel({ s }: { s: GameState }) {
               {designs.map((d) => <DesignChoice s={s} d={d} picked={d.id === picked?.id} onPick={() => setPicked(d.id)} />)}
             </div>
           )}
-          <Button variant="primary" class="mw-start" disabled={!!busy || !picked || s.taler < price}
+          <Button variant="primary" class="mw-start" disabled={busy || !picked || s.taler < price}
             onClick={() => picked && dispatch({ type: 'startMasterwork', designId: picked.id })}>
             {T.mw.start(Math.ceil(price))}
           </Button>

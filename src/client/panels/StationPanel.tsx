@@ -15,7 +15,7 @@ import { DecorSection } from './village/DecorPanel';
 import { TierSection } from './TierSection';
 import type { PanelId } from './PanelHost';
 import { T } from '../strings';
-import { masterworkInProgress } from '../../shared/masterwork';
+import { masterworkBusy } from '../../shared/masterwork';
 import { fmtTaler } from '../../shared/format';
 
 function upgradeEffect(st: Station): string {
@@ -160,7 +160,7 @@ export function WorkshopPanel({ s, onOpen }: { s: GameState; onOpen: (id: PanelI
       </div>
       {s.unlocks.includes('meisterstuecke') && (
         <button class="card card-row mw-card" data-open="masterwork" style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', marginTop: '12px' }} onClick={() => onOpen('masterwork')}>
-          <div class="grow"><strong>{T.tabs.masterwork}</strong><div class="muted" style={{ fontSize: '.85em' }}>{masterworkInProgress(s) ? T.mw.cardBusy : T.mw.card}</div></div>
+          <div class="grow"><strong>{T.tabs.masterwork}</strong><div class="muted" style={{ fontSize: '.85em' }}>{s.kilnMasterwork ? T.mw.inGreatKiln : masterworkBusy(s) ? T.mw.cardBusy : T.mw.card}</div></div>
           <span aria-hidden="true">›</span>
         </button>
       )}

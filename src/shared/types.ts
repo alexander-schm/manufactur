@@ -181,6 +181,8 @@ export interface GameState {
   keepStock: Record<string, number>;
   commission: Commission | null;
   masterworks: MasterworkRecord[];
+  /** the masterwork standing in the village's great kiln (only one masterwork at a time, here or in the workshop) */
+  kilnMasterwork?: { designId: string; firingId: string } | null;
   /** ids of village operations / deliveries already applied here (exactly-once), newest last */
   appliedOps?: string[];
 }
