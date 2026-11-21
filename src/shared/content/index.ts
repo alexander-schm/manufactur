@@ -1,19 +1,25 @@
 import type { StationKind } from '../types';
+import { BODIES } from './bodies';
 import { CUSTOMERS } from './customers';
 import { EFFECTS } from './effects';
 import { FORMS } from './forms';
 import { MATERIALS } from './materials';
 import { NAMES, PERSONALITIES } from './names';
 import { STATIONS } from './stations';
+import { TIERS, TIER_ORDER } from './tiers';
 import { TRAITS } from './traits';
 import { UNLOCKS } from './unlocks';
 
-export { CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
+export { BODIES, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
 export type { FormDef } from './forms';
 export type { MaterialDef } from './materials';
 export type { StationDef } from './stations';
 export type { TraitDef } from './traits';
 export type { EffectDef, RecipeInput } from './effects';
+export { bodyAvailable, bodyOf, getBody } from './bodies';
+export { getTier, nextTier, tierAtLeast, tierForLevel, tierRank } from './tiers';
+export type { BodyDef } from './bodies';
+export type { TierDef } from './tiers';
 export type { UnlockDef } from './unlocks';
 export type { CustomerDef } from './customers';
 

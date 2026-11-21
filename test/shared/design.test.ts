@@ -4,9 +4,9 @@ import type { Design, GlazeRecipe } from '../../src/shared/types';
 import { plainGame } from './helpers';
 
 const blueGlaze: GlazeRecipe = { id: 'g', name: 'Blau', base: 'opak', colorant: 'kobalt', colorantPct: 2,
-  firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#3f6fb5', effect: null };
+  firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#3f6fb5', effect: null, body: 'irdenware' };
 const vase: Design = { id: 'd', name: 'Hohe Vase', form: 'vase', profile: { height: 0.9, belly: 0.6, neck: 0.2, foot: 0.4, rim: 0.4 },
-  handle: 'none', rim: 'plain', glazeId: 'g', pattern: 'dots', patternColor: '#ffffff' };
+  handle: 'none', rim: 'plain', glazeId: 'g', pattern: 'dots', patternColor: '#ffffff', body: 'irdenware' };
 
 describe('design', () => {
   it('colour families', () => {

@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { EFFECTS, getStationDef, MATERIALS, own, STATIONS } from './content';
+import { EFFECTS, bodyOf, getStationDef, MATERIALS, own, STATIONS } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
@@ -11,7 +11,7 @@ import { rollWorker } from './state';
 import { hasBuilding } from './village/buildings';
 import { DECOR, MAX_DECOR_PLACED } from './village/decor';
 import { shopPrice } from './village/specialties';
-import type { Design, GameState, GlazeRecipe, MakerMark, StationKind } from './types';
+import type { BodyId, Design, GameState, GlazeRecipe, MakerMark, StationKind } from './types';
 
 export type Action =
   | { type: 'buyMaterial'; material: string; amount: number }
@@ -26,7 +26,7 @@ export type Action =
   | { type: 'declineOrder'; orderId: string }
   | { type: 'setStall'; designIds: string[] }
   | { type: 'sellNow'; designId: string; quality: 1 | 2 | 3; effect: string | null; count: number }
-  | { type: 'experiment'; recipe: Omit<GlazeRecipe, 'id' | 'color' | 'effect' | 'name'> }
+  | { type: 'experiment'; recipe: Omit<GlazeRecipe, 'id' | 'color' | 'effect' | 'name' | 'body'> & { body?: BodyId } }
   | { type: 'handTouch'; stationId: string }
   | { type: 'setAvatar'; seed: number }
   | { type: 'setMakerMark'; mark: MakerMark }
@@ -167,7 +167,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       if (err) fail(err);
       const clean: Design = {
         id: d.id, name: d.name.trim(), form: d.form, profile: { height: d.profile.height, belly: d.profile.belly, neck: d.profile.neck, foot: d.profile.foot, rim: d.profile.rim },
-        handle: d.handle, rim: d.rim, glazeId: d.glazeId, pattern: d.pattern, patternColor: d.patternColor,
+        handle: d.handle, rim: d.rim, glazeId: d.glazeId, pattern: d.pattern, patternColor: d.patternColor, body: bodyOf(d),
       };
       const idx = s.designs.findIndex((x) => x.id === d.id);
       // pieces on the shelf or in the pipeline keep the design they were made with

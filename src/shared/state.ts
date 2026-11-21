@@ -4,7 +4,7 @@ import { addOrder } from './orders';
 import { nextRandom, pick } from './rng';
 import type { Design, GameState, GlazeRecipe, Station, StationKind, Worker } from './types';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export { newId };
 
@@ -22,7 +22,7 @@ export function rollWorker(state: GameState): Worker {
 
 export const STARTER_GLAZE: GlazeRecipe = {
   id: 'klar', name: 'Klare Glasur', base: 'transparent', colorant: null, colorantPct: 0,
-  firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#e9c9a6', effect: null,
+  firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#e9c9a6', effect: null, body: 'irdenware',
 };
 
 const ROOM1: StationKind[] = ['prepBench', 'wheel', 'dryingRack', 'kiln', 'glazeTable', 'shelf', 'marketStall'];
@@ -37,6 +37,7 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
     makerMark: { shape: 'circle', letter: 'M', color: '#b44c36' }, nextId: 1,
     stats: { made: 0, sold: 0, ordersDone: 0, experiments: 0, designsSaved: 0, effectsFound: 0 },
     lastOrderAt: now, stallCarry: 0, village: null, decor: [], decorPlaced: [],
+    tier: 'werkstatt', collection: [], collectionRewards: [], keepStock: {}, commission: null, masterworks: [],
   };
   s.stations = ROOM1.map((kind, slot): Station => ({ id: newId(s, 's'), kind, level: 1, slot }));
   const first = rollWorker(s);
@@ -44,7 +45,7 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
   s.workers.push(first);
   for (let i = 0; i < 3; i++) s.hirePool.push(rollWorker(s));
   const design: Design = {
-    id: newId(s, 'd'), name: 'Erster Becher', form: 'becher', profile: { ...FORMS.becher.profileDefaults },
+    id: newId(s, 'd'), name: 'Erster Becher', form: 'becher', body: 'irdenware', profile: { ...FORMS.becher.profileDefaults },
     handle: 'round', rim: 'plain', glazeId: 'klar', pattern: 'none', patternColor: '#2b2420',
   };
   s.designs.push(design);
@@ -67,6 +68,17 @@ export function migrateState(raw: unknown): GameState {
     s.decor = [];
     s.decorPlaced = [];
     s.schemaVersion = 2;
+  }
+  if (s.schemaVersion === 2) {
+    s.tier = 'werkstatt';
+    for (const d of s.designs) d.body ??= 'irdenware';
+    for (const g of s.glazes) g.body ??= 'irdenware';
+    s.collection = [];
+    s.collectionRewards = [];
+    s.keepStock = {};
+    s.commission = null;
+    s.masterworks = [];
+    s.schemaVersion = 3;
   }
   return s;
 }

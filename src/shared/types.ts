@@ -8,6 +8,10 @@ export interface ProfileParams { height: number; belly: number; neck: number; fo
 
 export type PatternKind = 'none' | 'stripes' | 'dots' | 'waves' | 'leaves';
 
+export type Tier = 'werkstatt' | 'manufaktur' | 'hofmanufaktur';
+export type BodyId = 'irdenware' | 'steinzeug' | 'porzellan';
+export type Prestige = 'bronze' | 'silver' | 'gold';
+
 export interface Design {
   id: string;
   name: string;
@@ -15,6 +19,7 @@ export interface Design {
   profile: ProfileParams;
   handle: 'none' | 'round' | 'ear' | 'loop';
   rim: 'plain' | 'rolled' | 'flared';
+  body: BodyId;
   glazeId: string;
   pattern: PatternKind;
   /** css colour */
@@ -39,6 +44,7 @@ export interface GlazeRecipe {
   firing: FiringSettings;
   color: string;
   effect: string | null;
+  body: BodyId;
 }
 
 export interface Batch {
@@ -54,6 +60,7 @@ export interface Batch {
   touch?: number;
   /** finished firing but the shelf is full; waits in the kiln */
   blocked?: boolean;
+  masterwork?: boolean;
 }
 
 export interface Station { id: string; kind: StationKind; level: number; slot: number }
@@ -76,6 +83,7 @@ export interface Order {
   rewardTaler: number;
   rewardRuf: number;
   bonusDeadline: number | null;
+  body?: BodyId;
 }
 
 /** Auto-requeue a batch whenever the prepare stage is free. */
@@ -83,7 +91,41 @@ export interface StandingOrder { designId: string; batchSize: number; /** buy mi
 
 export interface AwayLog { since: number; made: number; sold: number; talerEarned: number; discoveries: string[] }
 
-export interface MakerMark { shape: 'circle' | 'heart' | 'star' | 'leaf'; letter: string; color: string }
+export interface MakerMark { shape: 'circle' | 'heart' | 'star' | 'leaf'; letter: string; color: string; frame?: string }
+
+export type MasterworkCriterion =
+  | { kind: 'body'; body: BodyId }
+  | { kind: 'form'; form: string }
+  | { kind: 'tall'; tall: boolean }
+  | { kind: 'effect'; effect: string }
+  | { kind: 'pattern'; pattern: PatternKind }
+  | { kind: 'color'; colorFamily: string };
+
+export interface Commission {
+  id: string;
+  patronSeed: number;
+  patronName: string;
+  patronJob: string;
+  criteria: MasterworkCriterion[];
+  costTaler: number;
+  rewardTaler: number;
+  rewardRuf: number;
+}
+
+export interface MasterworkRecord {
+  id: string;
+  commissionId: string;
+  patronName: string;
+  design: Design;
+  glazeColor: string;
+  effect: string | null;
+  quality: 1 | 2 | 3;
+  met: number;
+  total: number;
+  prestige: Prestige;
+  finishedAt: number;
+  acked: boolean;
+}
 
 export interface GameState {
   schemaVersion: number;
@@ -127,6 +169,14 @@ export interface GameState {
   /** decor items owned / placed in the workshop */
   decor: string[];
   decorPlaced: string[];
+  tier: Tier;
+  /** collection-book keys `form|body|effect` */
+  collection: string[];
+  collectionRewards: string[];
+  /** designId -> pieces to hold back from the stall */
+  keepStock: Record<string, number>;
+  commission: Commission | null;
+  masterworks: MasterworkRecord[];
   /** ids of village operations / deliveries already applied here (exactly-once), newest last */
   appliedOps?: string[];
 }

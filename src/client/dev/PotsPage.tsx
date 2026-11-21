@@ -27,7 +27,7 @@ function design(form: string, i: number, pattern: PatternKind = 'none'): Design 
   return {
     id: `${form}${i}`, name: '', form, pattern, patternColor: '#fff8ec',
     profile: { height: c(d.height + v), belly: c(d.belly - v * 0.6), neck: c(d.neck + v * 0.5), foot: c(d.foot), rim: c(d.rim + v * 0.4) },
-    handle: FORMS[form].handleAllowed ? (['round', 'ear', 'loop'] as const)[i % 3] : 'none', rim: (['plain', 'rolled', 'flared'] as const)[i % 3], glazeId: '',
+    handle: FORMS[form].handleAllowed ? (['round', 'ear', 'loop'] as const)[i % 3] : 'none', rim: (['plain', 'rolled', 'flared'] as const)[i % 3], glazeId: '', body: 'irdenware',
   };
 }
 

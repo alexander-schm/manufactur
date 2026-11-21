@@ -8,16 +8,16 @@ import { WorkshopScene } from '../art/workshop/WorkshopScene';
 export function mockWorkshop(now: number): GameState {
   const t0 = now - 7 * 60_000;
   let s = newGame('dev', 12345, t0);
-  const blue = { id: 'g90', name: 'Kobaltblau', base: 'opak' as const, colorant: 'kobalt', colorantPct: 3, firing: { temp: 'mittel' as const, atmosphere: 'oxidierend' as const, cooling: 'langsam' as const }, color: '', effect: null };
+  const blue = { id: 'g90', name: 'Kobaltblau', base: 'opak' as const, colorant: 'kobalt', colorantPct: 3, firing: { temp: 'mittel' as const, atmosphere: 'oxidierend' as const, cooling: 'langsam' as const }, color: '', effect: null, body: 'irdenware' as const };
   blue.color = glazeColor(blue);
   const green = { ...blue, id: 'g91', name: 'Kupfergrün', colorant: 'kupferoxid', colorantPct: 4, color: '' };
   green.color = glazeColor(green);
   const crack = { ...blue, id: 'g92', name: 'Craquelé', base: 'transparent' as const, colorant: null, colorantPct: 0, firing: { ...blue.firing, cooling: 'schnell' as const }, color: '#e9c9a6', effect: 'craquele' };
   s.glazes.push(blue, green, crack);
   s.designs.push(
-    { id: 'd90', name: 'Blaue Vase', form: 'vase', profile: { height: 0.8, belly: 0.6, neck: 0.25, foot: 0.4, rim: 0.5 }, handle: 'none', rim: 'flared', glazeId: 'g90', pattern: 'waves', patternColor: '#fff8ec' },
-    { id: 'd91', name: 'Grüne Schale', form: 'schale', profile: { height: 0.4, belly: 0.6, neck: 0.8, foot: 0.3, rim: 0.6 }, handle: 'none', rim: 'plain', glazeId: 'g91', pattern: 'dots', patternColor: '#fff8ec' },
-    { id: 'd92', name: 'Craquelé-Krug', form: 'krug', profile: { height: 0.6, belly: 0.6, neck: 0.45, foot: 0.5, rim: 0.55 }, handle: 'round', rim: 'plain', glazeId: 'g92', pattern: 'none', patternColor: '#2b2420' },
+    { id: 'd90', name: 'Blaue Vase', form: 'vase', profile: { height: 0.8, belly: 0.6, neck: 0.25, foot: 0.4, rim: 0.5 }, handle: 'none', rim: 'flared', glazeId: 'g90', pattern: 'waves', patternColor: '#fff8ec', body: 'irdenware' },
+    { id: 'd91', name: 'Grüne Schale', form: 'schale', profile: { height: 0.4, belly: 0.6, neck: 0.8, foot: 0.3, rim: 0.6 }, handle: 'none', rim: 'plain', glazeId: 'g91', pattern: 'dots', patternColor: '#fff8ec', body: 'irdenware' },
+    { id: 'd92', name: 'Craquelé-Krug', form: 'krug', profile: { height: 0.6, belly: 0.6, neck: 0.45, foot: 0.5, rim: 0.55 }, handle: 'round', rim: 'plain', glazeId: 'g92', pattern: 'none', patternColor: '#2b2420', body: 'irdenware' },
   );
   for (let i = 0; i < 3; i++) s.workers.push(rollWorker(s));
   s.workers[1].stationId = s.stations.find((x) => x.kind === 'prepBench')!.id;

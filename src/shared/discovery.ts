@@ -1,7 +1,7 @@
-import { EFFECTS, MATERIALS, own, type RecipeInput } from './content';
+import { EFFECTS, MATERIALS, bodyOf, own, type RecipeInput } from './content';
 import { COLOR_FAMILY_NAMES, colorFamily } from './design';
 import { newId } from './ids';
-import type { GameState, GlazeRecipe } from './types';
+import type { BodyId, GameState, GlazeRecipe } from './types';
 
 const BASE_COLOR: Record<GlazeRecipe['base'], string> = { transparent: '#e9c9a6', matt: '#e6dcc6', opak: '#f4efe4' };
 const BASE_LABEL: Record<GlazeRecipe['base'], string> = { transparent: 'transparent', matt: 'matt', opak: 'deckend' };
@@ -106,7 +106,7 @@ export function validateRecipe(r: RecipeInput, state: GameState): string | null 
 }
 
 /** Fire a test tile. Mutates state (materials, glazes, stats). Assumes validated input and paid cost. */
-export function runExperiment(state: GameState, input: RecipeInput): ExperimentOutcome {
+export function runExperiment(state: GameState, input: RecipeInput & { body?: BodyId }): ExperimentOutcome {
   const r: RecipeInput = {
     base: input.base, colorant: input.colorant, colorantPct: input.colorant ? input.colorantPct : 0,
     firing: { temp: input.firing.temp, atmosphere: input.firing.atmosphere, cooling: input.firing.cooling },
@@ -116,7 +116,7 @@ export function runExperiment(state: GameState, input: RecipeInput): ExperimentO
   if (existing) return { glaze: existing, isNew: false, newEffect: null, hint: existing.effect ? null : hintFor(r, state) };
   const effect = matchEffect(r);
   const newEffect = effect && !discoveredEffects(state).includes(effect) ? effect : null;
-  const glaze: GlazeRecipe = { id: newId(state, 'g'), name: glazeName(r, effect), ...r, color: glazeColor(r), effect };
+  const glaze: GlazeRecipe = { id: newId(state, 'g'), name: glazeName(r, effect), ...r, color: glazeColor(r), effect, body: bodyOf(input) };
   state.glazes.push(glaze);
   if (newEffect) state.stats.effectsFound += 1;
   return { glaze, isNew: true, newEffect, hint: effect ? null : hintFor(r, state) };

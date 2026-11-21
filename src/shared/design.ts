@@ -1,4 +1,4 @@
-import { FORMS, own } from './content';
+import { FORMS, bodyOf, own } from './content';
 import { designDifficultyOf } from './production';
 import type { Design, GameState, GlazeRecipe, Taste } from './types';
 
@@ -12,7 +12,7 @@ export const designDifficulty = designDifficultyOf;
 
 /** The glaze a design is made with — gifted designs carry their own colour (glaze ids are per workshop). */
 export function glazeForDesign(state: GameState, d: Design): GlazeRecipe | undefined {
-  if (d.origin) return { id: d.glazeId, name: '', base: 'opak', colorant: null, colorantPct: 0, firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: d.origin.glazeColor, effect: null };
+  if (d.origin) return { id: d.glazeId, name: '', base: 'opak', colorant: null, colorantPct: 0, firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: d.origin.glazeColor, effect: null, body: bodyOf(d) };
   return state.glazes.find((g) => g.id === d.glazeId);
 }
 

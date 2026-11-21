@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FORMS, STATIONS, TRAITS, EFFECTS, UNLOCKS, MATERIALS, NAMES, PERSONALITIES, CUSTOMERS, getForm, getStationDef } from '../../src/shared/content';
+import { FORMS, STATIONS, TRAITS, EFFECTS, UNLOCKS, MATERIALS, NAMES, PERSONALITIES, CUSTOMERS, BODIES, getForm, getStationDef, bodyOf, nextTier, tierAtLeast, tierForLevel } from '../../src/shared/content';
 import type { StationKind } from '../../src/shared/types';
 
 const KINDS: StationKind[] = ['prepBench', 'wheel', 'dryingRack', 'kiln', 'glazeTable', 'shelf', 'marketStall'];
@@ -27,5 +27,16 @@ describe('content', () => {
   });
   it('kaolin is declared but locked', () => {
     expect(MATERIALS.kaolin.locked).toBe(true);
+  });
+  it('every material unlock exists, and every body material is a material', () => {
+    for (const m of Object.values(MATERIALS)) if (m.unlock) expect(UNLOCKS[m.unlock], m.id).toBeDefined();
+    for (const b of Object.values(BODIES)) expect(MATERIALS[b.material], b.id).toBeDefined();
+  });
+  it('tier helpers', () => {
+    expect(tierAtLeast({ tier: 'manufaktur' }, 'werkstatt')).toBe(true);
+    expect(tierAtLeast({ tier: 'werkstatt' }, 'manufaktur')).toBe(false);
+    expect(nextTier({ tier: 'werkstatt' })!.id).toBe('manufaktur');
+    expect(tierForLevel(6)!.id).toBe('manufaktur');
+    expect(bodyOf({})).toBe('irdenware');
   });
 });

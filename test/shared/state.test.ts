@@ -44,3 +44,32 @@ describe('migrateState', () => {
     expect(() => migrateState({ foo: 1 })).toThrow();
   });
 });
+
+describe('schema 3', () => {
+  it('starts as a Werkstatt with empty endgame fields', () => {
+    const s = newGame('p', 5, T0);
+    expect(s.tier).toBe('werkstatt');
+    expect(s.designs[0].body).toBe('irdenware');
+    expect(s.glazes[0].body).toBe('irdenware');
+    expect([s.collection, s.collectionRewards, s.masterworks, s.commission, s.keepStock]).toEqual([[], [], [], null, {}]);
+  });
+  describe('migrateState v2 to v3', () => {
+    it('fills tier, bodies and the new fields without touching anything else', () => {
+      const v2: any = JSON.parse(JSON.stringify(newGame('p', 5, T0)));
+      v2.schemaVersion = 2;
+      for (const k of ['tier', 'collection', 'collectionRewards', 'keepStock', 'commission', 'masterworks']) delete v2[k];
+      for (const d of v2.designs) delete d.body;
+      for (const g of v2.glazes) delete g.body;
+      const s = migrateState(v2);
+      expect(s.schemaVersion).toBe(3);
+      expect(s).toEqual(newGame('p', 5, T0));
+    });
+    it('chains v1 to v3', () => {
+      const v1: any = JSON.parse(JSON.stringify(newGame('p', 5, T0)));
+      v1.schemaVersion = 1;
+      for (const k of ['village', 'decor', 'decorPlaced', 'tier', 'collection', 'collectionRewards', 'keepStock', 'commission', 'masterworks']) delete v1[k];
+      const s = migrateState(v1);
+      expect([s.schemaVersion, s.tier, s.village, s.decor]).toEqual([3, 'werkstatt', null, []]);
+    });
+  });
+});

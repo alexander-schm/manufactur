@@ -2,7 +2,7 @@ export interface UnlockDef {
   id: string;
   title: string;
   text: string;
-  kind: 'form' | 'feature' | 'pattern' | 'room';
+  kind: 'form' | 'feature' | 'pattern' | 'room' | 'frame' | 'color' | 'customer' | 'tier';
 }
 
 export const UNLOCKS: Record<string, UnlockDef> = {
@@ -22,5 +22,6 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   reduktion: { id: 'reduktion', kind: 'feature', title: 'Reduktionsbrand', text: 'Drossle die Luft im Ofen – und staune, was mit den Farben passiert.' },
   kobalt: { id: 'kobalt', kind: 'feature', title: 'Kobalt', text: 'Teuer, aber nichts ist so blau wie Kobaltblau.' },
   zeichen: { id: 'zeichen', kind: 'feature', title: 'Meisterzeichen', text: 'Herz, Stern oder Blatt – gestalte dein eigenes Zeichen für den Boden jedes Stücks.' },
+  steinzeug: { id: 'steinzeug', kind: 'feature', title: 'Steinzeug', text: 'Grauer Ton, heiß gebrannt, steinhart – und wertvoller.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };
