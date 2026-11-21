@@ -24,4 +24,5 @@ export const T = {
   village: 'Dorf',
   taler: 'Taler',
   ruf: 'Ruf',
+  kilnTooCold: (body: string) => `${body} muss heiß gebrannt werden – dein Ofen braucht dafür Stufe 2`,
 };

@@ -4,6 +4,7 @@ import { BODIES, MATERIALS, getBody } from "../../shared/content";
 import { glazeColor, matchEffect } from '../../shared/discovery';
 import type { BodyId, GameState } from '../../shared/types';
 import { inkStyle } from '../art/ink';
+import { T } from '../strings';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
 import { BodyPicker } from './BodyPicker';
@@ -23,8 +24,8 @@ function Tile({ color, effect }: { color: string; effect: string | null }) {
 
 const opt = <T extends string>(v: T, label: string) => ({ v, label });
 
-export function ExperimentPanel({ s }: { s: GameState }) {
-  const [f, setF] = useState<ExperimentForm>({ base: 'transparent', colorant: null, colorantPct: 2, temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam', body: 'irdenware' });
+export function ExperimentPanel({ s, initialBody = 'irdenware' }: { s: GameState; initialBody?: BodyId }) {
+  const [f, setF] = useState<ExperimentForm>({ base: 'transparent', colorant: null, colorantPct: 2, temp: BODIES[initialBody].mustFireHot ? 'hoch' : 'mittel', atmosphere: 'oxidierend', cooling: 'langsam', body: initialBody });
   const [firing, setFiring] = useState(false);
   const [result, setResult] = useState<{ color: string; effect: string | null; events: GameEvent[] } | null>(null);
   const set = (p: Partial<ExperimentForm>) => { setF({ ...f, ...p }); setResult(null); };
@@ -32,6 +33,7 @@ export function ExperimentPanel({ s }: { s: GameState }) {
   const colorants = Object.values(MATERIALS).filter((m) => m.kind === 'colorant' && !m.locked && (!m.unlock || s.unlocks.includes(m.unlock)));
   const body = getBody(f.body);
   const kiln = s.stations.find((x) => x.kind === 'kiln')!;
+  const tooCold = body.mustFireHot && kiln.level < 2;
   const action = experimentActionFor(f);
   const canAfford = (s.materials.glasurbasis ?? 0) >= 2 && (s.materials[body.material] ?? 0) >= 1 && (!f.colorant || (s.materials[f.colorant] ?? 0) >= 1);
 
@@ -63,6 +65,7 @@ export function ExperimentPanel({ s }: { s: GameState }) {
       {f.colorant && <label class="slider"><span>Anteil: {f.colorantPct} %</span><input type="range" min={0} max={10} step={1} value={f.colorantPct} onInput={(e) => set({ colorantPct: Number(e.currentTarget.value) })} /></label>}
       <h4>Brand</h4>
       <Radio name="Temperatur" items={[{ v: 'niedrig' as const, label: 'niedrig', lock: body.mustFireHot }, { v: 'mittel' as const, label: 'mittel', lock: body.mustFireHot }, { v: 'hoch' as const, label: 'hoch', lock: kiln.level < 2 }]} value={f.temp} onPick={(v) => set({ temp: v })} />
+      {tooCold && <p class="muted" style={{ fontSize: '.9em' }}>{T.kilnTooCold(body.name)}</p>}
       <Radio name="Luft" items={[opt('oxidierend', 'viel Luft'), { v: 'reduzierend' as const, label: 'wenig Luft (Reduktion)', lock: !s.unlocks.includes('reduktion') }]} value={f.atmosphere} onPick={(v) => set({ atmosphere: v })} />
       <Radio name="Abkühlen" items={[opt('schnell', 'schnell abkühlen'), opt('langsam', 'langsam abkühlen')]} value={f.cooling} onPick={(v) => set({ cooling: v })} />
       <div class="bench">
@@ -79,7 +82,7 @@ export function ExperimentPanel({ s }: { s: GameState }) {
           ) : <p class="muted">{firing ? 'Der Ofen glüht …' : 'Bereit für einen Versuch.'}</p>}
         </div>
       </div>
-      <Button variant="primary" disabled={firing || !canAfford} onClick={fire}>{canAfford ? 'Brennen!' : 'Material fehlt – ab in den Laden'}</Button>
+      <Button variant="primary" disabled={firing || !canAfford || tooCold} onClick={fire}>{canAfford ? 'Brennen!' : 'Material fehlt – ab in den Laden'}</Button>
     </div>
   );
 }

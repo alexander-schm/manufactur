@@ -5,6 +5,7 @@ import { BodyPicker } from '../../src/client/panels/BodyPicker';
 import { ExperimentPanel } from '../../src/client/panels/ExperimentPanel';
 import { RecipeBook } from '../../src/client/panels/RecipeBook';
 import { experimentActionFor, patternColorsFor, saveActionFor, switchBody, topFans } from '../../src/client/panels/studioLogic';
+import { T } from '../../src/client/strings';
 import { bodyGateError } from '../../src/shared/design';
 import { manufakturGame, plainGame } from '../shared/helpers';
 import { advance } from '../../src/shared/advance';
@@ -72,5 +73,19 @@ describe('design studio', () => {
     const manu = render(<RecipeBook s={manufakturGame()} />);
     expect(manu).toMatch(/<h4>Steinzeug<\/h4>/);
     expect(manu).not.toMatch(/weitere Effekte/);
+  });
+  it('experiment panel: stoneware needs kiln level 2, else a hint shows and Brennen is disabled', () => {
+    const s = manufakturGame();
+    const kiln = s.stations.find((x) => x.kind === 'kiln')!;
+    kiln.level = 1;
+    const cold = render(<ExperimentPanel s={s} initialBody="steinzeug" />);
+    expect(cold).toContain(T.kilnTooCold('Steinzeug'));
+    expect(cold).toMatch(/<button[^>]*disabled[^>]*>[^<]*Brennen!/);
+    kiln.level = 2;
+    s.materials.glasurbasis = 10;
+    const ok = render(<ExperimentPanel s={s} initialBody="steinzeug" />);
+    expect(ok).not.toContain('muss heiß gebrannt werden');
+    expect(ok).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*Brennen!/);
+    expect(render(<ExperimentPanel s={s} />)).not.toContain('muss heiß gebrannt werden');
   });
 });
