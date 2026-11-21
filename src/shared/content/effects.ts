@@ -106,4 +106,41 @@ export const EFFECTS: Record<string, EffectDef> = {
       { label: 'transparente Basis', test: (r) => r.base === 'transparent' },
     ],
   },
+  blancdechine: {
+    id: 'blancdechine', name: 'Blanc de Chine', valueMul: 3, body: 'porzellan',
+    description: 'Ein warmes, cremiges Weiß wie Elfenbein.',
+    hint: 'Greta schwärmt: „Deckend und ganz ohne Farbe, auf Porzellan – mehr braucht es nicht.“',
+    conditions: [
+      { label: 'deckende Basis', test: (r) => r.base === 'opak' },
+      { label: 'kein Farbkörper', test: (r) => r.colorant === null },
+    ],
+  },
+  blauweiss: {
+    id: 'blauweiss', name: 'Blau-Weiß', valueMul: 3.2, body: 'porzellan',
+    description: 'Feine kobaltblaue Malerei unter klarer Glasur.',
+    hint: 'Greta zeigt auf eine alte Tasse: „Klare Glasur und nur ein Hauch Kobalt – auf Porzellan.“',
+    conditions: [
+      { label: 'transparente Basis', test: (r) => r.base === 'transparent' },
+      { label: 'wenig Kobalt (1–2 %)', test: (r) => r.colorant === 'kobalt' && pct(1, 2)(r) },
+    ],
+  },
+  ochsenblut: {
+    id: 'ochsenblut', name: 'Ochsenblut', valueMul: 3.6, body: 'porzellan',
+    description: 'Ein tiefes, sattes Rot, das von innen zu glühen scheint.',
+    hint: 'Greta wird ernst: „Mehr Kupfer als fürs Kupferrot, wenig Luft und viel Geduld beim Abkühlen. Nur auf Porzellan.“',
+    conditions: [
+      { label: 'Kupferoxid (3–5 %)', test: (r) => r.colorant === 'kupferoxid' && pct(3, 5)(r) },
+      { label: 'Reduktion', test: (r) => r.firing.atmosphere === 'reduzierend' },
+      { label: 'langsames Abkühlen', test: (r) => r.firing.cooling === 'langsam' },
+    ],
+  },
+  eierschale: {
+    id: 'eierschale', name: 'Eierschale', valueMul: 3, body: 'porzellan',
+    description: 'So dünn und matt, dass das Licht hindurchschimmert.',
+    hint: 'Greta flüstert: „Matt, heiß und schnell abkühlen – das Porzellan wird fast durchsichtig.“',
+    conditions: [
+      { label: 'matte Basis', test: (r) => r.base === 'matt' },
+      { label: 'schnelles Abkühlen', test: (r) => r.firing.cooling === 'schnell' },
+    ],
+  },
 };

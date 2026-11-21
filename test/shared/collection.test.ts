@@ -11,6 +11,8 @@ describe('collection book', () => {
     expect(new Set(e.map((x) => x.key)).size).toBe(e.length);
     expect(e.some((x) => x.key === 'becher|irdenware|oelfleck')).toBe(false);
     expect(e.some((x) => x.key === 'becher|steinzeug|oelfleck')).toBe(true);
+    expect(e.some((x) => x.key === 'becher|porzellan|ochsenblut')).toBe(true);
+    expect(e.some((x) => x.key === 'becher|irdenware|ochsenblut')).toBe(false);
     expect(e.find((x) => x.key === 'teekanne|irdenware|-')!.tier).toBe('manufaktur');
     expect(e.find((x) => x.key === 'becher|irdenware|-')!.tier).toBe('werkstatt');
   });

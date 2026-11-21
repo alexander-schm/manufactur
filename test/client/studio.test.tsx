@@ -72,7 +72,9 @@ describe('design studio', () => {
     expect(werk).toMatch(/\+\d+ weitere Effekte ab der Manufaktur/);
     const manu = render(<RecipeBook s={manufakturGame()} />);
     expect(manu).toMatch(/<h4>Steinzeug<\/h4>/);
-    expect(manu).not.toMatch(/weitere Effekte/);
+    expect(manu).not.toMatch(/weitere Effekte ab der Manufaktur/);
+    expect(manu).toContain('+4 weitere Effekte ab der Hofmanufaktur');
+    expect(render(<RecipeBook s={hofGame()} />)).not.toMatch(/weitere Effekte/);
   });
   it('experiment panel: stoneware needs kiln level 2, else a hint shows and Brennen is disabled', () => {
     const s = manufakturGame();

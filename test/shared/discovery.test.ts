@@ -94,4 +94,14 @@ describe('discovery', () => {
     const r2 = r.ok && applyAction(r.state, { type: 'experiment', recipe: { ...stone({ base: 'matt' }), body: 'irdenware' } }, T0 + 20);
     expect(r2 && r2.ok && r2.state.glazes.filter((g) => g.base === 'matt' && g.colorant === null).map((g) => g.body).sort()).toEqual(['irdenware', 'steinzeug']);
   });
+  it('porcelain effects', () => {
+    const porc = (r: Partial<R>): R => ({ base: 'transparent', colorant: null, colorantPct: 0, firing: f('hoch', 'oxidierend', 'langsam'), body: 'porzellan', ...r });
+    expect(matchEffect(porc({ base: 'opak' }))).toBe('blancdechine');
+    expect(matchEffect(porc({ colorant: 'kobalt', colorantPct: 2 }))).toBe('blauweiss');
+    expect(matchEffect(porc({ colorant: 'kupferoxid', colorantPct: 3, firing: f('hoch', 'reduzierend', 'langsam') }))).toBe('ochsenblut');
+    expect(matchEffect({ ...porc({ colorant: 'kupferoxid', colorantPct: 3, firing: f('hoch', 'reduzierend', 'langsam') }), body: 'irdenware' })).toBe('kupferrot');
+    expect(matchEffect(porc({ base: 'matt', firing: f('hoch', 'oxidierend', 'schnell') }))).toBe('eierschale');
+    expect(matchEffect(BODIES.porzellan.starterGlaze!)).toBeNull();
+    expect(glazeColor(BODIES.porzellan.starterGlaze!)).toBe(BODIES.porzellan.starterGlaze!.color);
+  });
 });
