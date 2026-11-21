@@ -17,6 +17,7 @@ import { AwaySummary } from '../panels/AwaySummary';
 import { Celebration } from '../panels/Celebration';
 import { MasterworkDone } from '../panels/MasterworkPanel';
 import { ONBOARDING, OnboardingCard, onboardingStep } from '../panels/Onboarding';
+import { browserEnv } from '../surprises/env';
 import './screens.css';
 
 const TOOLS: { id: PanelId; icon: Parameters<typeof Icon>[0]['name'] }[] = [
@@ -28,6 +29,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
   const s = view.value;
   const [panel, setPanel] = useState<{ id: PanelId; arg?: string } | null>(initialPanel());
   const [menu, setMenu] = useState(false);
+  const [albumSeen, setAlbumSeen] = useState(() => browserEnv().albumSeen.load());
   useEffect(() => { void loadVillage(); startVillagePolling(); }, []);
   const [awayAtLoad, setAwayAtLoad] = useState(() => serverState.value?.away ?? null);
   const [skipTutorial, setSkipTutorial] = useState(() => { try { return localStorage.getItem('mf_skip_tutorial') === '1'; } catch { return false; } });
@@ -51,7 +53,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
       </header>
       <div class="scene-frame">
         <Paper seed={21}>
-          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} onMasterwork={() => open('masterwork')} highlight={highlight} />
+          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} onMasterwork={() => open('masterwork')} highlight={highlight} onCabinet={() => open('kabinett')} albumSeen={albumSeen} />
         </Paper>
       </div>
       <nav class="toolbar" aria-label="Werkzeuge">
@@ -68,7 +70,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
           );
         })}
       </nav>
-      {panel && <PanelHost id={panel.id} arg={panel.arg} onClose={() => setPanel(null)} onOpen={open} />}
+      {panel && <PanelHost id={panel.id} arg={panel.arg} onClose={() => setPanel(null)} onOpen={open} onAlbumSeen={setAlbumSeen} />}
       {!skipTutorial && !panel && !awayAtLoad && !pendingMilestone && !pendingMasterwork && (
         <OnboardingCard s={s} ctx={ctx} onOpen={open} onSkip={() => { try { localStorage.setItem('mf_skip_tutorial', '1'); } catch { /* ignore */ } setSkipTutorial(true); }} />
       )}
@@ -80,6 +82,9 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
           <p>Einladungscode für <strong>{me.value?.villageName}</strong>:</p>
           <div class="invite-code">{me.value?.inviteCode}</div>
           <p class="muted small">{me.value && inviteLink(me.value.inviteCode)}</p>
+          <div class="row">
+            <Button onClick={() => { setMenu(false); open('kabinett'); }}>{T.openKabinett}</Button>
+          </div>
           <div class="row">
             <Button onClick={() => me.value && navigator.clipboard?.writeText(inviteLink(me.value.inviteCode))}>{T.copy}</Button>
             <Button variant="quiet" onClick={async () => { await api.logout().catch(() => undefined); onLogout(); }}>{T.logout}</Button>

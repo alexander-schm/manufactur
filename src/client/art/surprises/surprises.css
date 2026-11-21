@@ -1,0 +1,13 @@
+/* Wall cabinet */
+.cabinet[role='button'] { cursor: pointer; }
+.cabinet[role='button']:focus { outline: none; }
+.cabinet[role='button']:focus-visible > rect:first-child { stroke: var(--g1); stroke-width: 3; stroke-dasharray: 6 5; }
+.cabinet-sparkle path { transform-box: fill-box; transform-origin: center; animation: cabinet-twinkle 1.8s ease-in-out infinite; }
+.cabinet-sparkle path:nth-child(2) { animation-delay: .6s; }
+.cabinet-sparkle path:nth-child(3) { animation-delay: 1.2s; }
+@keyframes cabinet-twinkle { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.55); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .cabinet-sparkle path { animation: none; } }
+
+/* Album cards */
+.curio-art { display: block; width: 100%; height: auto; }
+.curio-art.unfound .curio-art-body { filter: brightness(0) opacity(.16); }

@@ -1,7 +1,7 @@
 import { me, serverState, startClock } from '../store';
 import { GameScreen } from '../screens/GameScreen';
 import { mockEndgame, VILLAGE_DECOR } from './mockEndgame';
-import { mockWorkshop } from './ScenePage';
+import { applyFoundFlag, mockWorkshop } from './ScenePage';
 import { vmockPreset } from './mockVillage';
 import { village } from '../villageStore';
 import { MILESTONES } from '../../shared/progression';
@@ -49,6 +49,8 @@ export function GamePage() {
       if (vmock === 'kiln') s.batches = s.batches.filter((b) => !b.masterwork); // the masterwork slot is free for the great kiln
       if (vmock === 'project') s.goods.push({ designId: 'd93', quality: 2, effect: null, count: 5 }, { designId: 'd92', quality: 2, effect: null, count: 14 });
     }
+    // dev-only: #game&found=8 — the first 8 (or all) album entries are found
+    applyFoundFlag(s, location.hash, Date.now());
     serverState.value = s;
     me.value = { playerId: mockedVillage ? 'p1' : 'dev', name: 'Alex', villageName: 'Tonhausen', inviteCode: 'TON234' };
     if (mockedVillage) village.value = mockedVillage;

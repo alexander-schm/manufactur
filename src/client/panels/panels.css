@@ -208,3 +208,20 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .goods-btn { display: inline-flex; align-items: center; gap: 4px; }
 .wood-chip { padding: 2px 9px; min-width: 48px; }
 .museum-shelves { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0 24px; }
+
+/* Kuriositätenkabinett */
+.curio-book .book-page { min-width: 0; }
+.curio-book h3 { margin: 0 0 6px; }
+.curio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+@media (min-width: 1200px) { .sheet:has(.curio-book) { width: 720px; } }
+.curio-card { min-width: 0; background: var(--card); border: 2px solid var(--line); border-radius: 12px 8px 11px 9px; padding: 6px 8px 8px; box-shadow: 2px 3px 0 rgba(43,36,32,.25); }
+.curio-card:nth-child(odd) { transform: rotate(-0.6deg); }
+.curio-card:nth-child(even) { transform: rotate(0.5deg); }
+.curio-card.unfound { background: #f6eedd; border-style: dashed; box-shadow: none; }
+.curio-card .curio-art { height: 78px; background: #fbf3e2; border-radius: 8px; margin-bottom: 4px; }
+.curio-head { display: flex; gap: 6px; align-items: baseline; justify-content: space-between; }
+.curio-head strong { overflow-wrap: anywhere; }
+.curio-stars { color: #d79b1c; letter-spacing: -1px; white-space: nowrap; font-size: .9em; }
+.curio-card .hand-note { font-size: .86em; }
+@media (max-width: 420px) { .curio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+.curio-date { font-size: .8em; margin-top: 2px; }

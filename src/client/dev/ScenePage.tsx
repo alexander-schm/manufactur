@@ -4,6 +4,7 @@ import { glazeColor } from '../../shared/discovery';
 import { newGame, rollWorker } from '../../shared/state';
 import type { Batch, GameState, StationKind } from '../../shared/types';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
+import { CURIOSITIES } from '../../shared/content/curiosities';
 import { mockEndgame } from './mockEndgame';
 
 export function mockWorkshop(now: number): GameState {
@@ -32,6 +33,16 @@ export function mockWorkshop(now: number): GameState {
   return s;
 }
 
+/** Dev flag `&found=all|<n>`: the first n (or all) album entries, found one day apart going back from now. */
+export function applyFoundFlag(s: GameState, hash: string, now: number): GameState {
+  const m = /found=(all|\d+)/.exec(hash);
+  if (!m) return s;
+  const ids = Object.keys(CURIOSITIES);
+  const n = m[1] === 'all' ? ids.length : Number(m[1]);
+  s.curiosities = Object.fromEntries(ids.slice(0, n).map((id, i) => [id, now - i * 86_400_000]));
+  return s;
+}
+
 const MW_STAGE: Partial<Record<StationKind, Batch['stage']>> = { prepBench: 'prepare', wheel: 'form', glazeTable: 'glaze' };
 
 /** `&mw=wheel` moves the masterwork to that station; `&bays=1` clears the other batches there (a waiting batch may still move into a freed bay). */
@@ -52,12 +63,12 @@ function placeMasterwork(s: GameState, hash: string): GameState {
 
 export function ScenePage() {
   const [now, setNow] = useState(Date.now());
-  const [state] = useState(() => (location.hash.includes('endgame') ? placeMasterwork(mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur'), location.hash) : mockWorkshop(Date.now())));
+  const [state] = useState(() => applyFoundFlag(location.hash.includes('endgame') ? placeMasterwork(mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur'), location.hash) : mockWorkshop(Date.now()), location.hash, Date.now()));
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
   const view = advance(state, now);
   return (
     <div style={{ padding: '12px' }}>
-      <WorkshopScene state={view} now={now} onStation={(id) => console.log('station', id)} onWorker={(id) => console.log('worker', id)} onMasterwork={() => console.log('masterwork')} />
+      <WorkshopScene state={view} now={now} onStation={(id) => console.log('station', id)} onWorker={(id) => console.log('worker', id)} onMasterwork={() => console.log('masterwork')} onCabinet={() => console.log('cabinet')} />
     </div>
   );
 }

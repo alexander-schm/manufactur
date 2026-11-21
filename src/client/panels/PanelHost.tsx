@@ -1,9 +1,12 @@
 import { getStationDef, getUnlock } from '../../shared/content';
-import { me, view } from '../store';
+import { useEffect } from 'preact/hooks';
+import { me, serverTime, view } from '../store';
+import { browserEnv } from '../surprises/env';
 import { VillagePanel } from './village/VillagePanel';
 import { T } from '../strings';
 import { Icon } from '../ui/Icons';
 import { Sheet } from '../ui/Sheet';
+import { CuriosityAlbum } from './CuriosityAlbum';
 import { DesignStudio } from './DesignStudio';
 import { MarketPanel } from './MarketPanel';
 import { MasterworkPanel } from './MasterworkPanel';
@@ -14,7 +17,7 @@ import { StationPanel, WorkshopPanel } from './StationPanel';
 import { WorkersPanel } from './WorkersPanel';
 import './panels.css';
 
-export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market' | 'village' | 'masterwork';
+export type PanelId = 'orders' | 'workshop' | 'people' | 'studio' | 'recipes' | 'shop' | 'station' | 'market' | 'village' | 'masterwork' | 'kabinett';
 
 const UNLOCK: Partial<Record<PanelId, string>> = { orders: 'orders', studio: 'studio', recipes: 'recipes', masterwork: 'meisterstuecke' };
 export const panelUnlock = (id: PanelId) => UNLOCK[id];
@@ -39,8 +42,14 @@ function lockHint(unlock: string): string {
   } as Record<string, string>)[unlock] ?? 'Kommt bald.';
 }
 
-export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: string; onClose: () => void; onOpen: (id: PanelId, arg?: string) => void }) {
+export function PanelHost({ id, arg, onClose, onOpen, onAlbumSeen }: { id: PanelId; arg?: string; onClose: () => void; onOpen: (id: PanelId, arg?: string) => void; onAlbumSeen?: (t: number) => void }) {
   const s = view.value!;
+  useEffect(() => {
+    if (id !== 'kabinett') return;
+    const t = serverTime();
+    browserEnv().albumSeen.save(t);
+    onAlbumSeen?.(t);
+  }, [id]);
   const lock = UNLOCK[id];
   const station = id === 'station' ? s.stations.find((x) => x.id === arg) : undefined;
   const title = id === 'station' ? (station ? `${getStationDef(station.kind).name} · Stufe ${station.level}` : 'Station') : id === 'market' ? 'Regal & Markt' : T.tabs[id as keyof typeof T.tabs];
@@ -54,6 +63,7 @@ export function PanelHost({ id, arg, onClose, onOpen }: { id: PanelId; arg?: str
   else if (id === 'studio') body = <DesignStudio s={s} tab={arg} />;
   else if (id === 'recipes') body = <RecipeBook s={s} tab={arg} />;
   else if (id === 'masterwork') body = <MasterworkPanel s={s} />;
+  else if (id === 'kabinett') body = <CuriosityAlbum s={s} />;
   else if (id === 'village') return <Sheet title={`Dorf ${me.value?.villageName ?? ''}`} onClose={onClose} wide><VillagePanel tab={arg} /></Sheet>;
   else body = <MarketPanel s={s} />;
   return <Sheet title={title} onClose={onClose}>{body}</Sheet>;

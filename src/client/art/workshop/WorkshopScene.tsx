@@ -1,6 +1,7 @@
 import { makeCharacter } from '../../../shared/character';
 import type { GameState, Station, StationKind, Worker } from '../../../shared/types';
 import { Character, type Pose } from '../character/Character';
+import { Cabinet } from '../surprises/Cabinet';
 import { Plinths } from './Plinth';
 import { Cat, Room } from './Room';
 import { DryingRack, GlazeTable, Kiln, MarketStall, PrepBench, Shelf, SHELF_VISIBLE_MAX, Wheel, type StationProps } from './stations/Stations';
@@ -31,9 +32,18 @@ const WORKER_SPOT: Partial<Record<StationKind, { dx: number; dy: number; behind:
   glazeTable: { dx: -20, dy: -70, behind: true },
 };
 const IDLE_SPOTS = [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }];
+/** Wall between the broom and the drying rack, under the museum poster and above the kaolin block (hit area 311–379 × 286–404).
+ *  Task 4 moves this into SPOTS.cabinet and draws the cabinet in its SurpriseLayer. */
+export const CABINET_SPOT = { x: 345, y: 300 };
 
 /** Without onStation the scene is read-only (visiting a friend). */
-type Props = { state: GameState; now: number; onStation?: (id: string) => void; onWorker?: (id: string) => void; onMasterwork?: () => void; highlight?: StationKind };
+type Props = {
+  state: GameState; now: number; onStation?: (id: string) => void; onWorker?: (id: string) => void; onMasterwork?: () => void; highlight?: StationKind;
+  /** Opens the Kuriositätenkabinett from the wall cabinet (home only). */
+  onCabinet?: () => void;
+  /** Server time of the last album visit; newer curiosities make the cabinet sparkle. */
+  albumSeen?: number;
+};
 
 function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: number; pose: Pose; onWorker: (id: string) => void; i: number }) {
   const size = 100;
@@ -45,7 +55,7 @@ function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: numbe
   );
 }
 
-export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, onMasterwork, highlight }: Props) {
+export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, onMasterwork, highlight, onCabinet, albumSeen = 0 }: Props) {
   const readOnly = !onStation;
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
@@ -57,10 +67,12 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const ordered = [...state.stations].sort((a, b) => SLOTS[a.slot].y - SLOTS[b.slot].y);
   const idle = state.workers.filter((w) => !w.stationId);
   const catAwake = state.batches.length === 0;
+  const curiosities = Object.values(state.curiosities ?? {});
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
         <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} />
+        <Cabinet x={CABINET_SPOT.x} y={CABINET_SPOT.y} found={curiosities.length} fresh={!readOnly && curiosities.some((t) => t > albumSeen)} onClick={readOnly ? undefined : onCabinet} />
         <Plinths records={state.masterworks} onClick={readOnly ? undefined : onMasterwork} />
         <Cat x={760} y={652} sleeping={!catAwake} />
         {ordered.map((st) => {
