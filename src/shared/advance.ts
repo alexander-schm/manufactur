@@ -1,4 +1,5 @@
-import { getStationDef, getTrait, own } from './content';
+import { recordCollection } from './collection';
+import { bodyOf, getStationDef, getTrait, own } from './content';
 import { SPECIALTIES } from './village/specialties';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { addOrder, nextOrderTime } from './orders';
@@ -151,6 +152,7 @@ function finishBatch(s: GameState, b: Batch): boolean {
     if (v < chance) effect = glaze.effect;
   }
   addGoods(s, { designId: b.designId, quality: qualityTier(b.quality), effect, count: b.count });
+  if (design) recordCollection(s, design.form, bodyOf(design), effect);
   s.batches = s.batches.filter((x) => x !== b);
   s.stats.made += b.count;
   if (s.away) s.away.made += b.count;

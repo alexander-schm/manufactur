@@ -1,5 +1,6 @@
 import type { StationKind } from '../types';
 import { BODIES } from './bodies';
+import { EXTRA_COLORS } from './colors';
 import { CUSTOMERS } from './customers';
 import { EFFECTS } from './effects';
 import { FORMS } from './forms';
@@ -10,7 +11,7 @@ import { TIERS, TIER_ORDER } from './tiers';
 import { TRAITS } from './traits';
 import { UNLOCKS } from './unlocks';
 
-export { BODIES, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
+export { BODIES, EXTRA_COLORS, TIERS, TIER_ORDER, CUSTOMERS, EFFECTS, FORMS, MATERIALS, NAMES, PERSONALITIES, STATIONS, TRAITS, UNLOCKS };
 export type { FormDef } from './forms';
 export type { MaterialDef } from './materials';
 export type { StationDef } from './stations';

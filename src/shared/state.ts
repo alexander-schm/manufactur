@@ -1,4 +1,5 @@
 import { FORMS, NAMES, TRAITS } from './content';
+import { seedCollection } from './collection';
 import { newId } from './ids';
 import { addOrder } from './orders';
 import { nextRandom, pick } from './rng';
@@ -78,6 +79,7 @@ export function migrateState(raw: unknown): GameState {
     s.keepStock = {};
     s.commission = null;
     s.masterworks = [];
+    seedCollection(s);
     s.schemaVersion = 3;
   }
   return s;

@@ -1,3 +1,5 @@
+import { EXTRA_COLORS } from './colors';
+
 export interface UnlockDef {
   id: string;
   title: string;
@@ -27,3 +29,5 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   meisterstuecke: { id: 'meisterstuecke', kind: 'feature', title: 'Meisterstücke', text: 'Gönner aus der Stadt geben besondere Einzelstücke in Auftrag.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };
+
+for (const c of EXTRA_COLORS) UNLOCKS[c.unlock] = { id: c.unlock, kind: 'color', title: `Neue Farbe: ${c.name}`, text: 'Für Muster und Meisterzeichen.' };
