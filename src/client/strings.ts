@@ -99,7 +99,6 @@ export const T = {
     kilnFiring: (at: string) => `Der Ofen brennt – fertig um ${at}.`,
     heat: (pct: number) => `Hitze: ${pct} %`,
     heatHint: 'Mehr Leute und mehr Holz machen das Feuer heißer.',
-    kilnInside: 'Im Ofen',
     loadTitle: 'Etwas mitbrennen',
     loadHint: 'Du bezahlst Ton, Glasur und Holz gleich beim Einräumen. Was fehlt, kaufst du dazu.',
     count: 'Stück',
