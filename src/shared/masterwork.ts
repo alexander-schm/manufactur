@@ -125,6 +125,18 @@ export function predictMasterwork(s: GameState, design: Design): { met: boolean[
   return { met, quality, prestige: prestigeFor(met.filter(Boolean).length, met.length, quality) };
 }
 
+/** Materials a masterwork of this design uses: MASTERWORK_MATERIAL_PIECES pieces' worth plus `extra` (e.g. great-kiln wood). */
+export function masterworkNeed(s: GameState, design: Design, extra: Record<string, number> = {}): Record<string, number> {
+  const need = batchMaterials(s, design, MASTERWORK_MATERIAL_PIECES);
+  for (const [m, n] of Object.entries(extra)) need[m] = (need[m] ?? 0) + n;
+  return need;
+}
+
+/** What starting this masterwork costs in Taler: the commission's fee plus the missing materials (0 without a commission). */
+export function masterworkPrice(s: GameState, design: Design, extra: Record<string, number> = {}): number {
+  return s.commission ? s.commission.costTaler + missingMaterialCost(s, masterworkNeed(s, design, extra)) : 0;
+}
+
 /**
  * The checks and payment for a masterwork: fee, materials for MASTERWORK_MATERIAL_PIECES plus `extra` (missing ones bought).
  * Mutates s only when everything is fine; returns a German error or null.
@@ -135,8 +147,7 @@ export function payMasterwork(s: GameState, design: Design, extra: Record<string
   if (!c) return 'Gerade wartet kein Gönner';
   if (masterworkBusy(s)) return 'Es entsteht schon ein Meisterstück';
   if (design.origin) return 'Geschenkte Stücke kannst du nicht nachmachen';
-  const need = batchMaterials(s, design, MASTERWORK_MATERIAL_PIECES);
-  for (const [m, n] of Object.entries(extra)) need[m] = (need[m] ?? 0) + n;
+  const need = masterworkNeed(s, design, extra);
   for (const m in need) {
     if (need[m] > (s.materials[m] ?? 0)) {
       const err = buyError(s, m);

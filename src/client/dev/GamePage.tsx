@@ -2,6 +2,8 @@ import { me, serverState, startClock } from '../store';
 import { GameScreen } from '../screens/GameScreen';
 import { mockEndgame, VILLAGE_DECOR } from './mockEndgame';
 import { mockWorkshop } from './ScenePage';
+import { vmockPreset } from './mockVillage';
+import { village } from '../villageStore';
 import { MILESTONES } from '../../shared/progression';
 import { addOrder } from '../../shared/orders';
 
@@ -25,7 +27,7 @@ export function GamePage() {
       for (const st of s.stations) st.level = 6;
     }
     // dev-only: arg=<stationKind> is swapped for that station's id
-    location.hash = location.hash.replace(/arg=([a-zA-Z]+)/, (m, k) => `arg=${s.stations.find((x) => x.kind === k)?.id ?? k}`);
+    if (location.hash.includes('panel=station')) location.hash = location.hash.replace(/arg=([a-zA-Z]+)/, (m, k) => `arg=${s.stations.find((x) => x.kind === k)?.id ?? k}`);
     if (location.hash.includes('calm')) { // dev-only: no celebration cards over screenshots
       const held = MILESTONES.filter((m) => m.done(s)).map((m) => m.id);
       s.milestonesDone = [...held]; s.milestonesAcked = [...held];
@@ -40,8 +42,16 @@ export function GamePage() {
     }
     // dev-only: #game&endgame&vdecor — the five grand-project decor items are on show instead
     if (location.hash.includes('vdecor')) { s.decor = [...new Set([...s.decor, ...VILLAGE_DECOR])]; s.decorPlaced = [...VILLAGE_DECOR]; }
+    // dev-only: #game&endgame&vmock=project|offers|kiln|firing|museum|done&panel=village&arg=project — a mock village, seen as p1
+    const vmock = /vmock=(\w+)/.exec(location.hash)?.[1];
+    const mockedVillage = vmock ? vmockPreset(vmock, Date.now()) : null;
+    if (mockedVillage) {
+      if (vmock === 'kiln') s.batches = s.batches.filter((b) => !b.masterwork); // the masterwork slot is free for the great kiln
+      if (vmock === 'project') s.goods.push({ designId: 'd93', quality: 2, effect: null, count: 5 }, { designId: 'd92', quality: 2, effect: null, count: 14 });
+    }
     serverState.value = s;
-    me.value = { playerId: 'dev', name: 'Alex', villageName: 'Tonhausen', inviteCode: 'TON234' };
+    me.value = { playerId: mockedVillage ? 'p1' : 'dev', name: 'Alex', villageName: 'Tonhausen', inviteCode: 'TON234' };
+    if (mockedVillage) village.value = mockedVillage;
     startClock();
     ready = true;
   }

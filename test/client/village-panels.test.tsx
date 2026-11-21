@@ -29,6 +29,16 @@ describe('village panels', () => {
     expect((html.match(/Im Dorfladen kaufen/g) ?? []).length).toBe(materialParts);
     expect(html).toContain('Nur gemeinsam');
   });
+  it('a joint body part offers the substitute button', () => {
+    const v = mockVillage(2, []);
+    const s = newGame('p1', 1, T0); // d12: an earthenware Becher
+    s.goods.push({ designId: 'd12', quality: 2, effect: null, count: 10 });
+    const order = { ...v.jointOrders[0], parts: [{ kind: 'goods' as const, form: 'becher', count: 20, minQuality: 1 as const, body: 'steinzeug' as const, effect: 'ascheanflug', filled: 2 }], contributions: { p2: 10 } };
+    const html = render(<JointOrderCard v={v} s={s} meId="p1" order={order} onContribute={() => {}} />);
+    expect(html).toContain('20 Becher aus Steinzeug mit Ascheanflug');
+    expect(html).toContain('Ersatz: 9× Becher aus Irdenware');
+    expect(html).not.toMatch(/>\d+× Erster Becher</); // earthenware is no stoneware
+  });
   it('placed decor is drawn in the room', () => {
     const html = render(<svg><Room pins={[]} room2={false} tier="werkstatt" decor={['laterne', 'blumenkasten']} /></svg>);
     expect(html).toContain('data-decor="laterne"');

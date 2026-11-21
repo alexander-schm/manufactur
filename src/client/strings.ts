@@ -1,5 +1,8 @@
 import { fmtTaler } from '../shared/format';
 
+/** "14:05" in German local time. */
+export const hhmm = (t: number): string => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
 /** German UI strings that aren't game content. */
 export const T = {
   appName: 'Manufaktur',
@@ -61,6 +64,64 @@ export const T = {
     cardBusy: 'Gerade entsteht ein Meisterstück.',
     inGreatKiln: 'Dein Meisterstück brennt im Gemeinschaftsofen.',
     visitTitle: (name: string) => `Meisterstücke von ${name}`,
+  },
+  vl: {
+    tabs: { joint: 'Großaufträge', project: 'Dorfprojekt', kiln: 'Gemeinschaftsofen', trade: 'Tauschbrett', gift: 'Schenken', guestbook: 'Gästebuch', news: 'Neuigkeiten' },
+    marketDay: (until: string, pct: number) => `Markttag! Bis ${until} verkaufen die Marktstände zu ${pct} %.`,
+    back: '‹ Zurück zum Dorf',
+    // grand projects
+    firstStage: (parts: string) => `Erste Bauphase: ${parts}`,
+    firstChooses: 'Wer zuerst etwas beiträgt, wählt das Projekt.',
+    stageTitle: (name: string, roman: string, stage: number, stages: number, stageName: string) => `${name} ${roman} · Bauphase ${stage}/${stages}: ${stageName}`,
+    myShare: (pct: number) => `Dein Anteil: ${pct} % – höchstens 70 %`,
+    capReached: 'Den Rest lässt du den anderen – kein Dorfprojekt geht allein.',
+    needTwo: 'Zu zweit geht’s weiter: Eine Bauphase braucht zwei Leute, die etwas beitragen.',
+    noProjects: 'Dorfprojekte gibt es, sobald jemand im Dorf die Manufaktur erreicht hat.',
+    allProjects: 'Alle Dorfprojekte stehen – auf Stufe III!',
+    fromStock: (n: number) => `${n} aus deinem Lager`,
+    buyInStore: 'Im Dorfladen kaufen (3×)',
+    substitute: (pieces: number, plural: string) => `Ersatz: ${pieces}× ${plural} aus Irdenware`,
+    substituteHint: (pieces: number, plural: string) => `Geht auch als Ersatz: ${pieces}× ${plural} aus Irdenware.`,
+    noFittingGoods: 'Passende Stücke hast du gerade nicht im Regal.',
+    giveTaler: (n: number) => `${fmtTaler(n)} Taler geben`,
+    talerPart: (n: number) => `${fmtTaler(n)} Taler`,
+    masterworkPart: (n: number, prestige: string) => `${n} ${n === 1 ? 'Meisterstück' : 'Meisterstücke'} ab ${prestige}`,
+    lendMasterwork: (name: string, prestige: string) => `${name} · ${prestige}`,
+    lentNote: 'Meisterstücke werden nur ausgeliehen – sie bleiben auf deinem Sockel.',
+    noMasterwork: (prestige: string) => `Ein Meisterstück ab ${prestige}, das noch nicht im Dorf steht, hast du gerade nicht.`,
+    together: '🤝 Jede Bauphase bezahlt alle im Dorf – auch wer gerade nicht da ist.',
+    built: 'Fertige Dorfprojekte',
+    villageLevel: (level: number, pct: number) => `Dorfstufe ${level}: Großaufträge und Dorfprojekte zahlen ${pct} % mehr.`,
+    openMuseum: 'Ins Museum',
+    // great kiln
+    kilnEmpty: 'Der Ofen ist leer.',
+    kilnLoading: (pieces: number, cap: number, at: string) => `${pieces}/${cap} Stücke · brennt spätestens um ${at}`,
+    kilnFiring: (at: string) => `Der Ofen brennt – fertig um ${at}.`,
+    heat: (pct: number) => `Hitze: ${pct} %`,
+    heatHint: 'Mehr Leute und mehr Holz machen das Feuer heißer.',
+    kilnInside: 'Im Ofen',
+    loadTitle: 'Etwas mitbrennen',
+    loadHint: 'Du bezahlst Ton, Glasur und Holz gleich beim Einräumen. Was fehlt, kaufst du dazu.',
+    count: 'Stück',
+    woodPer: 'Holz pro Stück',
+    cost: 'Kosten',
+    load: 'In den Ofen räumen',
+    shareFull: 'Dein Platz in diesem Brand ist voll – beim nächsten Mal wieder!',
+    kilnFull: 'Der Ofen ist voll und wird gleich angezündet.',
+    noOwnDesigns: 'Du hast noch keine eigenen Entwürfe.',
+    firingWait: 'Während der Ofen brennt, bleibt die Tür zu.',
+    mwTitle: 'Meisterstück mitbrennen',
+    mwHint: 'Es ist dein eines Meisterstück: Solange es im Gemeinschaftsofen steht, kannst du in der Werkstatt keins beginnen. Das Feuer schenkt ihm vielleicht einen Ofeneffekt.',
+    mwInKiln: 'Dein Meisterstück steht schon im Gemeinschaftsofen.',
+    mwBusy: 'Dein Meisterstück entsteht gerade in der Werkstatt – erst danach kannst du eins mitbrennen.',
+    mwButton: (taler: number) => `Meisterstück mitbrennen · ${fmtTaler(taler)} Taler`,
+    lastFiring: 'Der letzte Brand',
+    lastFiringLine: (pieces: number, people: number, pct: number) => `${pieces} Stücke von ${people} ${people === 1 ? 'Person' : 'Leuten'} · Hitze ${pct} %`,
+    bestPiece: (maker: string, form: string, effect: string | null) => effect ? `Schönstes Stück: ${maker}s ${form} mit ${effect}` : `Schönstes Stück: ${maker}s ${form}`,
+    // museum
+    museumTitle: (roman: string) => `Museum ${roman}`,
+    museumEmpty: 'Noch keine Meisterstücke – das Museum wartet!',
+    museumShelfEmpty: 'Noch leer',
   },
   kilnTooCold: (body: string) => `${body} muss heiß gebrannt werden – dein Ofen braucht dafür Stufe 2`,
 };

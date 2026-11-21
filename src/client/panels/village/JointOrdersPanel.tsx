@@ -1,30 +1,62 @@
 import { useState } from 'preact/hooks';
 import { makeCharacter } from '../../../shared/character';
-import { FORMS, MATERIALS } from '../../../shared/content';
-import { COLOR_FAMILY_NAMES, colorFamily, type ColorFamily } from '../../../shared/design';
-import type { GameState } from '../../../shared/types';
+import { BODIES, EFFECTS, FORMS, MATERIALS } from '../../../shared/content';
+import { COLOR_FAMILY_NAMES, type ColorFamily } from '../../../shared/design';
+import type { Design, GameState, GoodsStack } from '../../../shared/types';
+import { allowsSubstitute, stackMismatch, substituteForm, SUBSTITUTE_FACTOR } from '../../../shared/village/goods';
 import { maxContribution } from '../../../shared/village/joint';
 import { villageStorePrice } from '../../../shared/village/specialties';
-import type { JointOrder, VillageAction, VillageView } from '../../../shared/village/types';
+import type { GoodsPart, JointOrder, VillageAction, VillageView } from '../../../shared/village/types';
 import { Character } from '../../art/character/Character';
 import { Button } from '../../ui/Button';
 import { Paper } from '../../ui/Paper';
 import { villageDispatch } from '../../villageStore';
-import { designColor, Stars } from '../common';
+import { fmtTaler } from '../../../shared/format';
+import { T } from '../../strings';
+import { DesignPot, Stars } from '../common';
 import { SWATCH } from './GivePicker';
 
-function partLabel(p: JointOrder['parts'][number]): string {
-  if (p.kind === 'material') return `${p.count} ${MATERIALS[p.material].name}`;
+/** "12 Krüge in Blau aus Steinzeug mit Ascheanflug" */
+export function goodsLabel(p: GoodsPart): string {
   const color = p.colorFamily ? ` in ${COLOR_FAMILY_NAMES[p.colorFamily as ColorFamily]}` : '';
-  return `${p.count} ${FORMS[p.form].plural}${color}`;
+  const body = p.body ? ` aus ${BODIES[p.body]?.name ?? p.body}` : '';
+  const effect = p.effect ? ` mit ${EFFECTS[p.effect]?.name ?? p.effect}` : '';
+  return `${p.count} ${FORMS[p.form].plural}${color}${body}${effect}`;
 }
 
-/** Shelf stacks that fit a goods part. */
-function fittingStacks(s: GameState, p: Extract<JointOrder['parts'][number], { kind: 'goods' }>) {
-  return s.goods.filter((g) => {
+function partLabel(p: JointOrder['parts'][number]): string {
+  return p.kind === 'material' ? `${p.count} ${MATERIALS[p.material].name}` : goodsLabel(p);
+}
+
+/** Shelf stacks the village takes for a goods part – as they are, or as earthenware substitutes (shared rules). */
+export function fittingStacks(s: GameState, p: GoodsPart, substitute = false): { g: GoodsStack; d: Design }[] {
+  if (substitute && !allowsSubstitute(p)) return [];
+  return s.goods.flatMap((g) => {
     const d = s.designs.find((x) => x.id === g.designId);
-    return d && d.form === p.form && g.quality >= p.minQuality && (!p.colorFamily || colorFamily(designColor(s, d)) === p.colorFamily);
+    return d && !stackMismatch(s, p, d, g, substitute) ? [{ g, d }] : [];
   });
+}
+
+/** Buttons for a goods part: one per fitting stack, plus earthenware substitutes in whole threes. `left` is in units. */
+export function GoodsButtons({ s, p, left, give }: { s: GameState; p: GoodsPart; left: number; give: (g: GoodsStack, count: number, substitute: boolean) => void }) {
+  const own = fittingStacks(s, p);
+  const subs = fittingStacks(s, p, true).filter(({ g }) => g.count >= SUBSTITUTE_FACTOR);
+  const plural = FORMS[substituteForm(p)]?.plural ?? substituteForm(p);
+  return (
+    <>
+      {own.map(({ g, d }) => {
+        const n = Math.min(left, g.count);
+        return <Button small variant="good" class="goods-btn" onClick={() => give(g, n, false)}><DesignPot s={s} d={d} size={24} effect={g.effect} />{n}× {d.name}</Button>;
+      })}
+      {subs.map(({ g, d }) => {
+        const pieces = Math.min(left, Math.floor(g.count / SUBSTITUTE_FACTOR)) * SUBSTITUTE_FACTOR;
+        return <Button small variant="quiet" class="goods-btn" title={d.name} data-substitute={d.id} onClick={() => give(g, pieces, true)}><DesignPot s={s} d={d} size={24} effect={g.effect} />{T.vl.substitute(pieces, plural)}</Button>;
+      })}
+      {own.length === 0 && subs.length === 0 && (
+        <span class="muted">{T.vl.noFittingGoods}{allowsSubstitute(p) ? ` ${T.vl.substituteHint(left * SUBSTITUTE_FACTOR, plural)}` : ''}</span>
+      )}
+    </>
+  );
 }
 
 export function JointOrderCard({ v, s, meId, order, onContribute }: { v: VillageView; s: GameState; meId: string; order: JointOrder; onContribute: (a: VillageAction) => void }) {
@@ -35,14 +67,13 @@ export function JointOrderCard({ v, s, meId, order, onContribute }: { v: Village
         <Character look={makeCharacter(order.clientSeed)} pose="wave" seed={order.clientSeed} size={64} wobble={false} />
         <div class="grow">
           <h3 style={{ margin: 0 }}>{order.title}</h3>
-          <div class="muted">für {order.client} · Belohnung {order.reward.taler} Taler, {order.reward.ruf} Ruf + Dekoration</div>
+          <div class="muted">für {order.client} · Belohnung {fmtTaler(order.reward.taler)} Taler, {order.reward.ruf} Ruf + Dekoration</div>
         </div>
       </div>
       <p class="together">🤝 Nur gemeinsam: mindestens zwei Leute müssen beitragen. Alle im Dorf bekommen einen Anteil – auch wer gerade nicht da ist.</p>
       {order.parts.map((p, i) => {
         const left = maxContribution(order, i, meId);
         const open = p.count - p.filled;
-        const stacks = p.kind === 'goods' ? fittingStacks(s, p) : [];
         const haveMat = p.kind === 'material' ? Math.floor(s.materials[p.material] ?? 0) : 0;
         return (
           <div class="joint-part">
@@ -57,14 +88,11 @@ export function JointOrderCard({ v, s, meId, order, onContribute }: { v: Village
             {open > 0 && left === 0 && <p class="muted">Den letzten Rest lässt du jemand anderem – Großaufträge gehen nur gemeinsam.</p>}
             {left > 0 && (
               <div class="row joint-actions">
-                {p.kind === 'material' && haveMat > 0 && <Button small variant="good" onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.min(left, haveMat), source: 'own' })}>{Math.min(left, haveMat)} aus deinem Lager</Button>}
-                {p.kind === 'material' && <Button small variant="quiet" title={`${villageStorePrice(p.material)} Taler pro Stück`} disabled={s.taler < villageStorePrice(p.material)} onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.max(1, Math.min(left, Math.floor(s.taler / villageStorePrice(p.material)))), source: 'store' })}>Im Dorfladen kaufen (3×)</Button>}
-                {stacks.map((g) => {
-                  const d = s.designs.find((x) => x.id === g.designId)!;
-                  const n = Math.min(left, g.count);
-                  return <Button small variant="good" onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: n, source: 'own', designId: g.designId, quality: g.quality, effect: g.effect })}>{n}× {d.name}</Button>;
-                })}
-                {p.kind === 'goods' && stacks.length === 0 && <span class="muted">Passende Stücke hast du gerade nicht im Regal.</span>}
+                {p.kind === 'material' && haveMat > 0 && <Button small variant="good" onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.min(left, haveMat), source: 'own' })}>{T.vl.fromStock(Math.min(left, haveMat))}</Button>}
+                {p.kind === 'material' && <Button small variant="quiet" title={`${villageStorePrice(p.material)} Taler pro Stück`} disabled={s.taler < villageStorePrice(p.material)} onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.max(1, Math.min(left, Math.floor(s.taler / villageStorePrice(p.material)))), source: 'store' })}>{T.vl.buyInStore}</Button>}
+                {p.kind === 'goods' && (
+                  <GoodsButtons s={s} p={p} left={left} give={(g, count, substitute) => onContribute({ type: 'contribute', jointId: order.id, part: i, count, source: substitute ? 'substitute' : 'own', designId: g.designId, quality: g.quality, effect: g.effect })} />
+                )}
               </div>
             )}
           </div>

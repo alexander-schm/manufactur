@@ -90,6 +90,7 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .news li.new { border-color: var(--line); background: #fff6d8; }
 .invite-hint { background: var(--card-2); border: 2px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
 .village-panel .tabs { margin-top: 10px; }
+.village-tabs { scroll-margin-top: 8px; }
 .give-chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1.6px solid var(--line); border-radius: 999px; padding: 1px 10px 1px 4px; }
 .give-chip svg { vertical-align: middle; }
 .mat-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 1.6px solid var(--line); margin-right: 4px; vertical-align: middle; }
@@ -167,3 +168,42 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .mw-record .medal { position: absolute; top: 4px; right: 6px; }
 .mw-record .muted { font-size: .85em; }
 .mw-done-art { display: flex; justify-content: center; align-items: flex-end; gap: 4px; margin: 6px 0; }
+/* village long goals: projects, great kiln, museum */
+.market-day { background: #fff3c4; border: 2px solid var(--line); border-radius: 12px 6px 14px 8px; padding: 6px 12px; margin-bottom: 8px; font-weight: 600; transform: rotate(-.4deg); box-shadow: 2px 2px 0 var(--line); }
+.project-card h3 { line-height: 1.2; }
+.project-first { margin: 6px 0 2px; font-size: .95em; }
+.project-share { display: grid; grid-template-columns: 1fr; gap: 4px 10px; align-items: center; margin: 8px 0 2px; }
+.share-bar > div { background: repeating-linear-gradient(45deg, var(--g5), var(--g5) 8px, #d99a2b 8px, #d99a2b 16px); }
+.part-icon { font-size: 1.4em; width: 28px; text-align: center; }
+.joint-actions .btn .medal { vertical-align: middle; }
+.small-note { flex-basis: 100%; font-size: .85em; }
+.project-done { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.project-done li { background: #fff; border: 1.6px solid var(--line); border-radius: 10px 6px 12px 8px; padding: 6px 10px; }
+.kiln-state { font-size: 1.05em; margin: 6px 0 4px; }
+.kiln-fill > div { background: repeating-linear-gradient(45deg, var(--wood), var(--wood) 8px, var(--woodDark) 8px, var(--woodDark) 16px); }
+.kiln-heat { display: grid; grid-template-columns: auto minmax(60px, 1fr); gap: 2px 10px; align-items: center; margin-top: 10px; }
+.kiln-heat .muted { grid-column: 1 / -1; font-size: .9em; }
+.heat-bar > div { background: linear-gradient(90deg, #f6d58a, #f2b84b 40%, #e07b39 75%, #c8452c); }
+.kiln-loads { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 10px; }
+.kiln-load { display: grid; grid-template-columns: 40px 1fr; align-items: center; column-gap: 6px; background: #fff; border: 1.6px solid var(--line); border-radius: 10px 6px 12px 8px; padding: 4px 8px; font-size: .9em; }
+.kiln-load .kiln-maker { grid-column: 2; display: inline-flex; align-items: center; gap: 2px; font-size: .9em; }
+.kiln-load > :first-child { grid-row: span 2; }
+.kiln-form { display: grid; gap: 8px; }
+.kiln-form .slider { grid-template-columns: 80px 1fr; }
+.design-chip { display: inline-flex; align-items: center; gap: 4px; }
+.kiln-cost { margin: 0; }
+.kiln-masterwork { display: grid; gap: 8px; }
+.kiln-mw-predict { margin: 0; display: flex; align-items: center; gap: 6px; }
+.museum-title { margin: 0; font-size: 1.4em; }
+.museum-benefit { margin: 2px 0 10px; font-size: .9em; }
+.museum-shelf { margin: 12px 0 4px; }
+.museum-owner { display: flex; align-items: center; gap: 6px; }
+.museum-pieces { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px; padding: 4px 8px 0; min-height: 60px; }
+.museum-piece { position: relative; margin: 0; display: grid; justify-items: center; width: 84px; text-align: center; font-size: .8em; }
+.museum-piece .medal { position: absolute; top: 0; right: 4px; }
+.museum-piece figcaption { line-height: 1.1; }
+.museum-empty { align-self: center; font-size: .9em; }
+.museum-plank { height: 12px; border: 2px solid var(--line); border-radius: 3px 6px 4px 5px; background: repeating-linear-gradient(90deg, var(--wood), var(--wood) 22px, var(--woodDark) 22px, var(--woodDark) 23px); box-shadow: 0 3px 0 rgba(43,36,32,.25); }
+.goods-btn { display: inline-flex; align-items: center; gap: 4px; }
+.wood-chip { padding: 2px 9px; min-width: 48px; }
+.museum-shelves { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 0 24px; }
