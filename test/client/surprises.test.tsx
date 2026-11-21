@@ -4,13 +4,14 @@ import { WorkshopScene } from '../../src/client/art/workshop/WorkshopScene';
 import { mockWorkshop } from '../../src/client/dev/ScenePage';
 import { browserEnv, memoryStore, readDevFlags } from '../../src/client/surprises/env';
 import { SURPRISES } from '../../src/client/surprises/defs';
-import { HIT_RECTS, SPOTS, TREE_BOXES, VILLAGE_SPOTS, catSpot, stationRect, xmasStallRect, type Rect } from '../../src/client/surprises/spots';
+import { CAKE_BOX, DECOR_BOXES, HIT_RECTS, SPOTS, TREE_BOXES, VILLAGE_SPOTS, catSpot, stationRect, xmasStallRect, type Rect } from '../../src/client/surprises/spots';
 import { BUILDING_SPOTS, PLOTS, PROJECT_SPOTS, VillageMap } from '../../src/client/art/village/VillageMap';
 import { mockVillage } from '../../src/client/dev/mockVillage';
 import type { LocalTime, Mood, Play, SurpriseView } from '../../src/client/surprises/types';
 import { shouldRecord } from '../../src/client/surprises/useSurprises';
 import { CARD_ART } from '../../src/client/art/surprises/cards';
 import { STATION_BOX } from '../../src/client/art/workshop/stations/Stations';
+import { DecorLayer } from '../../src/client/art/workshop/Decor';
 import { CURIOSITIES } from '../../src/shared/content/curiosities';
 import { newGame } from '../../src/shared/state';
 import type { StationKind } from '../../src/shared/types';
@@ -313,5 +314,127 @@ describe('browserEnv', () => {
     const f = readDevFlags('#scene&surprise=katze-streicheln&clock=2026-12-24T18:30&reduced&touch&rain&decor=all');
     expect(f).toEqual({ force: 'katze-streicheln', clock: new Date(2026, 11, 24, 18, 30).getTime(), reduced: true, touch: true, rain: true, decorAll: true });
     expect(readDevFlags('#scene&clock=kaputt')).toEqual({});
+  });
+});
+
+describe('Time of day', () => {
+  const scene = (sx: SurpriseView, s = mockWorkshop(T0)) => render(<WorkshopScene state={s} now={T0} onStation={() => {}} surprises={sx} />);
+  const NIGHT: Mood = { ...DAY_MOOD, daypart: 'night' };
+
+  it('the scene carries the daypart as a mood class', () => {
+    expect(scene(still([], { mood: NIGHT }))).toMatch(/<svg[^>]*class="scene mood-night"/);
+    expect(scene(still([]))).toMatch(/<svg[^>]*class="scene mood-day"/);
+    expect(scene(still([], { mood: { ...DAY_MOOD, daypart: 'evening' } }))).toMatch(/<svg[^>]*class="scene mood-evening"/);
+  });
+
+  it('evening light: a warm overlay over the room that never catches a click, under the stations', () => {
+    const html = scene(still([], { calendar: ['abendlicht'], mood: { ...DAY_MOOD, daypart: 'evening' } }));
+    const overlay = /<rect[^>]*data-surprise="abendlicht"[^>]*>/.exec(html)?.[0] ?? '';
+    expect(overlay).toContain('fill="var(--sun)"');
+    expect(overlay).toContain('pointer-events="none"');
+    expect(html.indexOf('data-surprise="abendlicht"')).toBeLessThan(html.indexOf('data-station='));
+    expect(scene(still([]))).not.toContain('data-surprise="abendlicht"');
+  });
+
+  it('night: moon and stars in the window, a soft dim over the room', () => {
+    const html = scene(still([], { mood: NIGHT }));
+    expect(html).toContain('data-moon');
+    expect((html.match(/data-star/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(html).toMatch(/<rect[^>]*data-night-dim[^>]*pointer-events="none"/);
+    const day = scene(still([]));
+    expect(day).not.toContain('data-moon');
+    expect(day).not.toContain('data-night-dim');
+  });
+
+  it('the owl and the morning birds sit on the sill outside the glass, under the muntins', () => {
+    for (const id of ['eule', 'morgenvoegel']) {
+      const html = scene(still([play(id)], { mood: id === 'eule' ? NIGHT : { ...DAY_MOOD, daypart: 'morning' } }));
+      const sill = html.indexOf('data-sill');
+      expect(sill, id).toBeGreaterThan(html.indexOf('clip-path="url(#window-clip)"'));
+      expect(html.indexOf(`data-surprise="${id}"`), id).toBeGreaterThan(sill);
+      expect(html.indexOf(`data-surprise="${id}"`), id).toBeLessThan(html.indexOf('data-window-mullions'));
+    }
+    expect(scene(still([]))).not.toContain('data-surprise="eule"');
+  });
+
+  it('New Year fireworks burst in the window; still: two frozen bursts', () => {
+    const html = scene(still([], { calendar: ['silvester'], mood: { ...NIGHT, newYear: true } }));
+    const at = html.indexOf('data-surprise="silvester"');
+    expect(at).toBeGreaterThan(html.indexOf('clip-path="url(#window-clip)"'));
+    expect(at).toBeLessThan(html.indexOf('data-window-mullions'));
+    expect((html.match(/data-burst/g) ?? []).length).toBe(2);
+    const moving = scene(still([], { calendar: ['silvester'], mood: { ...NIGHT, newYear: true }, still: false }));
+    expect((moving.match(/data-burst/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('the workshop birthday: a cake with one candle per year, a single number candle from six on', () => {
+    const s = mockWorkshop(T0);
+    const cake = (year: number, created: LocalTime) => scene(still([], { calendar: ['geburtstag'], mood: { ...DAY_MOOD, birthday: true }, local: { ...LOCAL, year }, created }), s);
+    const opened = { ...LOCAL, year: 2023 };
+    const three = cake(2026, opened);
+    expect(three).toContain('data-surprise="geburtstag"');
+    expect(three).toContain('Hurra!');
+    expect((three.match(/data-candle/g) ?? []).length).toBe(3);
+    const seven = cake(2030, opened);
+    expect((seven.match(/data-candle/g) ?? []).length).toBe(1);
+    expect(seven).toMatch(/data-candle[^>]*>[\s\S]*?>7<\/text>/);
+    // a forced cake with no known opening still has one candle
+    expect((scene(still([play('geburtstag')]), s).match(/data-candle/g) ?? []).length).toBe(1);
+  });
+
+  it('the cake stands at a free back-floor spot: clear of stations, idle workers, the cat, the tree, the cabinet and the floor decor', () => {
+    const s = mockWorkshop(T0);
+    const blockers: [string, Rect][] = s.stations.map((st) => [st.kind, stationRect(st.kind, st.slot)]);
+    // idle workers: figure 100 wide, 150 tall above their spot, name tag below
+    for (const [i, p] of [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }].entries()) blockers.push([`idle ${i}`, { x: p.x - 50, y: p.y - 150, w: 100, h: 172 }]);
+    blockers.push(['cat', HIT_RECTS.cat!], ['cabinet', HIT_RECTS.cabinet!], ...TREE_BOXES(SPOTS.tree).map((b): [string, Rect] => ['tree', b]));
+    blockers.push(['vogelhaus', { x: 628, y: 274, w: 78, h: 86 }], ['steinzeugtopf', { x: 836, y: 414, w: 60, h: 64 }], ['kaolinbrocken', { x: 326, y: 430, w: 43, h: 56 }]);
+    blockers.push(['blumenkasten', { x: 404, y: 266, w: 232, h: 40 }], ['window', { x: 392, y: 62, w: 256, h: 220 }], ['gluecksschwein', DECOR_BOXES.gluecksschwein], ['kerzenkranz', DECOR_BOXES.kerzenkranz]);
+    for (const [name, b] of blockers) expect(intersects(CAKE_BOX(SPOTS.cake), b), name).toBe(false);
+  });
+
+  it('the new decor sits at free spots: clear of stations, workers, the cat, the window, pinboard, clock, sign and the other decor', () => {
+    const s = mockWorkshop(T0);
+    const blockers: [string, Rect][] = s.stations.map((st) => [st.kind, stationRect(st.kind, st.slot)]);
+    for (const [i, p] of [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }].entries()) blockers.push([`idle ${i}`, { x: p.x - 50, y: p.y - 150, w: 100, h: 172 }]);
+    blockers.push(['cat', HIT_RECTS.cat!], ['cabinet', HIT_RECTS.cabinet!], ['cake', CAKE_BOX(SPOTS.cake)], ...TREE_BOXES(SPOTS.tree).map((b): [string, Rect] => ['tree', b]));
+    blockers.push(['window', { x: 392, y: 62, w: 256, h: 220 }], ['pinboard', { x: 700, y: 90, w: 172, h: 172 }], ['clock', { x: 884, y: 94, w: 52, h: 52 }], ['tier sign', { x: 696, y: 272, w: 208, h: 78 }]);
+    blockers.push(['wandteller', { x: 256, y: 76, w: 68, h: 68 }], ['museumsplakat', { x: 322, y: 190, w: 64, h: 82 }], ['ratssiegel', { x: 200, y: 78, w: 27, h: 74 }], ['hanging plant', { x: 318, y: 20, w: 44, h: 176 }]);
+    blockers.push(['teppich-blau', { x: 24, y: 680, w: 232, h: 40 }], ['grosse-vase', { x: 900, y: 546, w: 60, h: 174 }], ['rug', { x: 360, y: 582, w: 442, h: 100 }]);
+    blockers.push(['gift', { x: SPOTS.gift.x - 30, y: SPOTS.gift.y - 40, w: 60, h: 44 }]);
+    for (const id of ['gluecksschwein', 'kerzenkranz'] as const) {
+      for (const [name, b] of blockers) expect(intersects(DECOR_BOXES[id], b), `${id} vs ${name}`).toBe(false);
+    }
+    expect(intersects(DECOR_BOXES.gluecksschwein, DECOR_BOXES.kerzenkranz)).toBe(false);
+    const html = render(<svg><DecorLayer placed={['gluecksschwein', 'kerzenkranz']} /></svg>);
+    expect(html).toContain('data-decor="gluecksschwein"');
+    expect(html).toContain('data-decor="kerzenkranz"');
+    expect(html).not.toMatch(/NaN|undefined/);
+  });
+
+  it('the time-of-day defs and their album cards', () => {
+    const def = (id: string) => SURPRISES.find((d) => d.id === id)!;
+    expect(def('abendlicht')).toMatchObject({ where: 'workshop', trigger: { kind: 'calendar' }, rarity: 'C', album: ['abendlicht'] });
+    expect(def('eule')).toMatchObject({ where: 'window', trigger: { kind: 'ambient' }, rarity: 'C', durationMs: 5 * 60_000, album: ['eule'] });
+    expect(def('morgenvoegel')).toMatchObject({ where: 'window', trigger: { kind: 'ambient' }, rarity: 'C', durationMs: 3 * 60_000, album: ['morgenvoegel'] });
+    expect(def('silvester')).toMatchObject({ where: 'window', trigger: { kind: 'calendar' }, rarity: 'L', album: ['silvester'] });
+    expect(def('geburtstag')).toMatchObject({ where: 'workshop', trigger: { kind: 'calendar' }, rarity: 'L', album: ['geburtstag'] });
+    const ctx = (mood: Partial<Mood>) => ({ s: newGame('p', 1, T0), now: T0, local: LOCAL, mood: { ...DAY_MOOD, ...mood }, readOnly: false, touch: false, reducedMotion: false });
+    expect(def('abendlicht').when!(ctx({ daypart: 'evening' }))).toBe(true);
+    expect(def('abendlicht').when!(ctx({ daypart: 'night' }))).toBe(false);
+    expect(def('eule').when!(ctx({ daypart: 'night' }))).toBe(true);
+    expect(def('eule').when!(ctx({ daypart: 'morning' }))).toBe(false);
+    expect(def('morgenvoegel').when!(ctx({ daypart: 'morning' }))).toBe(true);
+    expect(def('morgenvoegel').when!(ctx({ daypart: 'day' }))).toBe(false);
+    expect(def('silvester').when!(ctx({ newYear: true }))).toBe(true);
+    expect(def('silvester').when!(ctx({}))).toBe(false);
+    expect(def('geburtstag').when!(ctx({ birthday: true }))).toBe(true);
+    expect(def('geburtstag').when!(ctx({}))).toBe(false);
+    for (const id of ['abendlicht', 'eule', 'morgenvoegel', 'silvester', 'geburtstag']) {
+      expect(CURIOSITIES[id], id).toBeDefined();
+      const Art = CARD_ART[id];
+      expect(Art, id).toBeDefined();
+      expect(render(<svg>{Art!()}</svg>), id).not.toMatch(/NaN|undefined/);
+    }
   });
 });

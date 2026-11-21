@@ -22,7 +22,8 @@ export const SPOTS = {
   mouseHole: { x: 805, y: 466 },
   /** Centre of the wall cabinet's crown; on the wall between the broom and the drying rack. */
   cabinet: { x: 345, y: 300 },
-  cake: { x: 660, y: 600 },
+  /** The birthday cake's stool: back floor between the drying rack and the glaze table, under the bird house (clear of idle worker 0 and the wheel). */
+  cake: { x: 612, y: 480 },
   accident: { x: 905, y: 500 },
   ghost: { x: 900, y: 470 },
   /** The December tree, where the broom leans the rest of the year: between the shelf and the kaolin stand, under the cabinet. */
@@ -35,6 +36,17 @@ export const TREE_BOXES = (p: Spot): Rect[] => [
   { x: p.x - 32, y: p.y - 80, w: 64, h: 84 },
   { x: p.x - 20, y: p.y - 128, w: 40, h: 48 },
 ];
+
+/** The birthday cake's drawn box around its spot (stool feet): cake and candles above the stool, the "Hurra!" flag to the right. */
+export const CAKE_BOX = (p: Spot): Rect => ({ x: p.x - 26, y: p.y - 98, w: 76, h: 102 });
+
+/** Drawn boxes of the decor items placed by the surprise tasks (fixed spots in `Decor.tsx`). */
+export const DECOR_BOXES = {
+  /** Floor, front edge under the wheel, between idle workers 2 and 0. */
+  gluecksschwein: { x: 446, y: 690, w: 50, h: 28 },
+  /** Wall between the shelf and the hanging plant, on a little bracket. */
+  kerzenkranz: { x: 250, y: 194, w: 60, h: 64 },
+} satisfies Record<string, Rect>;
 
 /**
  * Village map anchors (1400×1200). The Christmas stall stands at the square's north-west edge, between plots 0, 1 and 8
@@ -74,6 +86,7 @@ export function stationRect(kind: StationKind, slot: number): Rect {
 /** The spot a dev `&surprise=` shot centres on. */
 export function anchorOf(id: string): Spot {
   if (id.startsWith('katze-')) return SPOTS.catHome;
-  if (id === 'dezember') return { x: SPOTS.window.x + SPOTS.window.w / 2, y: SPOTS.window.y + SPOTS.window.h / 2 };
+  if (id === 'geburtstag') return { x: SPOTS.cake.x, y: SPOTS.cake.y - 50 };
+  if (id === 'dezember' || id === 'eule' || id === 'morgenvoegel' || id === 'silvester') return { x: SPOTS.window.x + SPOTS.window.w / 2, y: SPOTS.window.y + SPOTS.window.h / 2 };
   return { x: 600, y: 360 };
 }

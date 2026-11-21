@@ -150,3 +150,74 @@ export function ChristmasStall({ x, y }: { x: number; y: number }) {
     </g>
   );
 }
+
+/**
+ * The room's light for the time of day, drawn over the room and under the stations, so stations, workers and panels stay crisp:
+ * evening a warm wash (`abendlicht`), night a soft blue dim. Static rects; they never catch a click.
+ */
+export function MoodLight({ width, evening, night }: { width: number; evening: boolean; night: boolean }) {
+  return (
+    <g class="mood-light">
+      {evening && <rect data-surprise="abendlicht" x="0" y="0" width={width} height="700" fill="var(--sun)" opacity="0.13" pointer-events="none" />}
+      {night && <rect data-night-dim x="0" y="0" width={width} height="700" fill="#3b3168" opacity="0.1" pointer-events="none" />}
+      {night && <rect x="0" y="0" width={width} height="700" fill="var(--fire)" opacity="0.06" pointer-events="none" />}
+    </g>
+  );
+}
+
+const CREAM = '#fff8ec';
+const SPONGE = '#f4cf9a';
+
+/**
+ * The workshop's birthday cake on a little stool at (x, y) (stool feet): a round cake with cream, one candle per year
+ * (each `data-candle`; from six on a single number candle) and a little flag that says "Hurra!". Stays inside `CAKE_BOX`.
+ */
+export function BirthdayCake({ x, y, years, still }: { x: number; y: number; years: number; still: boolean }) {
+  const seat = y - 28, base = seat - 1, top = base - 24;
+  const n = Math.max(1, years);
+  const flame = (cx: number, cy: number, i: number) => (
+    <g class={still ? undefined : 'cake-flame'} style={{ transformOrigin: `${cx}px ${cy}px`, animationDelay: `${i * 0.2}s` }}>
+      <circle cx={cx} cy={cy - 4} r="5.5" fill="url(#glow)" opacity="0.9" />
+      <path d={`M${cx} ${cy - 8} Q${cx + 3.2} ${cy - 3} ${cx} ${cy - 0.4} Q${cx - 3.2} ${cy - 3} ${cx} ${cy - 8} Z`} fill="var(--fireCore)" style={inkStyle(0.8)} />
+    </g>
+  );
+  return (
+    <g class={`birthday-cake${still ? ' still' : ''}`}>
+      <ellipse cx={x} cy={y + 1} rx="24" ry="3" fill="url(#hatch)" opacity="0.5" />
+      {/* the stool */}
+      <path d={`M${x - 16} ${seat + 4} L${x - 19} ${y} M${x + 16} ${seat + 4} L${x + 19} ${y} M${x - 17} ${y - 11} L${x + 17} ${y - 11}`} stroke="var(--woodDark)" stroke-width="4" stroke-linecap="round" />
+      <path d={`M${x - 16} ${seat + 4} L${x - 19} ${y} M${x + 16} ${seat + 4} L${x + 19} ${y}`} fill="none" style={D} />
+      <path d={`M${x - 22} ${seat} L${x + 22} ${seat} L${x + 20} ${seat + 6} L${x - 20} ${seat + 6} Z`} fill="var(--wood)" style={inkStyle(1.6)} />
+      {/* the plate and the cake */}
+      <ellipse cx={x} cy={base} rx="25" ry="3.6" fill="#fbf8f2" style={inkStyle(1.4)} />
+      <path d={`M${x - 20} ${top} L${x - 20} ${base - 2} Q${x} ${base + 3} ${x + 20} ${base - 2} L${x + 20} ${top} Z`} fill={SPONGE} style={S} />
+      <path d={`M${x - 20} ${top + 12} Q${x} ${top + 16} ${x + 20} ${top + 12}`} fill="none" stroke="var(--g3)" stroke-width="2.4" />
+      {/* cream on top, dripping */}
+      <path d={`M${x - 21} ${top + 1} Q${x - 21} ${top + 8} ${x - 17} ${top + 7} Q${x - 14} ${top + 11} ${x - 11} ${top + 6} Q${x - 6} ${top + 9} ${x - 2} ${top + 6} Q${x + 3} ${top + 12} ${x + 7} ${top + 6} Q${x + 12} ${top + 9} ${x + 15} ${top + 6} Q${x + 19} ${top + 10} ${x + 21} ${top + 1} Z`} fill={CREAM} style={inkStyle(1.4)} />
+      <ellipse cx={x} cy={top} rx="21" ry="5" fill={CREAM} style={inkStyle(1.6)} />
+      {[[-12, 1], [0, 2.4], [12, 1]].map(([dx, dy]) => <circle cx={x + dx} cy={top + dy} r="2.4" fill="var(--g3)" style={inkStyle(0.9)} />)}
+      {[[-17, 18], [-6, 16], [6, 19], [16, 15]].map(([dx, dy]) => <circle cx={x + dx} cy={top + dy} r="1.1" fill="#fff" />)}
+      {/* candles */}
+      {n <= 5
+        ? Array.from({ length: n }, (_, i) => {
+          const cx = x + (i - (n - 1) / 2) * 7, ct = top - 12 + (i % 2);
+          return (
+            <g data-candle>
+              <rect x={cx - 1.8} y={ct} width="3.6" height={top - ct + 1} rx="1" fill={['var(--g1)', 'var(--g5)', 'var(--sun)', 'var(--g2)', 'var(--g4)'][i % 5]} style={inkStyle(0.9)} />
+              {flame(cx, ct, i)}
+            </g>
+          );
+        })
+        : (
+          <g data-candle>
+            <text x={x} y={top - 1} text-anchor="middle" font-size="18" font-weight="700" font-family="var(--font-hand)" fill="var(--g1)" stroke="var(--line)" stroke-width="0.9" paint-order="stroke">{n}</text>
+            {flame(x + 1, top - 15, 0)}
+          </g>
+        )}
+      {/* the flag */}
+      <path d={`M${x + 8} ${top + 2} L${x + 8} ${top - 44}`} stroke="var(--woodDark)" stroke-width="1.8" stroke-linecap="round" />
+      <path d={`M${x + 8} ${top - 45} L${x + 46} ${top - 42} L${x + 42} ${top - 35.5} L${x + 46} ${top - 29} L${x + 8} ${top - 30} Z`} fill="#fbf8f2" style={inkStyle(1.3)} />
+      <text x={x + 25} y={top - 33} text-anchor="middle" font-size="10.5" font-family="var(--font-hand)" fill="var(--kilnDark)">Hurra!</text>
+    </g>
+  );
+}

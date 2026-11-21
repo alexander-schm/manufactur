@@ -1,7 +1,8 @@
 import { inkStyle } from '../ink';
 import type { AlbumCard } from '../../panels/albumLogic';
 import { WorkshopCat, type CatPose } from './Cat';
-import { ChristmasTree } from './Seasonal';
+import { BirthdayCake, ChristmasTree } from './Seasonal';
+import { Burst, Owl, SillBird } from './WindowLayer';
 import './surprises.css';
 
 const S = inkStyle(2.2);
@@ -12,7 +13,94 @@ export const CARD_ART: Record<string, () => preact.JSX.Element> = {
   'katze-streicheln': () => <CatCard pose="purr" />,
   'katze-beleidigt': () => <CatCard pose="swat" />,
   dezember: () => <DecemberCard />,
+  abendlicht: () => <EveningCard />,
+  eule: () => <WindowCard sky="#33457a" tint={['#1d2748', 0.35]}><Moon x={118} y={30} /><g transform="translate(64 91) scale(1.15) translate(-64 -91)"><Owl x={64} y={91} still /></g></WindowCard>,
+  morgenvoegel: () => (
+    <WindowCard sky="#fbe2cc" sun>
+      <SillBird x={44} y={91} color="var(--g1)" /><SillBird x={70} y={91} color="var(--g3)" flip /><SillBird x={112} y={91} color="var(--sun)" flip />
+      <CardNote x={56} y={64} /><CardNote x={98} y={56} />
+    </WindowCard>
+  ),
+  silvester: () => (
+    <WindowCard sky="#33457a" tint={['#1d2748', 0.35]}>
+      <Burst x={52} y={36} r={18} color="#ff8fb1" /><Burst x={110} y={30} r={15} color="#ffd166" /><Burst x={86} y={66} r={13} color="#8fd3ff" />
+    </WindowCard>
+  ),
+  geburtstag: () => (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M0 100 Q80 96 160 100 L160 120 L0 120 Z" fill="var(--floor)" style={inkStyle(1.6)} />
+      {[[22, 18, 'var(--g3)'], [46, 30, 'var(--sun)'], [118, 26, 'var(--g1)'], [140, 16, 'var(--g2)']].map(([x, y, c]) => <path d={`M${x} ${y} l7 -2 l-1 7 Z`} fill={c as string} style={inkStyle(1)} />)}
+      <g transform="translate(70 112) scale(1.05) translate(-612 -480)"><BirthdayCake x={612} y={480} years={1} still /></g>
+    </g>
+  ),
 };
+
+/** A window on the wall in the card: frame, sky, hills, the glass's tint, then the scene inside, the muntins and the sill. */
+function WindowCard({ sky, tint, sun, children }: { sky: string; tint?: [string, number]; sun?: boolean; children?: preact.ComponentChildren }) {
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <rect x="12" y="4" width="136" height="96" fill="var(--woodDark)" style={S} />
+      <rect x="18" y="10" width="124" height="84" fill={sky} />
+      {sun && <circle cx="118" cy="30" r="11" fill="var(--sun)" />}
+      <path d="M18 74 Q50 58 82 70 Q112 58 142 72 L142 94 L18 94 Z" fill="var(--hill)" />
+      <path d="M18 84 Q80 74 142 84 L142 94 L18 94 Z" fill="var(--g2)" opacity="0.9" />
+      {tint && <rect x="18" y="10" width="124" height="84" fill={tint[0]} opacity={tint[1]} />}
+      {children}
+      <path d="M80 10 L80 94 M18 52 L142 52" stroke="var(--woodDark)" stroke-width="4" opacity="0.55" />
+      <rect x="18" y="10" width="124" height="84" fill="none" style={S} />
+      <path d="M6 100 L154 100 L150 108 L10 108 Z" fill="var(--wood)" style={S} />
+    </g>
+  );
+}
+
+/** A sleepy crescent moon. */
+function Moon({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <circle cx={x} cy={y} r="16" fill="#fff6d8" opacity="0.18" />
+      <path d={`M${x + 3} ${y - 12} A12 12 0 1 0 ${x + 3} ${y + 12} A9.5 11 0 1 1 ${x + 3} ${y - 12} Z`} fill="#fbf1cf" style={inkStyle(1.2)} />
+      {[[30, 20], [56, 16], [96, 40], [134, 50]].map(([sx, sy]) => <circle cx={sx} cy={sy} r="1.6" fill="#fff3b8" />)}
+    </g>
+  );
+}
+
+/** A tiny eighth note. */
+function CardNote({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <ellipse cx={x} cy={y} rx="3.4" ry="2.6" fill="var(--line)" transform={`rotate(-20 ${x} ${y})`} />
+      <path d={`M${x + 3} ${y - 0.6} L${x + 3} ${y - 13} q3.6 1.6 5.2 5.4`} fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round" />
+    </g>
+  );
+}
+
+/** The workshop at evening: a window with a sunset, string lights glowing, a warm wash over it all. */
+function EveningCard() {
+  const bulbs: [number, number, string][] = [[20, 24, 'var(--g3)'], [52, 34, 'var(--sun)'], [84, 28, 'var(--g1)'], [116, 36, 'var(--g2)'], [146, 26, 'var(--g3)']];
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M0 98 Q80 94 160 98 L160 120 L0 120 Z" fill="var(--floor)" style={inkStyle(1.6)} />
+      <rect x="44" y="40" width="72" height="54" fill="var(--woodDark)" style={S} />
+      <rect x="49" y="45" width="62" height="44" fill="#f6b99c" />
+      <circle cx="92" cy="74" r="10" fill="#ffb36b" />
+      <path d="M49 78 Q66 70 82 76 Q98 70 111 77 L111 89 L49 89 Z" fill="var(--hill)" />
+      <rect x="49" y="45" width="62" height="44" fill="#f08a6a" opacity="0.2" />
+      <path d="M80 45 L80 89 M49 67 L111 67" stroke="var(--woodDark)" stroke-width="3" />
+      <rect x="49" y="45" width="62" height="44" fill="none" style={D} />
+      <path d="M0 14 Q20 32 52 30 Q84 22 116 32 Q140 34 160 18" fill="none" style={{ ...D, opacity: 0.7 }} />
+      {bulbs.map(([x, y, c]) => (
+        <g>
+          <circle cx={x} cy={y + 8} r="11" fill={c} opacity="0.55" />
+          <path d={`M${x - 3} ${y} L${x + 3} ${y} L${x + 4} ${y + 10} Q${x} ${y + 14} ${x - 4} ${y + 10} Z`} fill={c} style={inkStyle(1.4)} />
+        </g>
+      ))}
+      <rect x="0" y="0" width="160" height="120" fill="var(--sun)" opacity="0.14" />
+    </g>
+  );
+}
 
 /** A snowy window on the wall with the little tree beside it. */
 function DecemberCard() {

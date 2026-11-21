@@ -2,8 +2,8 @@ import { makeCharacter } from '../../../shared/character';
 import type { GameState, Station, StationKind, Worker } from '../../../shared/types';
 import { Character, type Pose } from '../character/Character';
 import { WorkshopCat } from '../surprises/Cat';
-import { ChristmasTree } from '../surprises/Seasonal';
-import { SurpriseLayer, catPlay } from '../surprises/SurpriseLayer';
+import { ChristmasTree, MoodLight } from '../surprises/Seasonal';
+import { SurpriseLayer, catPlay, showing } from '../surprises/SurpriseLayer';
 import { WindowLayer } from '../surprises/WindowLayer';
 import { SPOTS } from '../../surprises/spots';
 import type { SurpriseView } from '../../surprises/types';
@@ -67,8 +67,10 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const december = sx.calendar.includes('dezember');
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
-      <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
+      <svg class={`scene mood-${sx.mood.daypart}`} viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
         <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} december={december} outside={<WindowLayer sx={sx} />} />
+        {/* the light of the time of day washes over the room, under the plinths, stations and workers */}
+        <MoodLight width={width} evening={showing(sx, 'abendlicht')} night={sx.mood.daypart === 'night'} />
         <Plinths records={state.masterworks} onClick={readOnly ? undefined : onMasterwork} />
         {/* the December tree stands where the broom leans, behind the stations like the broom */}
         {december && <ChristmasTree x={SPOTS.tree.x} y={SPOTS.tree.y} still={sx.still} />}

@@ -43,7 +43,7 @@ function WindowBack({ x, y, december }: { x: number; y: number; december?: boole
   return (
     <g>
       <path d={`M${x - 14} ${y - 10} L${x + w + 14} ${y - 10} L${x + w + 14} ${y + h + 8} L${x - 14} ${y + h + 8} Z`} fill="var(--woodDark)" style={S} />
-      <rect x={x} y={y} width={w} height={h} fill="var(--sky)" style={S} />
+      <rect class="window-sky" x={x} y={y} width={w} height={h} fill="var(--sky)" style={S} />
       <circle class="sun" cx={x + 150} cy={y + 44} r="21" fill="var(--sun)" />
       <path d={`M${x + 26} ${y + 52} q8 -16 24 -8 q10 -13 24 0 q13 0 10 10 L${x + 24} ${y + 55} Z`} fill="var(--paper)" style={S} class="cloud" />
       <path d={`M${x} ${y + 140} Q${x + 53} ${y + 100} ${x + 106} ${y + 128} Q${x + 160} ${y + 106} ${x + w} ${y + 132} L${x + w} ${y + h} L${x} ${y + h} Z`} fill="var(--hill)" />

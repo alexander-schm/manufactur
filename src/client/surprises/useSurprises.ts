@@ -65,7 +65,7 @@ export function useSurprises(area: 'workshop' | 'village', s: GameState, readOnl
   const c = ctx();
   const plays = sx.plays();
   return {
-    plays, calendar: sx.calendar(), mood: c.mood, local: c.local, now: c.now,
+    plays, calendar: sx.calendar(), mood: c.mood, local: c.local, now: c.now, created: env.local(c.s.createdAt),
     still: c.reducedMotion || plays.some((p) => p.held),
     touch: c.touch, readOnly,
     click: (target, data) => { if (sx.click(target, ctx(), data)) bump(); },

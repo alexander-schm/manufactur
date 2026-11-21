@@ -30,7 +30,7 @@ describe('station panel', () => {
 });
 
 /** decor whose art has not landed yet; each art task removes its own ids */
-const ART_PENDING = new Set(['socke', 'drachenpluesch', 'storchenmobile', 'gluecksschwein', 'kerzenkranz', 'ohrensessel', 'goldfischglas', 'drachenteppich']);
+const ART_PENDING = new Set(['socke', 'drachenpluesch', 'storchenmobile', 'ohrensessel', 'goldfischglas', 'drachenteppich']);
 
 describe('workshop decor', () => {
   it('every DECOR id draws in the room', () => {

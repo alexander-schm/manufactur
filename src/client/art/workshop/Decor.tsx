@@ -257,6 +257,51 @@ const DRAW: Record<string, () => preact.JSX.Element> = {
       <path d="M205 109 q3 -3 6 -3" fill="none" stroke="#f0a59a" stroke-width="1.6" stroke-linecap="round" />
     </g>
   ),
+  // surprise rewards ---------------------------------------------------------
+  // front floor under the wheel, between idle workers: a pink ceramic piggy bank with a painted four-leaf clover
+  gluecksschwein: () => (
+    <g>
+      <ellipse cx="471" cy="715.5" rx="22" ry="2.5" fill="url(#hatch)" opacity="0.5" />
+      <path d="M458 711 l0 4.5 l5 0 l0 -4 M478 711 l0 4.5 l5 0 l0 -4" fill="#f2a7b5" style={inkStyle(1.3)} />
+      <path d="M454 703 q-6 -3 -3 -7 q3 -2 2 2" fill="none" style={inkStyle(1.3)} />
+      <ellipse cx="470" cy="703" rx="18" ry="11.5" fill="#f6b8c4" style={inkStyle(1.8)} />
+      <path d="M474 693 L476 687 L481 693 Z M481 694 L485 688 L488 695 Z" fill="#f2a7b5" style={inkStyle(1.3)} />
+      <ellipse cx="489" cy="704" rx="5.2" ry="4.6" fill="#f2a7b5" style={inkStyle(1.4)} />
+      <circle cx="487.6" cy="703.6" r="0.9" fill="var(--line)" />
+      <circle cx="490.4" cy="703.6" r="0.9" fill="var(--line)" />
+      <circle cx="481" cy="699" r="1.4" fill="var(--line)" />
+      <ellipse cx="480" cy="704.5" rx="2.6" ry="1.6" fill="var(--cheek)" opacity="0.8" />
+      <path d="M465 692.6 L472 692.6" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round" />
+      {[[0, -1], [1, 0], [0, 1], [-1, 0]].map(([dx, dy]) => <circle cx={465 + dx * 2.6} cy={704 + dy * 2.6} r="2.5" fill="var(--g2)" style={inkStyle(0.8)} />)}
+      <path d="M465 704 q1 4 3 6" fill="none" stroke="var(--g2Dark)" stroke-width="1" stroke-linecap="round" />
+      <path d="M458 698 q3 -3 7 -3.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity="0.85" />
+    </g>
+  ),
+  // wall between the shelf and the hanging plant: a birthday ring with little candles on a wall bracket
+  kerzenkranz: () => (
+    <g>
+      <path d="M262 250 L280 258 L298 250 Z" fill="var(--woodDark)" style={inkStyle(1.3)} />
+      <path d="M252 244 L308 244 L306 251 L254 251 Z" fill="var(--wood)" style={inkStyle(1.6)} />
+      {['var(--g3)', 'var(--sun)', 'var(--g1)', '#fbf8f2', 'var(--g5)'].map((c, i) => {
+        const cx = 264 + i * 8, top = 224 - (i % 2) * 2;
+        return (
+          <g>
+            <rect x={cx - 2.4} y={top} width="4.8" height={236 - top} rx="1" fill={c} style={inkStyle(1)} />
+            <g class="flame" style={{ transformOrigin: `${cx}px ${top}px`, animationDelay: `${i * 0.25}s` }}>
+              <path d={`M${cx} ${top - 8} Q${cx + 3.2} ${top - 3} ${cx} ${top - 0.6} Q${cx - 3.2} ${top - 3} ${cx} ${top - 8} Z`} fill="var(--fireCore)" style={inkStyle(0.8)} />
+            </g>
+          </g>
+        );
+      })}
+      <ellipse cx="280" cy="238" rx="25" ry="7.5" fill="var(--wood)" style={inkStyle(1.8)} />
+      <ellipse cx="280" cy="236.4" rx="17" ry="3.4" fill="var(--woodDark)" opacity="0.55" />
+      {Array.from({ length: 9 }, (_, i) => {
+        const a = Math.PI * (0.08 + (i / 8) * 0.84);
+        return <ellipse cx={(280 - 22 * Math.cos(a)).toFixed(1)} cy={(239 + 5.6 * Math.sin(a)).toFixed(1)} rx="4" ry="2.2" fill="var(--g2)" style={inkStyle(0.9)} transform={`rotate(${(i - 4) * 10} ${(280 - 22 * Math.cos(a)).toFixed(1)} ${(239 + 5.6 * Math.sin(a)).toFixed(1)})`} />;
+      })}
+      {[[262, 241], [276, 245], [291, 244], [301, 239]].map(([bx, by]) => <circle cx={bx} cy={by} r="1.9" fill="var(--g3)" style={inkStyle(0.8)} />)}
+    </g>
+  ),
 };
 
 export function DecorLayer({ placed }: { placed: string[] }) {
