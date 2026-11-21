@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { BODIES, EFFECTS, bodyOf, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate } from './content';
+import { BODIES, EFFECTS, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, type RecipeInput } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
@@ -27,7 +27,7 @@ export type Action =
   | { type: 'declineOrder'; orderId: string }
   | { type: 'setStall'; designIds: string[] }
   | { type: 'sellNow'; designId: string; quality: 1 | 2 | 3; effect: string | null; count: number }
-  | { type: 'experiment'; recipe: Omit<GlazeRecipe, 'id' | 'color' | 'effect' | 'name' | 'body'> & { body?: BodyId } }
+  | { type: 'experiment'; recipe: RecipeInput }
   | { type: 'handTouch'; stationId: string }
   | { type: 'setAvatar'; seed: number }
   | { type: 'setMakerMark'; mark: MakerMark }
@@ -286,6 +286,8 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       if (err) fail(err);
       const need: Record<string, number> = { glasurbasis: EXPERIMENT_COST.glasurbasis - (hasBuilding(s, 'glasurbibliothek') ? 1 : 0) };
       if (a.recipe.colorant) need[a.recipe.colorant] = EXPERIMENT_COST.colorant;
+      const body = getBody(bodyOf(a.recipe));
+      if (body.id !== 'irdenware') need[body.material] = EXPERIMENT_COST.body;
       for (const [m, n] of Object.entries(need)) if ((s.materials[m] ?? 0) < n) fail(`Für den Versuch fehlt ${MATERIALS[m].name}`);
       for (const [m, n] of Object.entries(need)) s.materials[m] -= n;
       const out = runExperiment(s, a.recipe);

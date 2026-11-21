@@ -1,5 +1,5 @@
-import { EFFECTS, MATERIALS, bodyOf, own, type RecipeInput } from './content';
-import { COLOR_FAMILY_NAMES, colorFamily } from './design';
+import { EFFECTS, MATERIALS, bodyAvailable, bodyOf, getBody, own, type RecipeInput } from './content';
+import { COLOR_FAMILY_NAMES, bodyGateError, colorFamily } from './design';
 import { newId } from './ids';
 import type { BodyId, GameState, GlazeRecipe } from './types';
 
@@ -29,6 +29,7 @@ function colorantColor(r: RecipeInput): string | null {
       if (p <= 3) return reduced ? mix('#b9d6b0', '#8fb89a', t * 3) : mix('#e2c27a', '#c99a4a', t * 3);
       if (p <= 6) return mix('#a8673a', '#6e3a1e', (p - 4) / 2);
       return mix('#3a271d', '#1e1612', (p - 7) / 3);
+    case 'salz': return mix('#d8c3a0', '#a88760', t);
     default: return null;
   }
 }
@@ -36,7 +37,11 @@ function colorantColor(r: RecipeInput): string | null {
 export function glazeColor(r: RecipeInput): string {
   const base = BASE_COLOR[r.base];
   const c = colorantColor(r);
-  if (!c) return r.firing.temp === 'hoch' && r.base === 'transparent' ? '#e3bf98' : base;
+  if (!c) {
+    if (r.base !== 'transparent') return base;
+    if (bodyOf(r) !== 'irdenware') return getBody(bodyOf(r)).clearColor;
+    return r.firing.temp === 'hoch' ? '#e3bf98' : base;
+  }
   if (r.base === 'opak') return mix(c, '#ffffff', 0.12);
   if (r.base === 'matt') return mix(c, '#d9d2c4', 0.22);
   return c;
@@ -44,7 +49,8 @@ export function glazeColor(r: RecipeInput): string {
 
 /** The most specific effect whose conditions all hold. */
 export function matchEffect(r: RecipeInput): string | null {
-  const all = Object.values(EFFECTS).sort((a, b) => b.conditions.length - a.conditions.length);
+  const rank = (e: (typeof EFFECTS)[string]) => e.conditions.length + (e.body ? 1 : 0);
+  const all = Object.values(EFFECTS).filter((e) => !e.body || e.body === bodyOf(r)).sort((a, b) => rank(b) - rank(a));
   for (const e of all) if (e.conditions.every((c) => c.test(r))) return e.id;
   return null;
 }
@@ -59,9 +65,11 @@ export function hintFor(r: RecipeInput, state: GameState): string | null {
   let best: { name: string; hint: string; missing: string[]; matched: number } | null = null;
   for (const e of Object.values(EFFECTS)) {
     if (known.includes(e.id)) continue;
+    if (e.body && !bodyAvailable(state, e.body)) continue;
     const missing = e.conditions.filter((c) => !c.test(r)).map((c) => c.label);
-    if (missing.length === 0) continue;
     const matched = e.conditions.length - missing.length;
+    if (e.body && bodyOf(r) !== e.body) missing.push(`auf ${getBody(e.body).name}`);
+    if (missing.length === 0) continue;
     // fewest missing wins; on a tie, the one the player is already more invested in
     if (!best || missing.length < best.missing.length || (missing.length === best.missing.length && matched > best.matched)) {
       best = { name: e.name, hint: e.hint, missing, matched };
@@ -79,10 +87,11 @@ export function glazeName(r: RecipeInput, effect: string | null): string {
   return `${fam} (${BASE_LABEL[r.base]}, ${mat})`;
 }
 
-export const EXPERIMENT_COST = { glasurbasis: 2, colorant: 1 };
+/** `body` counts units of the body's own material, only for non-earthenware bodies. */
+export const EXPERIMENT_COST = { glasurbasis: 2, colorant: 1, body: 1 };
 
 const sameRecipe = (a: RecipeInput, b: RecipeInput) =>
-  a.base === b.base && a.colorant === b.colorant && (a.colorant === null || a.colorantPct === b.colorantPct) &&
+  bodyOf(a) === bodyOf(b) && a.base === b.base && a.colorant === b.colorant && (a.colorant === null || a.colorantPct === b.colorantPct) &&
   a.firing.temp === b.firing.temp && a.firing.atmosphere === b.firing.atmosphere && a.firing.cooling === b.firing.cooling;
 
 export type ExperimentOutcome = { glaze: GlazeRecipe; isNew: boolean; newEffect: string | null; hint: string | null };
@@ -99,6 +108,10 @@ export function validateRecipe(r: RecipeInput, state: GameState): string | null 
   if (typeof r.colorantPct !== 'number' || !Number.isInteger(r.colorantPct) || r.colorantPct < 0 || r.colorantPct > 10) return 'Der Anteil muss zwischen 0 und 10 % liegen';
   const f = r.firing;
   if (!f || !['niedrig', 'mittel', 'hoch'].includes(f.temp) || !['oxidierend', 'reduzierend'].includes(f.atmosphere) || !['schnell', 'langsam'].includes(f.cooling)) return 'Ungültige Brenneinstellung';
+  const bodyErr = bodyGateError(state, bodyOf(r));
+  if (bodyErr) return bodyErr;
+  const body = getBody(bodyOf(r));
+  if (body.mustFireHot && f.temp !== 'hoch') return `${body.name} muss heiß gebrannt werden`;
   if (f.atmosphere === 'reduzierend' && !state.unlocks.includes('reduktion')) return 'Den Reduktionsbrand beherrschst du noch nicht';
   const kiln = state.stations.find((s) => s.kind === 'kiln');
   if (f.temp === 'hoch' && (!kiln || kiln.level < 2)) return 'Für hohe Temperaturen braucht der Ofen Stufe 2';
@@ -106,17 +119,18 @@ export function validateRecipe(r: RecipeInput, state: GameState): string | null 
 }
 
 /** Fire a test tile. Mutates state (materials, glazes, stats). Assumes validated input and paid cost. */
-export function runExperiment(state: GameState, input: RecipeInput & { body?: BodyId }): ExperimentOutcome {
-  const r: RecipeInput = {
+export function runExperiment(state: GameState, input: RecipeInput): ExperimentOutcome {
+  const r: RecipeInput & { body: BodyId } = {
     base: input.base, colorant: input.colorant, colorantPct: input.colorant ? input.colorantPct : 0,
     firing: { temp: input.firing.temp, atmosphere: input.firing.atmosphere, cooling: input.firing.cooling },
+    body: bodyOf(input),
   };
   state.stats.experiments += 1;
   const existing = state.glazes.find((g) => sameRecipe(g, r));
   if (existing) return { glaze: existing, isNew: false, newEffect: null, hint: existing.effect ? null : hintFor(r, state) };
   const effect = matchEffect(r);
   const newEffect = effect && !discoveredEffects(state).includes(effect) ? effect : null;
-  const glaze: GlazeRecipe = { id: newId(state, 'g'), name: glazeName(r, effect), ...r, color: glazeColor(r), effect, body: bodyOf(input) };
+  const glaze: GlazeRecipe = { id: newId(state, 'g'), name: glazeName(r, effect), ...r, color: glazeColor(r), effect };
   state.glazes.push(glaze);
   if (newEffect) state.stats.effectsFound += 1;
   return { glaze, isNew: true, newEffect, hint: effect ? null : hintFor(r, state) };

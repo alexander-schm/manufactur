@@ -1,6 +1,7 @@
-import type { GlazeRecipe } from '../types';
+import type { BodyId, GlazeRecipe } from '../types';
 
-export type RecipeInput = Pick<GlazeRecipe, 'base' | 'colorant' | 'colorantPct' | 'firing'>;
+/** A glaze recipe as entered by the player; a missing body means irdenware. */
+export type RecipeInput = Pick<GlazeRecipe, 'base' | 'colorant' | 'colorantPct' | 'firing'> & { body?: BodyId };
 
 /** A single checkable condition, so hints can name the one that is off. */
 export interface EffectCondition { label: string; test: (r: RecipeInput) => boolean }
@@ -13,6 +14,8 @@ export interface EffectDef {
   /** sale value multiplier for pieces with this effect */
   valueMul: number;
   conditions: EffectCondition[];
+  /** only found on this clay body; counts as one extra condition when ranking */
+  body?: BodyId;
 }
 
 const pct = (lo: number, hi: number) => (r: RecipeInput) => r.colorantPct >= lo && r.colorantPct <= hi;
@@ -63,6 +66,44 @@ export const EFFECTS: Record<string, EffectDef> = {
       { label: 'matte Basis', test: (r) => r.base === 'matt' },
       { label: 'hohe Temperatur', test: (r) => r.firing.temp === 'hoch' },
       { label: 'langsames Abkühlen', test: (r) => r.firing.cooling === 'langsam' },
+    ],
+  },
+  oelfleck: {
+    id: 'oelfleck', name: 'Ölfleck', valueMul: 2.6, body: 'steinzeug',
+    description: 'Silbrige Tropfen schwimmen auf tiefschwarzer Glasur.',
+    hint: 'Greta raunt: „Auf Steinzeug, mit ganz viel Eisen, heiß – und dann lass dem Ofen Zeit beim Abkühlen.“',
+    conditions: [
+      { label: 'viel Eisenoxid (7–10 %)', test: (r) => r.colorant === 'eisenoxid' && pct(7, 10)(r) },
+      { label: 'hohe Temperatur', test: (r) => r.firing.temp === 'hoch' },
+      { label: 'langsames Abkühlen', test: (r) => r.firing.cooling === 'langsam' },
+    ],
+  },
+  hasenfell: {
+    id: 'hasenfell', name: 'Hasenfell', valueMul: 2.4, body: 'steinzeug',
+    description: 'Feine braune Streifen, wie das Fell eines Hasen.',
+    hint: 'Greta lächelt: „Nicht zu wenig Eisen, nicht zu viel – und nimm dem Feuer die Luft. Auf Steinzeug, versteht sich.“',
+    conditions: [
+      { label: 'mittel Eisenoxid (4–6 %)', test: (r) => r.colorant === 'eisenoxid' && pct(4, 6)(r) },
+      { label: 'Reduktion', test: (r) => r.firing.atmosphere === 'reduzierend' },
+    ],
+  },
+  shino: {
+    id: 'shino', name: 'Shino', valueMul: 2.3, body: 'steinzeug',
+    description: 'Milchig-weiß mit warmen, rötlichen Flecken.',
+    hint: 'Greta erzählt: „Matt und ganz ohne Farbe, langsam abkühlen – das Steinzeug malt dann selbst.“',
+    conditions: [
+      { label: 'matte Basis', test: (r) => r.base === 'matt' },
+      { label: 'kein Farbkörper', test: (r) => r.colorant === null },
+      { label: 'langsames Abkühlen', test: (r) => r.firing.cooling === 'langsam' },
+    ],
+  },
+  salzglasur: {
+    id: 'salzglasur', name: 'Salzglasur', valueMul: 2.5, body: 'steinzeug',
+    description: 'Eine Haut wie Orangenschale, glänzend und genarbt.',
+    hint: 'Greta flüstert: „Wirf Salz ins heiße Feuer, wenn Steinzeug drin steht – klare Glasur drunter.“',
+    conditions: [
+      { label: 'Salz als Zusatz', test: (r) => r.colorant === 'salz' },
+      { label: 'transparente Basis', test: (r) => r.base === 'transparent' },
     ],
   },
 };
