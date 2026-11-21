@@ -1,9 +1,15 @@
 import type { GameEvent } from './actions';
-import { TRAITS, UNLOCKS } from './content';
+import { TRAITS, UNLOCKS, tierAtLeast } from './content';
 import { pick } from './rng';
-import type { GameState } from './types';
+import type { GameState, Tier } from './types';
 
-export interface Milestone { id: string; text: string; unlocks: string[]; done: (s: GameState) => boolean }
+export interface Milestone {
+  id: string; text: string; unlocks: string[]; done: (s: GameState) => boolean;
+  /** set on tier milestones: the celebration card shows the new tier */
+  tier?: Tier;
+  /** decor ids handed out with the milestone */
+  decor?: string[];
+}
 
 /** In rough order of a first session. */
 export const MILESTONES: Milestone[] = [
@@ -22,6 +28,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'ruf45', text: 'Die alte Brennmeisterin verrät dir ein Geheimnis (45 Ruf)!', unlocks: ['reduktion'], done: (s) => s.ruf >= 45 },
   { id: 'ruf60', text: 'Eine richtige Manufaktur (60 Ruf)!', unlocks: ['room2'], done: (s) => s.ruf >= 60 },
   { id: 'ruf72', text: 'Man erkennt deine Stücke schon von Weitem (72 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 72 },
+  { id: 'tierManufaktur', tier: 'manufaktur', text: 'Aus der Werkstatt wird eine Manufaktur!', unlocks: ['steinzeug', 'teekanne', 'meisterstuecke'], done: (s) => tierAtLeast(s, 'manufaktur') },
 ];
 
 export const BOOST_AFTER_MS = 24 * 3_600_000;

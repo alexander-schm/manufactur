@@ -17,7 +17,7 @@ export type { StationDef } from './stations';
 export type { TraitDef } from './traits';
 export type { EffectDef, RecipeInput } from './effects';
 export { bodyAvailable, bodyOf, getBody } from './bodies';
-export { getTier, nextTier, tierAtLeast, tierForLevel, tierRank } from './tiers';
+export { getTier, nextTier, stationTierGate, tierAtLeast, tierForLevel, tierRank } from './tiers';
 export type { BodyDef } from './bodies';
 export type { TierDef } from './tiers';
 export type { UnlockDef } from './unlocks';

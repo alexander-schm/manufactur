@@ -39,4 +39,13 @@ describe('content', () => {
     expect(tierForLevel(6)!.id).toBe('manufaktur');
     expect(bodyOf({})).toBe('irdenware');
   });
+  it('station level arrays line up', () => {
+    for (const d of Object.values(STATIONS)) {
+      const L = d.piecesPerMinute.length;
+      expect(L, d.kind).toBe(7);
+      expect(d.upgradeCost.length, d.kind).toBe(L - 1);
+      expect(d.rufRequired.length, d.kind).toBe(L - 1);
+      if (d.capacity) expect(d.capacity.length, d.kind).toBe(L);
+    }
+  });
 });

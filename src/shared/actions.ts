@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { EFFECTS, bodyOf, getStationDef, MATERIALS, own, STATIONS } from './content';
+import { BODIES, EFFECTS, bodyOf, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
@@ -20,6 +20,7 @@ export type Action =
   | { type: 'hire'; workerId: string }
   | { type: 'assign'; workerId: string; stationId: string | null }
   | { type: 'upgradeStation'; stationId: string }
+  | { type: 'upgradeTier' }
   | { type: 'buildStation'; kind: StationKind }
   | { type: 'saveDesign'; design: Design }
   | { type: 'deliverOrder'; orderId: string; designId: string; quality: 1 | 2 | 3; effect: string | null }
@@ -36,7 +37,7 @@ export type Action =
   | { type: 'ackMilestone'; id: string };
 
 export type ActionType = Action['type'];
-export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'buildStation', 'saveDesign',
+export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'upgradeTier', 'buildStation', 'saveDesign',
   'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'placeDecor', 'removeDecor', 'ackAway', 'ackMilestone'];
 
 export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
@@ -135,7 +136,9 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       needUnlock(s, 'upgrades', 'Ausbauen ist noch nicht freigeschaltet');
       const st = s.stations.find((x) => x.id === a.stationId) ?? fail('Unbekannte Station');
       const def = STATIONS[st.kind];
-      if (st.level >= 5) fail('Schon auf höchster Stufe');
+      if (st.level >= def.piecesPerMinute.length) fail('Schon auf höchster Stufe');
+      const gate = stationTierGate(s, st.level);
+      if (gate) fail(gate);
       const ruf = def.rufRequired[st.level - 1];
       if (s.ruf < ruf) fail(`Dafür brauchst du ${ruf} Ruf`);
       const cost = def.upgradeCost[st.level - 1];
@@ -143,6 +146,17 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       s.taler -= cost;
       st.level += 1;
       events.push({ kind: 'levelUp', id: st.id, text: `${def.name} ist jetzt Stufe ${st.level}!` });
+      return;
+    }
+    case 'upgradeTier': {
+      const next = nextTier(s) ?? fail('Höher hinaus geht es nicht');
+      if (s.ruf < next!.ruf) fail(`Für die ${next!.name} brauchst du ${next!.ruf} Ruf`);
+      if (s.taler < next!.price) fail(`Für die ${next!.name} brauchst du ${next!.price} Taler`);
+      s.taler -= next!.price;
+      s.tier = next!.id;
+      for (const b of Object.values(BODIES)) {
+        if (b.tier === next!.id && b.starterGlaze && !s.glazes.some((g) => g.id === b.starterGlaze!.id)) s.glazes.push(structuredClone(b.starterGlaze));
+      }
       return;
     }
     case 'buildStation': {

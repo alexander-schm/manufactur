@@ -25,5 +25,12 @@ export function nextTier(s: { tier: Tier }): TierDef | null {
   return TIERS.find((x) => tierRank(x.id) > rank) ?? null;
 }
 
+/** German reason why a station at `level` cannot go to `level + 1` under the current tier, or null if the tier allows it. */
+export function stationTierGate(s: { tier: Tier }, level: number): string | null {
+  if (level < getTier(s.tier).maxStationLevel) return null;
+  const needed = tierForLevel(level + 1);
+  return needed ? `Stufe ${level + 1} gibt es erst ab der ${needed.name}` : null;
+}
+
 /** First tier whose station cap reaches `level`. */
 export const tierForLevel = (level: number): TierDef | undefined => TIERS.find((x) => x.maxStationLevel >= level);

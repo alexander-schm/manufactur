@@ -23,5 +23,7 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   kobalt: { id: 'kobalt', kind: 'feature', title: 'Kobalt', text: 'Teuer, aber nichts ist so blau wie Kobaltblau.' },
   zeichen: { id: 'zeichen', kind: 'feature', title: 'Meisterzeichen', text: 'Herz, Stern oder Blatt – gestalte dein eigenes Zeichen für den Boden jedes Stücks.' },
   steinzeug: { id: 'steinzeug', kind: 'feature', title: 'Steinzeug', text: 'Grauer Ton, heiß gebrannt, steinhart – und wertvoller.' },
+  teekanne: { id: 'teekanne', kind: 'form', title: 'Teekannen', text: 'Mit Tülle und Deckel – die Königsdisziplin an der Scheibe.' },
+  meisterstuecke: { id: 'meisterstuecke', kind: 'feature', title: 'Meisterstücke', text: 'Gönner aus der Stadt geben besondere Einzelstücke in Auftrag.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };
