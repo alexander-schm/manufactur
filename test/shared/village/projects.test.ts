@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BODIES, EFFECTS, FORMS, MATERIALS } from '../../../src/shared/content';
 import {
-  MAX_PROJECT_LEVEL, PROJECTS, PROJECT_ORDER, ROMAN, ensureProjectOffers, instantiateStage, isStageComplete, maxProjectUnits, partSize, projectScale, stageReward, stageShares,
+  MAX_PROJECT_LEVEL, PROJECTS, PROJECT_ORDER, ROMAN, ensureProjectOffers, instantiateStage, isStageComplete, maxProjectUnits, partSize, partWeight, projectScale, stageReward, stageShares,
 } from '../../../src/shared/village/projects';
 import { levelBonus } from '../../../src/shared/village/level';
 import { tickVillage } from '../../../src/shared/village/tick';
@@ -140,6 +140,23 @@ describe('the 70 % rule', () => {
     a.parts[1].by = { p1: 100 }; a.parts[1].filled = 100;
     expect(maxProjectUnits(a, 0, 'p1')).toBe(0);
     expect(maxProjectUnits(a, 9, 'p1')).toBe(0);
+  });
+  it('masterwork parts weigh nothing: the other parts share the stage, and lending is never capped', () => {
+    const a = activeFor(3);
+    a.parts.push({ kind: 'masterwork', count: 1, minPrestige: 'bronze', filled: 0, by: {} });
+    expect(partWeight(a, a.parts[0])).toBeCloseTo(1 / 3);
+    expect(partWeight(a, a.parts[3])).toBe(0);
+    a.parts[0].filled = 100; a.parts[0].by = { p1: 100 };
+    a.parts[1].filled = 100; a.parts[1].by = { p1: 100 };
+    expect(stageShares(a).p1).toBeCloseTo(2 / 3);
+    expect(maxProjectUnits(a, 2, 'p1')).toBe(10);
+    a.parts[2].filled = 10; a.parts[2].by = { p1: 10 };
+    expect(stageShares(a).p1).toBeCloseTo(0.7);
+    expect(maxProjectUnits(a, 2, 'p1')).toBe(0);
+    expect(maxProjectUnits(a, 3, 'p1')).toBe(1);
+    a.parts[3].filled = 1; a.parts[3].by = { p1: 1 };
+    expect(stageShares(a).p1).toBeCloseTo(0.7);
+    expect(maxProjectUnits(a, 3, 'p2')).toBe(0);
   });
   it('a stage needs everything filled and two contributors', () => {
     const a = activeFor(2);

@@ -113,7 +113,8 @@ function Faces({ v, meId, ids }: { v: VillageView; meId: string; ids: string[] }
 function ActiveCard({ v, s, meId, a, lonely, onContribute }: { v: VillageView; s: GameState; meId: string; a: ActiveProject; lonely: boolean; onContribute: Contribute }) {
   const def = PROJECTS[a.projectId];
   const share = stageShares(a)[meId] ?? 0;
-  const open = a.parts.map((p, i) => ({ p, i })).filter(({ p }) => p.filled < partSize(p));
+  // masterwork parts are lent, not value: the 70 % cap never closes them
+  const open = a.parts.map((p, i) => ({ p, i })).filter(({ p }) => p.filled < partSize(p) && p.kind !== 'masterwork');
   const capReached = open.length > 0 && (share >= MAX_STAGE_SHARE - 1e-9 || open.every(({ i }) => maxProjectUnits(a, i, meId) === 0));
   const who = [...new Set(a.parts.flatMap((p) => Object.entries(p.by).filter(([, n]) => n > 0).map(([id]) => id)))];
   return (

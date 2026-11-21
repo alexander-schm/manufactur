@@ -106,14 +106,22 @@ export function instantiateStage(def: ProjectDef, level: 1 | 2 | 3, stage: numbe
 export const partSize = (p: ProjectPart): number => (p.kind === 'taler' ? p.amount : p.count);
 
 /**
- * Each part weighs 1/n of the stage ("70 % of a stage's value" is the builder's call:
- * equal-weight parts, so a part's fill fraction is directly comparable across materials, goods and Taler).
+ * The weight of a part in the stage's value. Every part that is given away weighs 1/n of the stage
+ * ("70 % of a stage's value" is the builder's call: equal-weight parts, so a part's fill fraction is
+ * directly comparable across materials, goods and Taler). Masterwork parts are only lent, not value:
+ * they weigh 0, so the 70 % cap can never block the one member who owns a fitting masterwork.
  */
+export function partWeight(a: ActiveProject, p: ActivePart): number {
+  if (p.kind === 'masterwork') return 0;
+  const valued = a.parts.filter((q) => q.kind !== 'masterwork').length;
+  return valued ? 1 / valued : 0;
+}
+
 export function stageShares(a: ActiveProject): Record<string, number> {
   const out: Record<string, number> = {};
   for (const p of a.parts) {
-    const size = partSize(p);
-    for (const [id, n] of Object.entries(p.by)) out[id] = (out[id] ?? 0) + n / size / a.parts.length;
+    const size = partSize(p), w = partWeight(a, p);
+    for (const [id, n] of Object.entries(p.by)) out[id] = (out[id] ?? 0) + (n / size) * w;
   }
   return out;
 }
@@ -122,9 +130,10 @@ export function stageShares(a: ActiveProject): Record<string, number> {
 export function maxProjectUnits(a: ActiveProject, part: number, actorId: string): number {
   const p = a.parts[part];
   if (!p) return 0;
-  const size = partSize(p), left = Math.max(0, size - p.filled);
+  const size = partSize(p), left = Math.max(0, size - p.filled), w = partWeight(a, p);
+  if (w === 0) return left;
   const share = stageShares(a)[actorId] ?? 0;
-  return Math.max(0, Math.min(left, Math.floor((MAX_STAGE_SHARE - share) * size * a.parts.length + 1e-9)));
+  return Math.max(0, Math.min(left, Math.floor(((MAX_STAGE_SHARE - share) * size) / w + 1e-9)));
 }
 
 export function isStageComplete(a: ActiveProject): boolean {

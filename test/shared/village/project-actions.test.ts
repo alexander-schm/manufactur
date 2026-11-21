@@ -5,7 +5,7 @@ import type { GameState, MasterworkRecord, Prestige } from '../../../src/shared/
 import { DECOR } from '../../../src/shared/village/decor';
 import { BASE_SHARE } from '../../../src/shared/village/joint';
 import { villageLevel } from '../../../src/shared/village/level';
-import { PROJECTS, ROMAN, instantiateStage, isStageComplete, maxProjectUnits, partSize, stageReward } from '../../../src/shared/village/projects';
+import { PROJECTS, ROMAN, instantiateStage, isStageComplete, maxProjectUnits, partSize, stageReward, stageShares } from '../../../src/shared/village/projects';
 import { villageStorePrice } from '../../../src/shared/village/specialties';
 import type { ActivePart, VillageAction, VillageState } from '../../../src/shared/village/types';
 import { runAction, setTier, T0, village } from './helpers';
@@ -86,7 +86,9 @@ function fillStage(w: World, actors: string[], now = NOW): World {
       for (let i = 0; i < a.parts.length; i++) {
         const cur = w.v.projects.active;
         if (!cur || cur.stage !== stage) return w;
-        const units = maxProjectUnits(cur, i, actor);
+        let units = maxProjectUnits(cur, i, actor);
+        // a masterwork part takes only the actor's own, not yet lent masterworks
+        if (cur.parts[i].kind === 'masterwork') units = Math.min(units, w.ws[actor].masterworks.filter((m) => !w.v.lentMasterworks.includes(`${actor}:${m.id}`)).length);
         if (units <= 0) continue;
         const r = runAction(w.v, w.ws, actor, give(w, actor, i, units), now);
         if (r.error) throw new Error(`${actor} part ${i}: ${r.error}`);
@@ -217,6 +219,27 @@ describe('the 70 % rule', () => {
         expect(done.v.projects.active!.stage, `${id}/${n}`).toBe(1);
       }
     }
+  });
+
+  it('the only member with a masterwork can still lend it after giving 70 % of the rest; a second member finishes', () => {
+    let w = pickProject(world(2), 'museum');
+    const a = toStage(w, 1);
+    const mi = a.parts.findIndex((p) => p.kind === 'masterwork');
+    expect(w.ws.p2.masterworks).toEqual([]);
+    w = fillStage(w, ['p1']);
+    const capped = w.v.projects.active!;
+    expect(capped.stage).toBe(1);
+    expect(stageShares(capped).p1).toBeCloseTo(0.7, 2);
+    expect(capped.parts.every((p, i) => p.kind === 'masterwork' || maxProjectUnits(capped, i, 'p1') === 0)).toBe(true);
+    w.ws.p1.masterworks.push(masterwork('late', 'bronze', w.ws.p1));
+    expect(maxProjectUnits(capped, mi, 'p1')).toBe(partSize(capped.parts[mi]));
+    const lent = runAction(w.v, w.ws, 'p1', give(w, 'p1', mi, 1));
+    expect(lent.error).toBeNull();
+    expect(lent.v.projects.active!.parts[mi].by.p1).toBe(1);
+    expect(stageShares(lent.v.projects.active!).p1).toBeCloseTo(stageShares(capped).p1);
+    const done = fillStage({ v: lent.v, ws: lent.ws }, ['p2']);
+    expect(done.v.stagesDone).toBe(1);
+    expect(done.v.projects.active!.stage).toBe(2);
   });
 });
 
