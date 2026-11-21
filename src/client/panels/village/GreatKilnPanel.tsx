@@ -2,7 +2,8 @@ import { useState } from 'preact/hooks';
 import { makeCharacter } from '../../../shared/character';
 import { EFFECTS, FORMS, MATERIALS } from '../../../shared/content';
 import { fmtTaler } from '../../../shared/format';
-import { masterworkBusy, masterworkPrice, predictMasterwork, PRESTIGE_NAME } from '../../../shared/masterwork';
+import { masterworkBusy, masterworkNeed, masterworkPrice, predictMasterwork, PRESTIGE_NAME } from '../../../shared/masterwork';
+import { buyError } from '../../../shared/shop';
 import type { GameState } from '../../../shared/types';
 import { ownDesigns } from '../../../shared/village/apply';
 import { GREAT_KILN_CAPACITY, heatFor, KILN_FIRING_MS, kilnCost, kilnPieces, KILN_WOOD_MAX, KILN_WOOD_MIN, shareLeft } from '../../../shared/village/kiln';
@@ -149,6 +150,9 @@ function MasterworkLoad({ s, disabled }: { s: GameState; disabled: boolean }) {
   if (!picked) return null;
   const price = masterworkPrice(s, picked, { holz: wood });
   const prestige = predictMasterwork(s, picked).prestige;
+  // a missing material that the shop does not sell yet blocks the masterwork, just like on the server
+  const need = masterworkNeed(s, picked, { holz: wood });
+  const unbuyable = Object.keys(need).filter((m) => need[m] > (s.materials[m] ?? 0)).map((m) => buyError(s, m)).find((e) => e !== null) ?? null;
   return (
     <section class="panel-section kiln-masterwork">
       <h3>{T.vl.mwTitle}</h3>
@@ -159,7 +163,8 @@ function MasterworkLoad({ s, disabled }: { s: GameState; disabled: boolean }) {
       <p class="kiln-mw-predict"><Medal prestige={prestige} size={18} /> {T.mw.predicted(PRESTIGE_NAME[prestige])}</p>
       <strong>{T.vl.woodPer}</strong>
       <WoodPicker value={wood} onChange={setWood} />
-      <Button variant="primary" disabled={disabled || s.taler < price} onClick={() => villageDispatch({ type: 'loadKilnMasterwork', designId: picked.id, wood })}>{T.vl.mwButton(price)}</Button>
+      {unbuyable && <p class="hand-note" data-mw-blocked>{unbuyable}</p>}
+      <Button variant="primary" disabled={disabled || s.taler < price || unbuyable !== null} onClick={() => villageDispatch({ type: 'loadKilnMasterwork', designId: picked.id, wood })}>{T.vl.mwButton(price)}</Button>
     </section>
   );
 }

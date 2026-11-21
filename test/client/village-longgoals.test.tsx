@@ -7,6 +7,7 @@ import { ProjectSite } from '../../src/client/art/village/ProjectSites';
 import { VillageMap } from '../../src/client/art/village/VillageMap';
 import { mockVillage } from '../../src/client/dev/mockVillage';
 import { LEVEL_DECORATIONS } from '../../src/shared/village/level';
+import { MATERIALS } from '../../src/shared/content';
 import { PROJECTS } from '../../src/shared/village/projects';
 import { mockEndgame } from '../../src/client/dev/mockEndgame';
 import { GreatKilnPanel } from '../../src/client/panels/village/GreatKilnPanel';
@@ -213,6 +214,18 @@ describe('village long-goal panels', () => {
     const free = render(<GreatKilnPanel v={v} s={s} meId="p1" now={T0} />);
     expect(free).toMatch(/<button[^>]*>Meisterstück mitbrennen · [\d.]+ Taler/);
     expect(free).toContain('Es ist dein eines Meisterstück');
+    // with every material for sale nothing blocks; a material the shop does not sell yet blocks the button and says why
+    const locked = Object.values(MATERIALS).filter((m) => m.unlock).map((m) => m.id);
+    for (const m of locked) s.materials[m] = 0;
+    s.unlocks = [...new Set([...s.unlocks, ...locked.map((m) => MATERIALS[m].unlock!)])];
+    s.taler = 1e9;
+    const open = render(<GreatKilnPanel v={v} s={s} meId="p1" now={T0} />);
+    expect(open).not.toContain('data-mw-blocked');
+    expect(open).not.toMatch(/<button[^>]*disabled[^>]*>Meisterstück mitbrennen/);
+    s.unlocks = s.unlocks.filter((u) => !locked.some((m) => MATERIALS[m].unlock === u));
+    const blocked = render(<GreatKilnPanel v={v} s={s} meId="p1" now={T0} />);
+    expect(blocked).toMatch(/data-mw-blocked[^>]*>[^<]+ gibt es hier noch nicht zu kaufen</);
+    expect(blocked).toMatch(/<button[^>]*disabled[^>]*>Meisterstück mitbrennen/);
   });
 
   it('the kiln panel tells empty, firing and the last firing apart', () => {
