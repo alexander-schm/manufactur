@@ -7,6 +7,7 @@ export const TIER_ORDER: Tier[] = ['werkstatt', 'manufaktur', 'hofmanufaktur'];
 export const TIERS: TierDef[] = [
   { id: 'werkstatt', name: 'Werkstatt', price: 0, ruf: 0, maxStationLevel: 5 },
   { id: 'manufaktur', name: 'Manufaktur', price: 250000, ruf: 300, maxStationLevel: 7 },
+  { id: 'hofmanufaktur', name: 'Hofmanufaktur', price: 2500000, ruf: 1000, maxStationLevel: 8 },
 ];
 
 export const tierRank = (t: Tier): number => TIER_ORDER.indexOf(t);

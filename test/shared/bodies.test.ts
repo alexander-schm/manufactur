@@ -3,11 +3,11 @@ import { advance } from '../../src/shared/advance';
 import { applyAction } from '../../src/shared/actions';
 import { bodyGateError, validateDesign } from '../../src/shared/design';
 import { pieceValue } from '../../src/shared/market';
-import { batchMaterials, designDifficultyOf, stageDurationMs } from '../../src/shared/production';
+import { batchMaterials, batchQuality, designDifficultyOf, stageDurationMs } from '../../src/shared/production';
 import { migrateState } from '../../src/shared/state';
 import type { Design, GameState } from '../../src/shared/types';
 import { importStack } from '../../src/shared/village/apply';
-import { manufakturGame, plainGame, T0, withStanding } from './helpers';
+import { hofGame, manufakturGame, plainGame, T0, withStanding } from './helpers';
 
 const H = 3_600_000;
 const stoneCup = (s: GameState): Design => ({ ...s.designs[0], id: 'sc', body: 'steinzeug', glazeId: 'klar-steinzeug' });
@@ -21,6 +21,25 @@ describe('clay bodies', () => {
     const kiln = s.stations.find((x) => x.kind === 'kiln')!;
     const fire = (designId: string) => stageDurationMs(s, { id: 'x', designId, count: 6, stage: 'glazeFire', stationId: null, startedAt: null, durationMs: 0, quality: 60 }, kiln, T0);
     expect(fire('sc') / fire(s.designs[0].id)).toBeCloseTo(1.5, 2);
+  });
+
+  it('porcelain is worth 3.2×, fires twice as long, and skilled workers count 1.5×', () => {
+    const s = hofGame();
+    const cup = s.designs[0];
+    const porc: Design = { ...cup, id: 'pc', body: 'porzellan', glazeId: 'klar-porzellan' };
+    s.designs.push(porc);
+    expect(pieceValue(s, { designId: 'pc', quality: 2, effect: null })).toBeCloseTo(6 * 3.2);
+    expect(batchMaterials(s, porc, 6)).toEqual({ kaolin: 6, glasurbasis: 2 });
+    expect(designDifficultyOf(porc) - designDifficultyOf(cup)).toBeCloseTo(0.5);
+    const kiln = s.stations.find((x) => x.kind === 'kiln')!;
+    const fire = (designId: string) => stageDurationMs(s, { id: 'x', designId, count: 6, stage: 'glazeFire', stationId: null, startedAt: null, durationMs: 0, quality: 60 }, kiln, T0);
+    expect(fire('pc') / fire(cup.id)).toBeCloseTo(2, 2);
+    const wheel = s.stations.find((x) => x.kind === 'wheel')!;
+    wheel.level = 1; // keep quality below the 100 cap so the deltas are exact
+    const skilled = [{ id: 'w', name: 'W', traits: ['perfektionist'], xp: 150, stationId: wheel.id }] as unknown as typeof s.workers;
+    const delta = (d: Design) => batchQuality(s, d, skilled) - batchQuality(s, d, []);
+    expect(delta(cup)).toBeGreaterThan(0);
+    expect(delta(porc)).toBeCloseTo(1.5 * delta(cup));
   });
 
   it('[Review Focus 1] earthenware numbers are unchanged', () => {

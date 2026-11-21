@@ -86,9 +86,11 @@ export function designDifficultyOf(design: Design): number {
 
 export function batchQuality(state: GameState, design: Design, workers: Worker[]): number {
   let q = 62 - (designDifficultyOf(design) - 1) * 22;
+  const skill = getBody(bodyOf(design)).skillMul ?? 1;
   for (const w of workers) {
-    for (const t of w.traits) q += getTrait(t).qualityAdd;
-    q += Math.min(10, w.xp / 30);
+    let add = Math.min(10, w.xp / 30);
+    for (const t of w.traits) add += getTrait(t).qualityAdd;
+    q += add * skill;
   }
   const wheel = state.stations.find((s) => s.kind === 'wheel');
   if (wheel) q += (wheel.level - 1) * 4;

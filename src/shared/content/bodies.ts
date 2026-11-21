@@ -12,6 +12,8 @@ export interface BodyDef {
   mustFireHot: boolean;
   rufBonus: number;
   clearColor: string;
+  /** multiplies every worker's contribution to batch quality (default 1) */
+  skillMul?: number;
   starterGlaze: GlazeRecipe | null;
   description: string;
 }
@@ -32,6 +34,15 @@ export const BODIES: Record<string, BodyDef> = {
       firing: { temp: 'hoch', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#d3c7b4', effect: null, body: 'steinzeug',
     },
     description: 'Grauer Ton, heiß gebrannt, steinhart – und wertvoller.',
+  },
+  porzellan: {
+    id: 'porzellan', name: 'Porzellan', material: 'kaolin', tier: 'hofmanufaktur', valueMul: 3.2, difficultyAdd: 0.5, glazeFireMul: 2,
+    mustFireHot: true, rufBonus: 4, clearColor: '#f3f1ec', skillMul: 1.5,
+    starterGlaze: {
+      id: 'klar-porzellan', name: 'Klare Porzellanglasur', base: 'transparent', colorant: null, colorantPct: 0,
+      firing: { temp: 'hoch', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#f3f1ec', effect: null, body: 'porzellan',
+    },
+    description: 'Weiß, fein und kostbar – aber launisch im Feuer und nur für geübte Hände.',
   },
 };
 

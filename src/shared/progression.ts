@@ -55,6 +55,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'ruf72', text: 'Man erkennt deine Stücke schon von Weitem (72 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 72 },
   { id: 'ruf250', text: 'Weit über das Tal hinaus bekannt (250 Ruf)!', unlocks: ['rahmen-punkte'], done: (s) => s.ruf >= 250 },
   { id: 'tierManufaktur', tier: 'manufaktur', text: 'Aus der Werkstatt wird eine Manufaktur!', unlocks: ['steinzeug', 'teekanne', 'meisterstuecke'], done: (s) => tierAtLeast(s, 'manufaktur') },
+  { id: 'tierHofmanufaktur', tier: 'hofmanufaktur', text: 'Ernannt zur Hofmanufaktur!', unlocks: ['porzellan', 'figur', 'fliese'], done: (s) => tierAtLeast(s, 'hofmanufaktur') },
   { id: 'firstStoneware', text: 'Dein erstes Stück aus Steinzeug!', unlocks: [], decor: ['steinzeugtopf'], done: hasStoneware },
   { id: 'ruf400', text: 'Händler fragen nach deinem Namen (400 Ruf)!', unlocks: ['muster-ranken'], done: (s) => s.ruf >= 400 },
   { id: 'firstBodyEffect', text: 'Ein Effekt, den nur ein besonderer Ton kann!', unlocks: ['mangan'], done: hasBodyEffect },

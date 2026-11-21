@@ -210,11 +210,11 @@ export function GlazeTable({ x, y, state, running, waiting, now }: StationProps)
       })}
       {items.map(({ b, on }, i) => {
         const d = designOf(state, b.designId);
-        const px = items.length > 1 ? left + 124 + i * 52 : left + w - 28;
+        const px = items.length > 2 ? left + 128 + i * 34 : items.length > 1 ? left + 124 + i * 52 : left + w - 28;
         return d ? (
           <g>
             <g style={{ animationDelay: `${i * 0.4}s` }} class={on ? 'dip' : undefined}>
-              <ScenePot x={px} y={top} size={items.length > 1 ? 46 : 52} design={d} color={on ? glazeColorOf(state, d) : BISQUE} />
+              <ScenePot x={px} y={top} size={items.length > 2 ? 40 : items.length > 1 ? 46 : 52} design={d} color={on ? glazeColorOf(state, d) : BISQUE} />
             </g>
             {b.masterwork && <MasterworkTag x={px} y={top - 62} />}
           </g>
@@ -273,7 +273,8 @@ export function PrepBench({ x, y, state, running, now }: StationProps) {
   const w = 190, left = x - w / 2, top = y - 88;
   const ton = Math.floor(state.materials.ton ?? 0);
   const glaze = Math.floor(state.materials.glasurbasis ?? 0);
-  const lumps: (Batch | undefined)[] = running.length > 0 ? running.slice(0, 2) : [undefined];
+  const lumps: (Batch | undefined)[] = running.length > 0 ? running : [undefined];
+  const lumpStep = lumps.length > 2 ? 55 : 80; // three bays squeeze onto the same bench
   const sack = (sx: number, sy: number, s: number, label: string, n: number) => (
     <g>
       <path d={`M${sx - 26 * s} ${sy} Q${sx - 33 * s} ${sy - 36 * s} ${sx - 21 * s} ${sy - 60 * s} L${sx - 12 * s} ${sy - 67 * s} Q${sx} ${sy - 60 * s} ${sx + 12 * s} ${sy - 69 * s} L${sx + 21 * s} ${sy - 60 * s} Q${sx + 33 * s} ${sy - 36 * s} ${sx + 26 * s} ${sy} Z`} fill="var(--sack)" style={S} />
@@ -287,7 +288,7 @@ export function PrepBench({ x, y, state, running, now }: StationProps) {
       <path d={`M${left} ${top} L${left + w} ${top} L${left + w} ${top + 12} L${left} ${top + 12} Z`} fill="var(--wood)" style={S} />
       <path d={`M${left + 10} ${top + 12} L${left + 8} ${y} M${left + w - 10} ${top + 12} L${left + w - 8} ${y} M${left + 10} ${top + 56} L${left + w - 10} ${top + 56}`} fill="none" style={S} />
       {lumps.map((b, i) => {
-        const lx = left + 58 + i * 80;
+        const lx = left + (lumps.length > 2 ? 38 : 58) + i * lumpStep;
         const d = b && designOf(state, b.designId);
         return (
           <g>

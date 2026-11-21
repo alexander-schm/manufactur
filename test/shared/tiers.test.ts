@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
-import { STATIONS, getTier } from '../../src/shared/content';
+import { STATIONS, TIERS, getTier } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
-import { manufakturGame, plainGame, T0 } from './helpers';
+import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
 
 const NOW = T0 + 1000;
 const PRICE = getTier('manufaktur').price;
@@ -37,7 +37,7 @@ describe('tiers', () => {
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/300 Ruf/);
     s.ruf = 300; s.taler = PRICE - 1;
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/Taler/);
-    expect(rejected(manufakturGame(), { type: 'upgradeTier' })).toMatch(/Höher hinaus/); // Part 1 only
+    expect(rejected(hofGame(), { type: 'upgradeTier' })).toMatch(/Höher hinaus/);
   });
   it('station levels 6–7 need the Manufaktur', () => {
     const s = plainGame(); s.unlocks.push('upgrades'); s.ruf = 1000; s.taler = 1e6;
@@ -49,7 +49,47 @@ describe('tiers', () => {
     expect(t.taler).toBe(1e6 - STATIONS.wheel.upgradeCost[4]);
     t = ok(t, { type: 'upgradeStation', stationId: wheel.id }).state;
     expect(t.stations.find((x) => x.id === wheel.id)!.level).toBe(7);
-    expect(rejected(t, { type: 'upgradeStation', stationId: wheel.id })).toMatch(/höchster Stufe/);
+    expect(rejected(t, { type: 'upgradeStation', stationId: wheel.id })).toMatch(/Hofmanufaktur/);
+  });
+  it('Hofmanufaktur: needs 1000 Ruf and its price, gives the porcelain glaze, kaolin becomes buyable', () => {
+    const hof = getTier('hofmanufaktur');
+    expect(hof).toMatchObject({ ruf: 1000, maxStationLevel: 8 });
+    expect(hof.price).toBe(2_500_000);
+    expect(TIERS.at(-1)!.id).toBe('hofmanufaktur');
+    const s = manufakturGame(); s.ruf = 999; s.taler = hof.price;
+    expect(rejected(s, { type: 'upgradeTier' })).toMatch(/1000 Ruf/);
+    s.ruf = 1000; s.taler = hof.price - 1;
+    expect(rejected(s, { type: 'upgradeTier' })).toMatch(/Taler/);
+    s.taler = hof.price;
+    expect(rejected(s, { type: 'buyMaterial', material: 'kaolin', amount: 10 })).toMatch(/noch nicht/);
+    const r = ok(s, { type: 'upgradeTier' });
+    expect(r.state.tier).toBe('hofmanufaktur');
+    expect(r.state.taler).toBe(0);
+    expect(r.state.milestonesDone).toContain('tierHofmanufaktur');
+    expect(r.state.unlocks).toEqual(expect.arrayContaining(['porzellan', 'figur', 'fliese']));
+    expect(r.state.glazes.some((g) => g.id === 'klar-porzellan' && g.body === 'porzellan')).toBe(true);
+    r.state.taler = 1000;
+    const t = ok(r.state, { type: 'buyMaterial', material: 'kaolin', amount: 10 });
+    expect(t.state.materials.kaolin).toBe(10);
+  });
+  it('level 8 needs the Hofmanufaktur; all stations to level 8 cost about 3 000 000 Taler', () => {
+    const s = manufakturGame(); s.ruf = 2000; s.taler = 1e9;
+    const wheel = s.stations.find((x) => x.kind === 'wheel')!; wheel.level = 7;
+    expect(rejected(s, { type: 'upgradeStation', stationId: wheel.id })).toMatch(/Hofmanufaktur/);
+    const h = hofGame(); h.ruf = 2000; h.taler = 1e9;
+    h.stations.find((x) => x.kind === 'wheel')!.level = 7;
+    const t = ok(h, { type: 'upgradeStation', stationId: wheel.id }).state;
+    expect(t.stations.find((x) => x.id === wheel.id)!.level).toBe(8);
+    expect(t.taler).toBe(1e9 - STATIONS.wheel.upgradeCost[6]);
+    const total = Object.values(STATIONS).reduce((a, d) => a + d.upgradeCost[6], 0);
+    expect(total).toBeGreaterThan(2_900_000);
+    expect(total).toBeLessThan(3_100_000);
+    const kilnCost = STATIONS.kiln.upgradeCost[6];
+    expect(Object.values(STATIONS).every((d) => d.upgradeCost[6] <= kilnCost)).toBe(true);
+    expect(Object.values(STATIONS).every((d) => d.rufRequired[6] === 1000 && d.piecesPerMinute.length === 8 && d.upgradeCost.length === 7)).toBe(true);
+    expect(STATIONS.kiln.capacity![7]).toBe(150);
+    expect(STATIONS.shelf.capacity![7]).toBe(1000);
+    expect(STATIONS.marketStall.capacity![7]).toBe(12);
   });
   it('manufakturGame starts quiet', () => {
     const s = manufakturGame();

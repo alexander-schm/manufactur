@@ -37,3 +37,18 @@ export function withStanding(seed = 1): GameState {
   s.stallDesignIds = [];
   return s;
 }
+
+/** A Manufaktur game promoted to the Hofmanufaktur, all stations at level 7, with every milestone that currently holds acknowledged. */
+export function hofGame(seed = 1): GameState {
+  const s = manufakturGame(seed);
+  s.tier = 'hofmanufaktur';
+  for (const u of ['porzellan', 'figur', 'fliese']) if (!s.unlocks.includes(u)) s.unlocks.push(u);
+  for (const st of s.stations) st.level = 7;
+  s.ruf = 1000;
+  s.materials.kaolin = 100;
+  s.glazes.push(structuredClone(BODIES.porzellan.starterGlaze!));
+  const held = MILESTONES.filter((m) => m.done(s)).map((m) => m.id);
+  s.milestonesDone = [...held];
+  s.milestonesAcked = [...held];
+  return s;
+}

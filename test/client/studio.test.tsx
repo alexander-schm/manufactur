@@ -7,7 +7,7 @@ import { RecipeBook } from '../../src/client/panels/RecipeBook';
 import { experimentActionFor, patternColorsFor, saveActionFor, switchBody, topFans } from '../../src/client/panels/studioLogic';
 import { T } from '../../src/client/strings';
 import { bodyGateError } from '../../src/shared/design';
-import { manufakturGame, plainGame } from '../shared/helpers';
+import { hofGame, manufakturGame, plainGame } from '../shared/helpers';
 import { advance } from '../../src/shared/advance';
 import { newGame } from '../../src/shared/state';
 
@@ -59,7 +59,7 @@ describe('design studio', () => {
     const html = render(<BodyPicker s={plainGame()} value="irdenware" onPick={() => {}} />);
     expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*ab Manufaktur/);
     expect(html).toContain(bodyGateError(plainGame(), 'steinzeug')!);
-    expect(render(<BodyPicker s={manufakturGame()} value="steinzeug" onPick={() => {}} />)).not.toMatch(/disabled/);
+    expect(render(<BodyPicker s={hofGame()} value="porzellan" onPick={() => {}} />)).not.toMatch(/disabled/);
   });
   it('experiment panel counts the body material in the cost text', () => {
     const html = render(<ExperimentPanel s={manufakturGame()} />);

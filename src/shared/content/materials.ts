@@ -21,5 +21,5 @@ export const MATERIALS: Record<string, MaterialDef> = {
   salz: { id: 'salz', name: 'Salz', kind: 'colorant', price: 4, colorFamily: 'braun', unlock: 'steinzeug', description: 'Grobes Salz. Ins heiße Feuer geworfen, bildet es eine ganz eigene Glasur.' },
   mangan: { id: 'mangan', name: 'Mangan', kind: 'colorant', price: 10, colorFamily: 'lila', unlock: 'mangan', description: 'Violettbraunes Pulver – je mehr, desto dunkler.' },
   holz: { id: 'holz', name: 'Brennholz', kind: 'fuel', price: 1, description: 'Buchenscheite für den Ofen.' },
-  kaolin: { id: 'kaolin', name: 'Kaolin', kind: 'clay', price: 6, locked: true, description: 'Weiße Porzellanerde. Noch weiß niemand, wo es welche gibt …' },
+  kaolin: { id: 'kaolin', name: 'Kaolin', kind: 'clay', price: 6, unlock: 'porzellan', description: 'Weiße Porzellanerde aus dem Gebirge – endlich lieferbar!' },
 };

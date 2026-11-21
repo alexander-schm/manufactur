@@ -25,8 +25,9 @@ describe('content', () => {
     expect(PERSONALITIES.length).toBeGreaterThanOrEqual(20);
     expect(CUSTOMERS.length).toBeGreaterThanOrEqual(12);
   });
-  it('kaolin is declared but locked', () => {
-    expect(MATERIALS.kaolin.locked).toBe(true);
+  it('kaolin unlocks with porcelain', () => {
+    expect(MATERIALS.kaolin.unlock).toBe('porzellan');
+    expect(MATERIALS.kaolin.locked).toBeUndefined();
   });
   it('every material unlock exists, and every body material is a material', () => {
     for (const m of Object.values(MATERIALS)) if (m.unlock) expect(UNLOCKS[m.unlock], m.id).toBeDefined();
@@ -42,7 +43,7 @@ describe('content', () => {
   it('station level arrays line up', () => {
     for (const d of Object.values(STATIONS)) {
       const L = d.piecesPerMinute.length;
-      expect(L, d.kind).toBe(7);
+      expect(L, d.kind).toBe(8);
       expect(d.upgradeCost.length, d.kind).toBe(L - 1);
       expect(d.rufRequired.length, d.kind).toBe(L - 1);
       if (d.capacity) expect(d.capacity.length, d.kind).toBe(L);
