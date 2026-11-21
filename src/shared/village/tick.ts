@@ -1,4 +1,5 @@
 import { nextKilnWake, tickGreatKiln } from './kiln';
+import { ensureProjectOffers } from './projects';
 import { addNews, maxMemberTier } from './state';
 import type { Delivery, VillageState } from './types';
 
@@ -12,6 +13,7 @@ export function tickVillage(v: VillageState, now: number): { changed: boolean; d
     for (const m of v.members) deliveries.push({ to: m.playerId, delta: { village: { buildings: [...v.buildings] } } });
     changed = true;
   }
+  if (ensureProjectOffers(v)) changed = true;
   const kiln = v.greatKiln;
   const doneAt = kiln.doneAt;
   deliveries.push(...tickGreatKiln(v, now));
