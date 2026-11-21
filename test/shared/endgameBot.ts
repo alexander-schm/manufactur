@@ -29,10 +29,10 @@ export function endgameBot(state: GameState, days: number): { state: GameState; 
       if (goodsTotal(s) >= 0.9 * shelfCapacity(s)) for (const g of [...s.goods]) act({ type: 'sellNow', designId: g.designId, quality: g.quality, effect: g.effect, count: g.count });
       const best = bestDesign(s);
       if (best && s.standing?.designId !== best) act({ type: 'setStanding', designId: best, batchSize: kilnCapacity(s), autoBuy: true });
-      // Beyond the plain brief: orders the standing design can never fill (other form or body) would fill all MAX_ORDERS
+      // Beyond the plain brief: orders the standing design can never fill (other form or body; an order without a body wants earthenware) would fill all MAX_ORDERS
       // slots for good and freeze Ruf, so the bot turns them down like a real player would.
       const made = s.designs.find((d) => d.id === s.standing?.designId);
-      for (const o of [...s.orders]) if (made && (o.form !== made.form || (o.body && o.body !== made.body))) act({ type: 'declineOrder', orderId: o.id });
+      for (const o of [...s.orders]) if (made && (o.form !== made.form || (o.body ?? 'irdenware') !== made.body)) act({ type: 'declineOrder', orderId: o.id });
       const next = nextTier(s);
       if (next && s.ruf >= next.ruf && s.taler >= next.price && act({ type: 'upgradeTier' })) tierDay[next.id] = day + 1;
       const cheapest = cheapestUpgrade(s);
@@ -48,7 +48,7 @@ function deliverAll(s: GameState, act: (a: Action) => boolean): void {
     const fits = s.goods
       .filter((g) => {
         const d = s.designs.find((x) => x.id === g.designId);
-        return d && d.form === o.form && (!o.body || d.body === o.body) && g.quality >= o.minQuality && g.count >= o.count;
+        return d && d.form === o.form && (o.body ?? 'irdenware') === d.body && g.quality >= o.minQuality && g.count >= o.count;
       })
       .sort((a, b) => b.quality - a.quality || (b.effect ? 1 : 0) - (a.effect ? 1 : 0));
     const g = fits[0];

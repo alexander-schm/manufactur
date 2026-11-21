@@ -3,6 +3,7 @@ import { applyAction, type Action } from '../../src/shared/actions';
 import { STATIONS, TIERS, getTier } from '../../src/shared/content';
 import type { GameState } from '../../src/shared/types';
 import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
+import { fmtTaler } from '../../src/shared/format';
 
 const NOW = T0 + 1000;
 const PRICE = getTier('manufaktur').price;
@@ -36,7 +37,7 @@ describe('tiers', () => {
     const s = plainGame(); s.ruf = 299; s.taler = 1e6;
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/300 Ruf/);
     s.ruf = 300; s.taler = PRICE - 1;
-    expect(rejected(s, { type: 'upgradeTier' })).toMatch(/Taler/);
+    expect(rejected(s, { type: 'upgradeTier' })).toBe('Für die Manufaktur brauchst du 250.000 Taler');
     expect(rejected(hofGame(), { type: 'upgradeTier' })).toMatch(/Höher hinaus/);
   });
   it('station levels 6–7 need the Manufaktur', () => {
@@ -50,6 +51,9 @@ describe('tiers', () => {
     t = ok(t, { type: 'upgradeStation', stationId: wheel.id }).state;
     expect(t.stations.find((x) => x.id === wheel.id)!.level).toBe(7);
     expect(rejected(t, { type: 'upgradeStation', stationId: wheel.id })).toMatch(/Hofmanufaktur/);
+    t.tier = 'hofmanufaktur'; t.taler = STATIONS.wheel.upgradeCost[6] - 1;
+    expect(rejected(t, { type: 'upgradeStation', stationId: wheel.id })).toBe(`Für den Ausbau brauchst du ${fmtTaler(STATIONS.wheel.upgradeCost[6])} Taler`);
+    expect(fmtTaler(STATIONS.wheel.upgradeCost[6])).toMatch(/^\d{1,3}(\.\d{3})+$/);
   });
   it('Hofmanufaktur: needs 1000 Ruf and its price, gives the porcelain glaze, kaolin becomes buyable', () => {
     const hof = getTier('hofmanufaktur');
@@ -59,7 +63,7 @@ describe('tiers', () => {
     const s = manufakturGame(); s.ruf = 999; s.taler = hof.price;
     expect(rejected(s, { type: 'upgradeTier' })).toMatch(/1000 Ruf/);
     s.ruf = 1000; s.taler = hof.price - 1;
-    expect(rejected(s, { type: 'upgradeTier' })).toMatch(/Taler/);
+    expect(rejected(s, { type: 'upgradeTier' })).toBe('Für die Hofmanufaktur brauchst du 2.500.000 Taler');
     s.taler = hof.price;
     expect(rejected(s, { type: 'buyMaterial', material: 'kaolin', amount: 10 })).toMatch(/noch nicht/);
     const r = ok(s, { type: 'upgradeTier' });

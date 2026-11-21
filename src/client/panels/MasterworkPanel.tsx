@@ -7,7 +7,7 @@ import { ownDesigns } from '../../shared/village/apply';
 import { Character } from '../art/character/Character';
 import { Pot } from '../art/Pot';
 import { Medal } from '../art/workshop/Plinth';
-import { dispatch, now } from '../store';
+import { dispatch, now, serverTime } from '../store';
 import { T } from '../strings';
 import { Button } from '../ui/Button';
 import { Paper } from '../ui/Paper';
@@ -76,7 +76,7 @@ function masterworkProgress(b: Batch, t: number): { done: number; leftMs: number
 
 function InProgress({ s, b }: { s: GameState; b: Batch }) {
   const d = s.designs.find((x) => x.id === b.designId);
-  const { done, leftMs } = masterworkProgress(b, now.value);
+  const { done, leftMs } = masterworkProgress(b, now.value + (serverTime() - Date.now()));
   return (
     <section class="panel-section mw-progress">
       <h3>{T.mw.inProgress}</h3>

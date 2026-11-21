@@ -16,6 +16,7 @@ import { TierSection } from './TierSection';
 import type { PanelId } from './PanelHost';
 import { T } from '../strings';
 import { masterworkInProgress } from '../../shared/masterwork';
+import { fmtTaler } from '../../shared/format';
 
 function upgradeEffect(st: Station): string {
   const def = getStationDef(st.kind);
@@ -139,7 +140,7 @@ function UpgradeBox({ s, st }: { s: GameState; st: Station }) {
       <h3>Ausbau auf Stufe {st.level + 1}</h3>
       <p>{upgradeEffect(st)}</p>
       <Button variant="primary" disabled={s.taler < cost || s.ruf < ruf} onClick={() => dispatch({ type: 'upgradeStation', stationId: st.id })}>
-        Ausbauen · {cost} Taler{ruf > 0 ? ` · ab ${ruf} Ruf` : ''}
+        Ausbauen · {fmtTaler(cost)} Taler{ruf > 0 ? ` · ab ${ruf} Ruf` : ''}
       </Button>
     </section>
   );
@@ -171,7 +172,7 @@ export function WorkshopPanel({ s, onOpen }: { s: GameState; onOpen: (id: PanelI
             {(Object.keys(BUILD_COST) as StationKind[]).map((k) => (
               <div class="card-row">
                 <div class="grow">{STATIONS[k].name}</div>
-                <Button small disabled={s.taler < BUILD_COST[k]!} onClick={() => dispatch({ type: 'buildStation', kind: k })}>Bauen · {BUILD_COST[k]} T</Button>
+                <Button small disabled={s.taler < BUILD_COST[k]!} onClick={() => dispatch({ type: 'buildStation', kind: k })}>Bauen · {fmtTaler(BUILD_COST[k]!)} T</Button>
               </div>
             ))}
           </div>

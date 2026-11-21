@@ -6,6 +6,7 @@ import { batchMaterials, batchQuality, missingMaterialCost, productionWorkers, q
 import { nextRandom } from './rng';
 import { buyError } from './shop';
 import type { Batch, BodyId, Commission, Design, GameState, MasterworkCriterion, PatternKind, Prestige } from './types';
+import { fmtTaler } from './format';
 
 export const MASTERWORK_QUALITY_BONUS = 10;
 export const MASTERWORK_MATERIAL_PIECES = 12;
@@ -118,7 +119,7 @@ export function startMasterwork(s: GameState, design: Design): string | null {
     }
   }
   const total = c.costTaler + missingMaterialCost(s, need);
-  if (total > s.taler) return `Dafür brauchst du ${Math.ceil(total)} Taler`;
+  if (total > s.taler) return `Dafür brauchst du ${fmtTaler(total)} Taler`;
   s.taler = Math.round((s.taler - total) * 100) / 100;
   useMaterials(s, need);
   s.batches.push({

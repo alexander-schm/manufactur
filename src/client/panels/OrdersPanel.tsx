@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { CoinIcon, StarIcon } from '../ui/Counter';
 import { DesignPot, Stars } from './common';
 import { bestDesignForOrder, deliverActionFor, describeTaste } from './logic';
+import { fmtTaler } from '../../shared/format';
 
 export function OrderCard({ state: s, order: o, onDeliver, onProduce, onDecline }: { state: GameState; order: Order; onDeliver: (a: Action) => void; onProduce: (designId: string) => void; onDecline?: (id: string) => void }) {
   const deliver = deliverActionFor(s, o);
@@ -21,7 +22,7 @@ export function OrderCard({ state: s, order: o, onDeliver, onProduce, onDecline 
           <strong>{o.customerName}</strong> <span class="muted">· {o.customerJob}</span>
           <div class="bubble">{describeTaste(o.taste, o.form, o.count, o.body)}</div>
           <div class="reward">
-            <span class="counter"><CoinIcon />≈ {o.rewardTaler}+</span>
+            <span class="counter"><CoinIcon />≈ {fmtTaler(o.rewardTaler)}+</span>
             <span class="counter"><StarIcon />{o.rewardRuf}+</span>
             {o.body && <span class="chip small" data-body-badge>{getBody(o.body).name}</span>}
             {o.minQuality > 1 && <span>mind. <Stars n={o.minQuality} /></span>}

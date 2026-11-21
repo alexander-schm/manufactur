@@ -3,6 +3,7 @@ import { MILESTONES } from '../../shared/progression';
 import type { GameState } from '../../shared/types';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
+import { fmtTaler } from '../../shared/format';
 
 export function TierSection({ s }: { s: GameState }) {
   const cur = getTier(s.tier);
@@ -13,9 +14,9 @@ export function TierSection({ s }: { s: GameState }) {
   return (
     <section class="panel-section">
       <h3>Deine {cur.name}</h3>
-      <p>Nächster Schritt: die <strong>{next.name}</strong> für {next.price.toLocaleString('de-DE')} Taler und {next.ruf} Ruf.</p>
+      <p>Nächster Schritt: die <strong>{next.name}</strong> für {fmtTaler(next.price)} Taler und {next.ruf} Ruf.</p>
       {brings.length > 0 && <p class="muted" style={{ fontSize: '.9em' }}>Bringt: {brings.join(', ')}</p>}
-      <Button variant="primary" disabled={!ok} onClick={() => dispatch({ type: 'upgradeTier' })}>{`Zur ${next.name} aufsteigen · ${next.price} Taler`}</Button>
+      <Button variant="primary" disabled={!ok} onClick={() => dispatch({ type: 'upgradeTier' })}>{`Zur ${next.name} aufsteigen · ${fmtTaler(next.price)} Taler`}</Button>
       {s.ruf < next.ruf && <p class="muted" style={{ fontSize: '.85em' }}>ab {next.ruf} Ruf</p>}
     </section>
   );

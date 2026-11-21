@@ -1,10 +1,12 @@
 import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
-import { autoAssignPlan, bestStackForOrder, deliverActionFor, describeTaste } from '../../src/client/panels/logic';
+import { autoAssignPlan, bestDesignForOrder, bestStackForOrder, deliverActionFor, describeTaste } from '../../src/client/panels/logic';
 import { OrderCard } from '../../src/client/panels/OrdersPanel';
 import { advance } from '../../src/shared/advance';
 import { manufakturGame } from '../shared/helpers';
 import { newGame, rollWorker } from '../../src/shared/state';
+import { T } from '../../src/client/strings';
+import { getTier } from '../../src/shared/content';
 
 const T0 = 1_800_000_000_000;
 function game() {
@@ -47,6 +49,23 @@ describe('orders panel', () => {
     expect(html).toContain('Steinzeug');
     s.designs[0].body = 'steinzeug';
     expect(bestStackForOrder(s, o)).not.toBeNull();
+  });
+  it('[Final fix #1] an order without a body is only offered earthenware', () => {
+    const s = manufakturGame();
+    const { body: _b, ...o } = { ...game().orders[0], form: 'becher', count: 2, minQuality: 1 as const };
+    s.designs[0].form = 'becher';
+    s.designs[0].body = 'steinzeug';
+    s.goods = [{ designId: s.designs[0].id, quality: 3, effect: null, count: 5 }];
+    expect(bestStackForOrder(s, o)).toBeNull();
+    expect(bestDesignForOrder(s, o)).toBeNull();
+    s.designs[0].body = 'irdenware';
+    expect(bestStackForOrder(s, o)).toEqual(s.goods[0]);
+    expect(bestDesignForOrder(s, o)?.id).toBe(s.designs[0].id);
+  });
+  it('[Final fix #3] the header names the current tier', () => {
+    expect(T.workshopOf(getTier('werkstatt').name, 'Alex')).toBe('Werkstatt von Alex');
+    expect(T.workshopOf(getTier('manufaktur').name, 'Alex')).toBe('Manufaktur von Alex');
+    expect(T.workshopOf(getTier('hofmanufaktur').name, 'Alex')).toBe('Hofmanufaktur von Alex');
   });
   it('describes tastes in German', () => {
     expect(describeTaste({ form: 'vase', tall: true, colorFamily: 'blau', pattern: 'dots' }, 'vase', 4)).toBe('Ich hätte gern 4 Vasen, schön hoch, in Blau, mit Punkten!');

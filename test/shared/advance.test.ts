@@ -147,6 +147,18 @@ describe('market stall reserve', () => {
     expect(after.goods.find((g) => g.designId === 'sc')?.count).toBe(5);
     expect(after.goods.find((g) => g.designId === s.designs[0].id)?.count ?? 0).toBeLessThan(5);
   });
+  it('[Final fix #1] an order without a body takes earthenware only, never stoneware', () => {
+    const s = manufakturGame();
+    s.designs.push({ ...s.designs[0], id: 'sc', body: 'steinzeug', glazeId: 'klar-steinzeug' });
+    const { body: _b, ...order } = { ...s.orders[0], form: 'becher', count: 2, minQuality: 1 as const };
+    s.orders = [order];
+    s.goods = [{ designId: 'sc', quality: 3, effect: null, count: 5 }, { designId: s.designs[0].id, quality: 1, effect: null, count: 5 }];
+    const stone = applyAction(s, { type: 'deliverOrder', orderId: order.id, designId: 'sc', quality: 3, effect: null }, T0);
+    expect(stone).toEqual({ ok: false, error: 'Das muss Irdenware sein' });
+    const earth = applyAction(s, { type: 'deliverOrder', orderId: order.id, designId: s.designs[0].id, quality: 1, effect: null }, T0);
+    expect(earth.ok).toBe(true);
+    expect(earth.ok && earth.state.orders.some((o) => o.id === order.id)).toBe(false);
+  });
   it('does not spin when everything is reserved and the shelf is full', () => {
     const s = withStanding();
     s.stallDesignIds = [s.designs[0].id];

@@ -177,7 +177,7 @@ export interface GameState {
   /** collection-book keys `form|body|effect` */
   collection: string[];
   collectionRewards: string[];
-  /** designId -> pieces to hold back from the stall */
+  /** material id -> target amount the shop tops up to */
   keepStock: Record<string, number>;
   commission: Commission | null;
   masterworks: MasterworkRecord[];

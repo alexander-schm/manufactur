@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
 import { applyAction } from '../../src/shared/actions';
 import { getForm } from '../../src/shared/content';
-import { generateOrder } from '../../src/shared/orders';
+import { ORDER_RUF_COUNT_CAP, generateOrder } from '../../src/shared/orders';
 import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
 
 describe('orders', () => {
@@ -53,12 +53,26 @@ describe('orders', () => {
     expect(good.ok).toBe(true);
     if (good.ok) expect(good.state.orders.some((o) => o.id === 'ox')).toBe(false);
   });
-  it('an order without a body accepts stoneware too', () => {
+  it('an order without a body means earthenware: stoneware is turned away', () => {
     const s = manufakturGame();
     s.designs.push({ ...s.designs[0], id: 'sc', body: 'steinzeug', glazeId: 'klar-steinzeug' });
-    s.orders = [{ ...s.orders[0], id: 'ox', form: 'becher', count: 2, minQuality: 1 }];
+    const { body: _b, ...order } = { ...s.orders[0], id: 'ox', form: 'becher', count: 2, minQuality: 1 as const };
+    s.orders = [order];
     s.goods = [{ designId: 'sc', quality: 2, effect: null, count: 5 }];
-    expect(applyAction(s, { type: 'deliverOrder', orderId: 'ox', designId: 'sc', quality: 2, effect: null }, T0).ok).toBe(true);
+    expect(applyAction(s, { type: 'deliverOrder', orderId: 'ox', designId: 'sc', quality: 2, effect: null }, T0)).toEqual({ ok: false, error: 'Das muss Irdenware sein' });
+  });
+  it('[Final fix #11] Ruf adds at most 20 pieces to an order', () => {
+    let s = hofGame(); s.ruf = 2500;
+    let tiles = 0;
+    for (let i = 0; i < 300; i++) {
+      const [o, r] = generateOrder(s);
+      const mul = getForm(o.form).orderCountMul ?? 1;
+      expect(o.count).toBeLessThanOrEqual(Math.round((8 + ORDER_RUF_COUNT_CAP) * mul));
+      if (o.form === 'fliese') { tiles++; expect(o.count).toBeGreaterThanOrEqual(Math.round((3 + ORDER_RUF_COUNT_CAP) * mul)); }
+      s = { ...s, rng: r };
+    }
+    expect(tiles).toBeGreaterThan(0);
+    expect(ORDER_RUF_COUNT_CAP).toBe(20);
   });
   it('tile orders are four times the cup range', () => {
     let s = hofGame(); s.ruf = 0;

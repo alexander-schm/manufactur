@@ -166,7 +166,7 @@ describe('masterworks', () => {
     const d = stonewareBecher(s);
     s.materials.steinzeugton = 2; // 10 missing at 3 Taler
     s.taler = 3029;
-    expect(rejected(s, { type: 'startMasterwork', designId: d.id })).toBe('Dafür brauchst du 3030 Taler');
+    expect(rejected(s, { type: 'startMasterwork', designId: d.id })).toBe('Dafür brauchst du 3.030 Taler');
     s.taler = 3030;
     const a = ok(s, { type: 'startMasterwork', designId: d.id });
     expect(a.taler).toBe(0);

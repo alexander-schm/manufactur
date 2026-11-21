@@ -14,6 +14,7 @@ import { DECOR, MAX_DECOR_PLACED } from './village/decor';
 import { MAX_BUY, buyError } from './shop';
 import { shopPrice } from './village/specialties';
 import type { BodyId, Design, GameState, GlazeRecipe, MakerMark, StationKind } from './types';
+import { fmtTaler } from './format';
 
 export type Action =
   | { type: 'buyMaterial'; material: string; amount: number }
@@ -157,7 +158,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       const ruf = def.rufRequired[st.level - 1];
       if (s.ruf < ruf) fail(`Dafür brauchst du ${ruf} Ruf`);
       const cost = def.upgradeCost[st.level - 1];
-      if (cost > s.taler) fail('Nicht genug Taler');
+      if (cost > s.taler) fail(`Für den Ausbau brauchst du ${fmtTaler(cost)} Taler`);
       s.taler -= cost;
       st.level += 1;
       events.push({ kind: 'levelUp', id: st.id, text: `${def.name} ist jetzt Stufe ${st.level}!` });
@@ -166,7 +167,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'upgradeTier': {
       const next = nextTier(s) ?? fail('Höher hinaus geht es nicht');
       if (s.ruf < next!.ruf) fail(`Für die ${next!.name} brauchst du ${next!.ruf} Ruf`);
-      if (s.taler < next!.price) fail(`Für die ${next!.name} brauchst du ${next!.price} Taler`);
+      if (s.taler < next!.price) fail(`Für die ${next!.name} brauchst du ${fmtTaler(next!.price)} Taler`);
       s.taler -= next!.price;
       s.tier = next!.id;
       for (const b of Object.values(BODIES)) {
@@ -219,7 +220,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       const order = s.orders.find((o) => o.id === a.orderId) ?? fail('Diesen Auftrag gibt es nicht mehr');
       const design = s.designs.find((d) => d.id === a.designId) ?? fail('Unbekannter Entwurf');
       if (design.form !== order.form) fail('Das ist die falsche Form');
-      if (order.body && bodyOf(design) !== order.body) fail(`Das muss ${getBody(order.body).name} sein`);
+      if ((order.body ?? 'irdenware') !== bodyOf(design)) fail(`Das muss ${getBody(order.body ?? 'irdenware').name} sein`);
       if (a.quality < order.minQuality) fail('Die Qualität reicht nicht');
       const stack = s.goods.find((g) => g.designId === a.designId && g.quality === a.quality && g.effect === a.effect);
       if (!stack || stack.count < order.count) fail('Davon hast du nicht genug im Regal');

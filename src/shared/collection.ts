@@ -1,8 +1,6 @@
 import { BODIES, EFFECTS, EXTRA_COLORS, FORMS, bodyOf, tierRank } from './content';
 import type { BodyId, GameState, Tier } from './types';
 
-export const COLLECTION_FALLBACK_TALER = 200;
-
 export interface CollectionEntry { key: string; form: string; body: BodyId; effect: string | null; tier: Tier }
 
 export const collectionKey = (form: string, body: BodyId, effect: string | null): string => `${form}|${body}|${effect ?? '-'}`;

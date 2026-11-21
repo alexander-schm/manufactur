@@ -23,7 +23,7 @@ export function bestStackForOrder(s: GameState, o: Order): GoodsStack | null {
   for (const g of s.goods) {
     const d = s.designs.find((x) => x.id === g.designId);
     if (!d || d.form !== o.form || g.quality < o.minQuality || g.count < o.count) continue;
-    if (o.body && bodyOf(d) !== o.body) continue;
+    if ((o.body ?? 'irdenware') !== bodyOf(d)) continue;
     const r = orderReward(o, g, d, glazeOf(s, d)).taler;
     if (r > bestReward) { best = g; bestReward = r; }
   }
@@ -39,7 +39,7 @@ export function deliverActionFor(s: GameState, o: Order): Action | null {
 export function bestDesignForOrder(s: GameState, o: Order): Design | null {
   let best: Design | null = null, score = -1;
   for (const d of ownDesigns(s)) {
-    if (d.form !== o.form || (o.body && bodyOf(d) !== o.body)) continue;
+    if (d.form !== o.form || (o.body ?? 'irdenware') !== bodyOf(d)) continue;
     const a = appeal(d, glazeOf(s, d), o.taste);
     if (a > score) { best = d; score = a; }
   }

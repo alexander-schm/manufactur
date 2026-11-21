@@ -91,4 +91,18 @@ describe('clay bodies', () => {
     expect(s.designs.filter((d) => d.id.startsWith('f:'))).toHaveLength(1);
     expect(s.goods.find((g) => g.designId === foreign[0].id)!.count).toBe(4);
   });
+  it('[Final fix #9] a design gifted before bodies existed and again after (as Irdenware) lands on one copy', () => {
+    const s = plainGame();
+    const { body: _b, ...design } = s.designs[0];
+    const origin = { playerName: 'Ben', makerMark: s.makerMark, glazeColor: '#3f6fb5' };
+    const old = { design: { ...design, id: 'x', origin } as Design, quality: 2 as const, effect: null, count: 2, makerName: 'Ben', makerMark: s.makerMark };
+    const now = { ...old, design: { ...design, id: 'x', body: 'irdenware' as const, origin } };
+    importStack(s, old);
+    importStack(s, now);
+    const foreign = s.designs.filter((d) => d.id.startsWith('f:'));
+    expect(foreign).toHaveLength(1);
+    expect(s.goods.find((g) => g.designId === foreign[0].id)!.count).toBe(4);
+    importStack(s, { ...old, design: { ...old.design, body: 'steinzeug' } });
+    expect(s.designs.filter((d) => d.id.startsWith('f:'))).toHaveLength(2);
+  });
 });

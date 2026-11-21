@@ -5,6 +5,8 @@ import { advance } from '../../src/shared/advance';
 import { newGame } from '../../src/shared/state';
 import { mockEndgame } from '../../src/client/dev/mockEndgame';
 import { Celebration } from '../../src/client/panels/Celebration';
+import { Plinths } from '../../src/client/art/workshop/Plinth';
+import type { VNode } from 'preact';
 
 const T0 = 1_800_000_000_000;
 
@@ -78,6 +80,19 @@ describe('WorkshopScene', () => {
     expect((html.match(/data-plinth/g) ?? []).length).toBe(3);
     expect(html).toContain('Ein sehr la…');
     expect(html).not.toContain('Ein sehr langer');
+  });
+  it('[Final fix #12] clickable plinths are focusable and open on Enter or Space', () => {
+    const s = mockEndgame(T0);
+    let opened = 0;
+    const html = render(<WorkshopScene state={s} now={T0} onStation={() => {}} onWorker={() => {}} onMasterwork={() => { opened++; }} />);
+    expect((html.match(/<g[^>]*data-plinth[^>]*tabindex="0"/gi) ?? []).length).toBe(3);
+    expect(render(<Plinths records={s.masterworks} />)).not.toMatch(/tabindex/i);
+    const group = Plinths({ records: s.masterworks, onClick: () => { opened++; } }) as VNode<{ children: VNode[] }>;
+    const first = group.props.children[0];
+    const g = (first.type as (p: unknown) => VNode<{ onKeyDown: (e: unknown) => void }>)(first.props);
+    const key = (k: string) => g.props.onKeyDown({ key: k, preventDefault() {}, stopPropagation() {} });
+    key('Enter'); key(' '); key('a');
+    expect(opened).toBe(2);
   });
   it('mockEndgame has every milestone done and acknowledged', () => {
     const s = mockEndgame(T0);

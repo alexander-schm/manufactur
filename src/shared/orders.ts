@@ -9,6 +9,8 @@ export const ORDER_REFILL_MS = 4 * 60_000;
 export const ORDER_REFILL_LOW_MS = 2 * 60_000;
 export const MIN_ORDERS = 3;
 export const MAX_ORDERS = 5;
+/** Extra pieces per order from Ruf (one per 40) stop here, so famous workshops don't get 70-piece orders. */
+export const ORDER_RUF_COUNT_CAP = 20;
 export const TIER_MUL: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.4, 3: 2 };
 
 export const BODY_ORDER_PREMIUM = 1.25;
@@ -43,7 +45,7 @@ export function generateOrder(state: GameState): [Order, number] {
   if (taste.form) form = taste.form;
   else [form, r] = pick(r, forms);
   let count; [count, r] = randInt(r, 3, 8);
-  count += Math.floor(state.ruf / 40);
+  count += Math.min(ORDER_RUF_COUNT_CAP, Math.floor(state.ruf / 40));
   count = Math.round(count * (getForm(form).orderCountMul ?? 1));
   let q; [q, r] = nextRandom(r);
   const minQuality: 1 | 2 | 3 = state.ruf >= 60 && q < 0.2 ? 3 : state.ruf >= 15 && q < 0.4 ? 2 : 1;

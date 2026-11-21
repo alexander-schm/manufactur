@@ -1,6 +1,9 @@
+import { fmtTaler } from '../shared/format';
+
 /** German UI strings that aren't game content. */
 export const T = {
   appName: 'Manufaktur',
+  workshopOf: (tierName: string, name: string) => `${tierName} von ${name}`,
   tagline: 'Deine kleine Töpferei – gemeinsam mit Freunden und Familie.',
   found: 'Manufaktur gründen',
   foundHint: 'Du gründest ein neues Dorf und bekommst einen Einladungscode für deine Leute.',
@@ -33,15 +36,15 @@ export const T = {
     letterFrom: 'Ein Auftrag von',
     wish: 'Ich wünsche mir ein Stück …',
     fee: 'Preis',
-    feeValue: (taler: number) => `${taler.toLocaleString('de-DE')} Taler und Material`,
+    feeValue: (taler: number) => `${fmtTaler(taler)} Taler und Material`,
     reward: 'Lohn',
-    rewardValue: (taler: number, ruf: number) => `bis zu ${taler.toLocaleString('de-DE')} Taler und ${ruf} Ruf`,
-    swap: (cost: number) => `Anderen Auftrag (${cost} Taler)`,
+    rewardValue: (taler: number, ruf: number) => `bis zu ${fmtTaler(taler)} Taler und ${ruf} Ruf`,
+    swap: (cost: number) => `Anderen Auftrag (${fmtTaler(cost)} Taler)`,
     pickTitle: 'Welcher Entwurf passt?',
     pickHint: 'Je mehr Wünsche dein Entwurf erfüllt und je besser er gelingt, desto edler die Medaille.',
     noDesigns: 'Du hast noch keine eigenen Entwürfe.',
     predicted: (prestige: string) => `wird ${prestige}`,
-    start: (taler: number) => `Meisterstück beginnen · ${taler.toLocaleString('de-DE')} Taler`,
+    start: (taler: number) => `Meisterstück beginnen · ${fmtTaler(taler)} Taler`,
     busyNote: 'Erst wenn das jetzige Meisterstück fertig ist, kannst du ein neues beginnen.',
     inProgress: 'In der Werkstatt',
     waiting: 'wartet auf einen freien Platz',
@@ -52,7 +55,7 @@ export const T = {
     met: (met: number, total: number) => `${met} von ${total} Wünschen`,
     doneKicker: 'Ein Meisterstück!',
     doneTitle: (prestige: string, name: string) => `${prestige} für „${name}“`,
-    donePaid: (patron: string, taler: number, ruf: number) => `${patron || 'Dein Gönner'} zahlt dir ${taler.toLocaleString('de-DE')} Taler und ${ruf} Ruf.`,
+    donePaid: (patron: string, taler: number, ruf: number) => `${patron || 'Dein Gönner'} zahlt dir ${fmtTaler(taler)} Taler und ${ruf} Ruf.`,
     doneClose: 'Wunderbar!',
     card: 'Gönner geben besondere Einzelstücke in Auftrag.',
     cardBusy: 'Gerade entsteht ein Meisterstück.',

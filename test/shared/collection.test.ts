@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
-import { COLLECTION_FALLBACK_TALER, collectionEntries, collectionPercent, recordCollection } from '../../src/shared/collection';
+import { collectionEntries, collectionPercent, recordCollection } from '../../src/shared/collection';
 import { BODIES, EXTRA_COLORS, FORMS } from '../../src/shared/content';
 import { migrateState, newGame } from '../../src/shared/state';
 import { T0, manufakturGame, withStanding } from './helpers';
@@ -23,7 +23,7 @@ describe('collection book', () => {
     const s = advance(withStanding(1), T0 + 3_600_000);
     expect(s.collection).toEqual(['becher|irdenware|-']);
   });
-  it('recording skips unknown keys, duplicates and missing designs without throwing', () => {
+  it('recording skips unknown keys and duplicates without throwing', () => {
     const s = manufakturGame();
     recordCollection(s, 'becher', 'irdenware', 'oelfleck');
     recordCollection(s, 'nope', 'irdenware', null);
@@ -44,7 +44,6 @@ describe('collection book', () => {
     for (const x of collectionEntries().filter((x) => x.body === 'irdenware' && x.form === 'schale')) recordCollection(s, x.form, x.body, x.effect);
     expect(s.taler).toBe(taler);
     expect(s.collectionRewards).toContain('stamp|r|irdenware|schale');
-    expect(COLLECTION_FALLBACK_TALER).toBe(200);
   });
   it('completing a column grants a prize', () => {
     const s = manufakturGame();

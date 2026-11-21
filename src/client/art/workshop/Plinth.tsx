@@ -32,7 +32,9 @@ function Plinth({ r, x, y, h, onClick }: { r: MasterworkRecord; x: number; y: nu
   const py = top + h - 22; // plaque sits on the column, so neighbouring plinths of different heights don't collide
   return (
     <g class="plinth" data-plinth={r.prestige} role={onClick ? 'button' : undefined} aria-label={onClick ? r.design.name : undefined}
-      onClick={onClick ? (e) => { e.stopPropagation(); onClick(); } : undefined}>
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick ? (e) => { e.stopPropagation(); onClick(); } : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } } : undefined}>
       <ellipse cx={x + 4} cy={y + 2} rx="26" ry="5" fill="url(#hatch)" opacity="0.5" />
       {/* base, column, capital */}
       <path d={`M${x - 22} ${y} L${x - 21} ${y - 9} L${x + 21} ${y - 9} L${x + 22} ${y} Z`} fill={STONE} style={S} />

@@ -9,6 +9,7 @@ import { VisitView } from '../../src/client/panels/village/VisitView';
 import { T } from '../../src/client/strings';
 import { COMMISSION_SWAP_COST, describeCriterion, predictMasterwork, PRESTIGE_NAME } from '../../src/shared/masterwork';
 import { newGame } from '../../src/shared/state';
+import { fmtTaler } from '../../src/shared/format';
 
 const T0 = 1_800_000_000_000;
 
@@ -30,10 +31,10 @@ describe('masterwork panel', () => {
     expect(html).toContain(c.patronName);
     expect(html).toContain(c.patronJob);
     expect(html).toContain('data-character');
-    expect(html).toContain(`${c.costTaler.toLocaleString('de-DE')} Taler`);
-    expect(html).toContain(`${c.rewardTaler.toLocaleString('de-DE')} Taler`);
+    expect(html).toContain(`${fmtTaler(c.costTaler)} Taler`);
+    expect(html).toContain(`${fmtTaler(c.rewardTaler)} Taler`);
     expect(html).toContain(`${c.rewardRuf} Ruf`);
-    expect(html).toContain(`Anderen Auftrag (${COMMISSION_SWAP_COST} Taler)`);
+    expect(html).toContain(`Anderen Auftrag (${fmtTaler(COMMISSION_SWAP_COST)} Taler)`);
   });
 
   it('each own design shows a tick or cross per criterion and its predicted prestige', () => {

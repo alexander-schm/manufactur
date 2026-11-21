@@ -7,6 +7,7 @@ import { Character } from '../art/character/Character';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
 import { autoAssignPlan } from './logic';
+import { fmtTaler } from '../../shared/format';
 
 export function TraitBadges({ w }: { w: Worker }) {
   return <div class="traits">{w.traits.map((t) => <span class="badge" title={getTrait(t).description}>{getTrait(t).name}</span>)}</div>;
@@ -64,7 +65,7 @@ export function WorkersPanel({ s, focus }: { s: GameState; focus?: string }) {
                     <div class="muted" style={{ fontSize: '.9em' }}>{personality(w.seed, w.traits)}</div>
                     <TraitBadges w={w} />
                   </div>
-                  <Button small variant="primary" disabled={s.taler < cost} onClick={() => dispatch({ type: 'hire', workerId: w.id })}>Einstellen · {cost} T</Button>
+                  <Button small variant="primary" disabled={s.taler < cost} onClick={() => dispatch({ type: 'hire', workerId: w.id })}>Einstellen · {fmtTaler(cost)} T</Button>
                 </div>
               </article>
             ))}

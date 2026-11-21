@@ -46,6 +46,8 @@ describe('bulk buying and keep-in-stock', () => {
     const s = withStanding(); s.keepStock = { ton: 500 }; s.taler = 10;
     const a = advance(s, T0 + MIN);
     expect(a.materials.ton).toBeLessThanOrEqual(40); expect(a.taler).toBeGreaterThanOrEqual(0);
+    const noBuy = advance({ ...s, keepStock: {} }, T0 + MIN);
+    expect(a.materials.ton).toBeGreaterThan(noBuy.materials.ton); // it did buy something
     const b = advance(s, T0 + 24 * H);
     expect(b.taler).toBeGreaterThanOrEqual(0); expect(b.stats.made).toBeGreaterThan(0);
   });

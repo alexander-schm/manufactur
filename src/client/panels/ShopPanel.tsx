@@ -5,7 +5,7 @@ import type { GameState } from '../../shared/types';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
 
-const SWATCH: Record<string, string> = { ton: '#c8784c', glasurbasis: '#f4efe4', eisenoxid: '#a4512a', kupferoxid: '#4f8a5c', kobalt: '#2a4f9a', holz: '#a96e42', kaolin: '#ffffff' };
+const SWATCH: Record<string, string> = { ton: '#c8784c', glasurbasis: '#f4efe4', eisenoxid: '#a4512a', kupferoxid: '#4f8a5c', kobalt: '#2a4f9a', holz: '#a96e42', kaolin: '#ffffff', steinzeugton: '#9a9087', salz: '#eae6dc', mangan: '#6b3a5a' };
 
 export const KEEP_STOCK_STEPS = [0, 100, 500, 1000, 5000];
 

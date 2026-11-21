@@ -5,6 +5,7 @@ import { dispatch, me, now, serverState, view } from '../store';
 import { gaveOrHelped, loadVillage, startVillagePolling, unreadNews, village, villageOpened } from '../villageStore';
 import { useEffect } from 'preact/hooks';
 import { T } from '../strings';
+import { getTier } from '../../shared/content';
 import { Counter } from '../ui/Counter';
 import { Icon } from '../ui/Icons';
 import { Paper } from '../ui/Paper';
@@ -42,7 +43,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
       <header class="topbar">
         <div class="title">
           <strong>{me.value?.villageName ?? T.appName}</strong>
-          <span>Manufaktur von {me.value?.name}</span>
+          <span>{T.workshopOf(getTier(s.tier).name, me.value?.name ?? '')}</span>
         </div>
         <Counter icon="coin" value={s.taler} label={T.taler} />
         <Counter icon="star" value={s.ruf} label={T.ruf} />
