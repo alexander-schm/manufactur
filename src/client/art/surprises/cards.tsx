@@ -1,12 +1,27 @@
 import { inkStyle } from '../ink';
 import type { AlbumCard } from '../../panels/albumLogic';
+import { WorkshopCat, type CatPose } from './Cat';
 import './surprises.css';
 
 const S = inkStyle(2.2);
 const D = inkStyle(1.2);
 
 /** Album card art per curiosity id, each drawn in `viewBox="0 0 160 120"`. The surprise art tasks add their entries. */
-export const CARD_ART: Record<string, () => preact.JSX.Element> = {};
+export const CARD_ART: Record<string, () => preact.JSX.Element> = {
+  'katze-streicheln': () => <CatCard pose="purr" />,
+  'katze-beleidigt': () => <CatCard pose="swat" />,
+};
+
+/** The scene's cat in a still pose, on a little rug, centred in the card. */
+function CatCard({ pose }: { pose: CatPose }) {
+  // the cat with its yarn ball spans about −72…+95 × −104…+12 around its anchor
+  return (
+    <g>
+      <path d="M14 108 Q80 100 146 108 Q150 114 144 118 Q80 122 16 118 Q10 114 14 108 Z" fill="var(--rug)" style={inkStyle(1.6)} />
+      <g transform="translate(70 108) scale(0.86)"><WorkshopCat x={0} y={0} pose={pose} still /></g>
+    </g>
+  );
+}
 
 /** Fallback art: a stoppered glass jar with a ribbon. */
 export function GenericCard() {

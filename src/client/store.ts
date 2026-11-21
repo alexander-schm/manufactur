@@ -67,9 +67,14 @@ export async function loadMe(): Promise<Me | null> {
 
 let queue: Promise<unknown> = Promise.resolve();
 
+export interface DispatchOpts {
+  /** No error toasts (local or server rejection); the state still rolls back. For background actions like recording a curiosity. */
+  quiet?: boolean;
+}
+
 /** Apply an action optimistically, then confirm it with the server. Calls are serialised. */
-export function dispatch(action: Action): Promise<GameEvent[]> {
-  const run = queue.then(() => doDispatch(action));
+export function dispatch(action: Action, opts: DispatchOpts = {}): Promise<GameEvent[]> {
+  const run = queue.then(() => doDispatch(action, opts));
   queue = run.catch(() => undefined);
   return run;
 }
@@ -78,16 +83,18 @@ function announce(events: GameEvent[]) {
   lastEvents.value = events;
   for (const e of events) {
     if (e.kind === 'milestone' || e.kind === 'unlock') continue; // shown as celebration cards
-    toast(e.text, e.kind === 'discovery' || e.kind === 'glaze' ? 'discovery' : 'info', e.kind === 'hint' ? 7000 : 4200);
+    if (e.kind === 'curiosity') toast(e.text, 'curiosity', 4200);
+    else toast(e.text, e.kind === 'discovery' || e.kind === 'glaze' ? 'discovery' : 'info', e.kind === 'hint' ? 7000 : 4200);
   }
 }
 
-async function doDispatch(action: Action): Promise<GameEvent[]> {
+async function doDispatch(action: Action, { quiet = false }: DispatchOpts): Promise<GameEvent[]> {
+  const fail = (text: string) => { if (!quiet) toast(text, 'error'); };
   const base = serverState.value;
   if (!base) return [];
   const local = applyAction(base, action, serverTime());
   if (!local.ok) {
-    toast(local.error, 'error');
+    fail(local.error);
     return [];
   }
   serverState.value = local.state; // optimistic
@@ -104,13 +111,13 @@ async function doDispatch(action: Action): Promise<GameEvent[]> {
         if (e.body.catchingUp) await loadState();
         const fresh = serverState.value!;
         const retry = applyAction(fresh, action, serverTime());
-        if (!retry.ok) { toast(retry.error, 'error'); return []; }
+        if (!retry.ok) { fail(retry.error); return []; }
         serverState.value = retry.state;
         version = fresh.version;
         continue;
       }
       serverState.value = e instanceof ApiError && e.body?.state ? e.body.state : base; // roll back
-      toast(e instanceof Error ? e.message : 'Da ist etwas schiefgegangen', 'error');
+      fail(e instanceof Error ? e.message : 'Da ist etwas schiefgegangen');
       return [];
     }
   }

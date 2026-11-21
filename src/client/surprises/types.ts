@@ -39,3 +39,12 @@ export interface SurpriseEnv {
   visible(): boolean; touch(): boolean; reducedMotion(): boolean;
   store: { load(): Record<string, number>; save(v: Record<string, number>): void };
 }
+
+/** What the scene draws from: the scheduler's plays and calendar set, plus the moment's context. */
+export interface SurpriseView {
+  plays: Play[]; calendar: string[]; mood: Mood; local: LocalTime; now: number;
+  /** Reduced motion, or a dev-held play: draw every actor in its still pose. */
+  still: boolean;
+  touch: boolean; readOnly: boolean;
+  click(target: ClickTarget, data?: Play['data']): void;
+}

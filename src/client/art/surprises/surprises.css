@@ -11,3 +11,17 @@
 /* Album cards */
 .curio-art { display: block; width: 100%; height: auto; }
 .curio-art.unfound .curio-art-body { filter: brightness(0) opacity(.16); }
+
+/* The cat's surprises. Resting positions are the still pose; animations only add motion around them. */
+.scene .cat-hit { cursor: pointer; outline: none; }
+.scene .cat .hearts > g { animation: cat-heart 2.2s ease-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes cat-heart { 0% { transform: translateY(10px) scale(.5); opacity: 0 } 25% { transform: translateY(0) scale(1); opacity: 1 } 100% { transform: translateY(-14px) scale(.9); opacity: 0 } }
+.scene .cat[data-cat-pose='purr'] .cat-body { animation: cat-purr .18s ease-in-out infinite; }
+@keyframes cat-purr { 0%, 100% { transform: scale(1, 1) } 50% { transform: scale(1.012, .985) } }
+.scene .cat .swat-paw { animation: cat-swat .32s ease-in-out infinite alternate; }
+@keyframes cat-swat { from { transform: rotate(10deg) } to { transform: rotate(-12deg) } }
+.scene .cat .cat-huff { animation: bob .6s ease-in-out infinite; }
+.scene .cat .cat-tail-puff { animation: cat-bristle .4s ease-in-out infinite; transform-box: fill-box; transform-origin: 20% 100%; }
+@keyframes cat-bristle { 0%, 100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
+.scene .cat.still *, .curio-art .cat * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .scene .cat * { animation: none !important; } }

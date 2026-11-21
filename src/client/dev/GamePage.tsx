@@ -1,7 +1,7 @@
 import { me, serverState, startClock } from '../store';
 import { GameScreen } from '../screens/GameScreen';
 import { mockEndgame, VILLAGE_DECOR } from './mockEndgame';
-import { applyFoundFlag, mockWorkshop } from './ScenePage';
+import { applyFoundFlag, mockWorkshop, useCentreOnSurprise } from './ScenePage';
 import { vmockPreset } from './mockVillage';
 import { village } from '../villageStore';
 import { MILESTONES } from '../../shared/progression';
@@ -57,5 +57,6 @@ export function GamePage() {
     startClock();
     ready = true;
   }
+  useCentreOnSurprise(); // dev-only: &surprise=<id> centres that surprise on phones
   return <GameScreen onLogout={() => undefined} />;
 }

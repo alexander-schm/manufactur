@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals';
 
-export type ToastKind = 'info' | 'error' | 'discovery';
+/** `curiosity`: a new album entry; looks like `discovery` but never catches a click. */
+export type ToastKind = 'info' | 'error' | 'discovery' | 'curiosity';
 export type ToastItem = { id: number; text: string; kind: ToastKind };
 export const toasts = signal<ToastItem[]>([]);
 let next = 1;

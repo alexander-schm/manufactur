@@ -3,9 +3,44 @@
  */
 import type { ComponentChildren } from 'preact';
 import { bodyOf } from '../../../../shared/content';
-import type { Batch, Design, GameState, GoodsStack, Station } from '../../../../shared/types';
+import type { Batch, Design, GameState, GoodsStack, Station, StationKind } from '../../../../shared/types';
 import { inkStyle } from '../../ink';
 import { Pot } from '../../Pot';
+
+/** Floor positions (centre, base y) per station slot. Slots 7–11 are in the second room. */
+export const SLOTS: { x: number; y: number }[] = [
+  { x: 190, y: 640 },  // 0 prepBench (front left)
+  { x: 520, y: 650 },  // 1 wheel (front centre)
+  { x: 470, y: 480 },  // 2 dryingRack (back, under the window)
+  { x: 1060, y: 470 }, // 3 kiln (back right)
+  { x: 820, y: 640 },  // 4 glazeTable (front right)
+  { x: 130, y: 470 },  // 5 shelf (back left)
+  { x: 1070, y: 680 }, // 6 marketStall (front right corner)
+  { x: 1330, y: 640 }, { x: 1520, y: 480 }, { x: 1660, y: 640 }, { x: 1700, y: 470 }, { x: 1400, y: 470 },
+];
+
+/**
+ * The full drawn box of each station around its slot (x centred, `h` above the base y, `below` under it),
+ * including everything that belongs to its click (checked against getBBox in the browser, animations included): workers at it, gauges, labels, sacks, firewood,
+ * the kiln's chimney with its smoke, and the wheel bench at its widest (three bays).
+ * Surprise hit areas must stay clear of these (the cat's excepted).
+ */
+export const STATION_BOX: Record<StationKind, { w: number; h: number; below: number }> = {
+  // sacks reach 156 either side; the worker behind stands up to 220 above the base, the gauge 162
+  prepBench: { w: 320, h: 225, below: 20 },
+  // three bays: bench half-width 130 + tray 8 + shadow 20; the first worker stands 120 left (figure 100 wide)
+  wheel: { w: 340, h: 165, below: 40 },
+  // posts and boards 170 wide, rising steam above the top board, the label under the base
+  dryingRack: { w: 180, h: 220, below: 30 },
+  // firewood 173 left of the centre; chimney cap 334 above the base, smoke puffs rising to 400
+  kiln: { w: 350, h: 402, below: 10 },
+  // workers behind (two, 70 apart) reach 220 up, the gauge 154 to the right
+  glazeTable: { w: 310, h: 225, below: 10 },
+  // 290 tall, the overflow count 26 above it
+  shelf: { w: 230, h: 320, below: 0 },
+  // awning 230 wide, price sign to 127 right, label under the base
+  marketStall: { w: 260, h: 195, below: 30 },
+};
 
 export type StationProps = { x: number; y: number; state: GameState; station: Station; now: number; running: Batch[]; waiting: Batch[] };
 

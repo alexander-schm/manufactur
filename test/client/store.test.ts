@@ -68,6 +68,47 @@ describe('store', () => {
     expect(toasts.value.some((t) => t.text === 'Nicht genug Taler' && t.kind === 'error')).toBe(true);
   });
 
+  it('[Review Focus 2] a quiet dispatch the server rejects rolls back without an error toast', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T0);
+    mockFetch([
+      { status: 200, body: { state, serverNow: T0 } },
+      { status: 400, body: { error: 'Schon entdeckt' } },
+    ]);
+    const store = await freshStore();
+    const { toasts } = await import('../../src/client/ui/Toast');
+    await store.loadState();
+    const before = structuredClone(store.serverState.value);
+    await store.dispatch({ type: 'discoverCuriosity', id: 'katze-streicheln' }, { quiet: true });
+    expect(store.serverState.value).toEqual(before);
+    expect(toasts.value.filter((t) => t.kind === 'error')).toEqual([]);
+  });
+
+  it('a quiet dispatch the client already rejects shows no toast either', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const found = { ...structuredClone(state), curiosities: { 'katze-streicheln': T0 } };
+    const calls = mockFetch([{ status: 200, body: { state: found, serverNow: T0 } }]);
+    const store = await freshStore();
+    const { toasts } = await import('../../src/client/ui/Toast');
+    await store.loadState();
+    await store.dispatch({ type: 'discoverCuriosity', id: 'katze-streicheln' }, { quiet: true });
+    expect(calls.length).toBe(1);
+    expect(toasts.value).toEqual([]);
+  });
+
+  it('a curiosity event shows as a curiosity toast', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(T0);
+    const after = { ...structuredClone(state), version: 1, curiosities: { 'katze-streicheln': T0 } };
+    mockFetch([
+      { status: 200, body: { state, serverNow: T0 } },
+      { status: 200, body: { state: after, events: [{ kind: 'curiosity', id: 'katze-streicheln', text: 'Neu im Kuriositätenkabinett: Schnurrende Katze (+5 Taler)' }], serverNow: T0 } },
+    ]);
+    const store = await freshStore();
+    const { toasts } = await import('../../src/client/ui/Toast');
+    await store.loadState();
+    await store.dispatch({ type: 'discoverCuriosity', id: 'katze-streicheln' }, { quiet: true });
+    expect(toasts.value).toEqual([expect.objectContaining({ text: 'Neu im Kuriositätenkabinett: Schnurrende Katze (+5 Taler)', kind: 'curiosity' })]);
+  });
+
   it('applies the action optimistically before the server answers', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(T0);
     mockFetch([{ status: 200, body: { state, serverNow: T0 } }]);

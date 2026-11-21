@@ -139,40 +139,6 @@ function Clock({ x, y }: { x: number; y: number }) {
   );
 }
 
-export function Cat({ x, y, sleeping = true }: { x: number; y: number; sleeping?: boolean }) {
-  return (
-    <g class="cat">
-      <ellipse cx={x} cy={y + 7} rx="54" ry="8" fill="url(#hatch)" opacity="0.5" />
-      <g class="cat-body" style={{ transformOrigin: `${x}px ${y}px` }}>
-        <path d={`M${x - 50} ${y} Q${x - 55} ${y - 42} ${x - 8} ${y - 47} Q${x + 46} ${y - 47} ${x + 46} ${y - 8} Q${x + 46} ${y + 5} ${x} ${y + 5} Q${x - 46} ${y + 5} ${x - 50} ${y} Z`} fill="var(--cat)" style={S} />
-        <path d={`M${x - 8} ${y - 42} q5 10 0 20 M${x + 10} ${y - 42} q5 10 0 20 M${x + 25} ${y - 37} q4 8 0 15`} fill="none" style={T} />
-      </g>
-      <path d={`M${x - 42} ${y - 27} L${x - 45} ${y - 52} L${x - 27} ${y - 40} Z`} fill="var(--cat)" style={S} />
-      <path d={`M${x - 17} ${y - 42} L${x - 10} ${y - 62} L${x - 2} ${y - 40} Z`} fill="var(--cat)" style={S} />
-      <path d={`M${x - 41} ${y - 34} L${x - 42} ${y - 45} L${x - 33} ${y - 38} Z`} fill="var(--cheek)" />
-      {sleeping ? (
-        <path d={`M${x - 37} ${y - 20} q5 4 10 0 M${x - 22} ${y - 22} q5 4 10 0`} stroke="var(--line)" stroke-width="2.2" fill="none" stroke-linecap="round" />
-      ) : (
-        <g><circle cx={x - 32} cy={y - 21} r="3" fill="var(--line)" /><circle cx={x - 17} cy={y - 23} r="3" fill="var(--line)" /></g>
-      )}
-      <path d={`M${x - 26} ${y - 14} l-2.5 2.5 l-2.5 -2.5`} stroke="var(--line)" stroke-width="1.6" fill="none" />
-      <ellipse cx={x - 40} cy={y - 11} rx="4" ry="2.4" fill="var(--cheek)" opacity="0.8" />
-      <path d={`M${x - 50} ${y - 12} l-12 -2 M${x - 50} ${y - 7} l-12 2`} fill="none" style={T} />
-      <path class="cat-tail" d={`M${x + 44} ${y - 5} Q${x + 76} ${y - 2} ${x + 69} ${y - 30} Q${x + 64} ${y - 40} ${x + 57} ${y - 32}`} fill="none" style={{ ...S, transformOrigin: `${x + 44}px ${y - 5}px` }} />
-      <path d={`M${x - 32} ${y + 2} q5 5 12 0 M${x - 7} ${y + 2} q5 5 12 0`} fill="var(--cat)" style={S} />
-      {sleeping && (
-        <g class="zzz" font-family="var(--font-hand)" fill="var(--line)">
-          <text x={x + 24} y={y - 62} font-size="20" opacity="0.7">z</text>
-          <text x={x + 38} y={y - 80} font-size="15" opacity="0.55">z</text>
-          <text x={x + 48} y={y - 94} font-size="11" opacity="0.4">z</text>
-        </g>
-      )}
-      <circle cx={x + 84} cy={y} r="11" fill="var(--g1)" style={S} />
-      <path d={`M${x + 76} ${y - 5} q8 5 17 -2 M${x + 77} ${y + 5} q8 2 16 -5`} fill="none" style={T} />
-    </g>
-  );
-}
-
 function Rug({ x, y }: { x: number; y: number }) {
   return (
     <g>

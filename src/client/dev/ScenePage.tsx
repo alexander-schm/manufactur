@@ -5,6 +5,9 @@ import { newGame, rollWorker } from '../../shared/state';
 import type { Batch, GameState, StationKind } from '../../shared/types';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
 import { CURIOSITIES } from '../../shared/content/curiosities';
+import { DECOR } from '../../shared/village/decor';
+import { devFlags } from '../surprises/env';
+import { anchorOf } from '../surprises/spots';
 import { mockEndgame } from './mockEndgame';
 
 export function mockWorkshop(now: number): GameState {
@@ -61,11 +64,33 @@ function placeMasterwork(s: GameState, hash: string): GameState {
   return s;
 }
 
+/** Dev `&surprise=<id>`: scroll the scene so that surprise's anchor is centred (phones show only part of the room). */
+export function useCentreOnSurprise() {
+  useEffect(() => {
+    const id = devFlags().force;
+    if (!id) return;
+    let tries = 0;
+    const t = setInterval(() => {
+      const box = document.querySelector<HTMLElement>('.scene-scroll');
+      const svg = box?.querySelector<SVGSVGElement>('svg.scene');
+      if (box && svg && svg.getBoundingClientRect().width > 0) {
+        const scale = svg.getBoundingClientRect().width / Number(svg.dataset.width ?? 1200);
+        box.scrollLeft = anchorOf(id).x * scale - box.clientWidth / 2;
+        clearInterval(t);
+      } else if (++tries > 40) clearInterval(t);
+    }, 50);
+    return () => clearInterval(t);
+  }, []);
+}
+
 export function ScenePage() {
   const [now, setNow] = useState(Date.now());
   const [state] = useState(() => applyFoundFlag(location.hash.includes('endgame') ? placeMasterwork(mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur'), location.hash) : mockWorkshop(Date.now()), location.hash, Date.now()));
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
+  useCentreOnSurprise();
   const view = advance(state, now);
+  // dev-only: &decor=all draws every decor item that has art, ignoring the placement cap
+  if (devFlags().decorAll) view.decorPlaced = Object.keys(DECOR);
   return (
     <div style={{ padding: '12px' }}>
       <WorkshopScene state={view} now={now} onStation={(id) => console.log('station', id)} onWorker={(id) => console.log('worker', id)} onMasterwork={() => console.log('masterwork')} onCabinet={() => console.log('cabinet')} />

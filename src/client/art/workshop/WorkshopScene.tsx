@@ -1,25 +1,18 @@
 import { makeCharacter } from '../../../shared/character';
 import type { GameState, Station, StationKind, Worker } from '../../../shared/types';
 import { Character, type Pose } from '../character/Character';
-import { Cabinet } from '../surprises/Cabinet';
+import { WorkshopCat } from '../surprises/Cat';
+import { SurpriseLayer, catPlay } from '../surprises/SurpriseLayer';
+import { SPOTS } from '../../surprises/spots';
+import type { SurpriseView } from '../../surprises/types';
+import { useSurprises } from '../../surprises/useSurprises';
 import { Plinths } from './Plinth';
-import { Cat, Room } from './Room';
-import { DryingRack, GlazeTable, Kiln, MarketStall, PrepBench, Shelf, SHELF_VISIBLE_MAX, Wheel, type StationProps } from './stations/Stations';
+import { Room } from './Room';
+import { DryingRack, GlazeTable, Kiln, MarketStall, PrepBench, Shelf, SHELF_VISIBLE_MAX, SLOTS, Wheel, type StationProps } from './stations/Stations';
 import './scene.css';
 
-export { SHELF_VISIBLE_MAX };
+export { SHELF_VISIBLE_MAX, SLOTS };
 
-/** Floor positions (centre, base y) per station slot. Slots 7–11 are in the second room. */
-export const SLOTS: { x: number; y: number }[] = [
-  { x: 190, y: 640 },  // 0 prepBench (front left)
-  { x: 520, y: 650 },  // 1 wheel (front centre)
-  { x: 470, y: 480 },  // 2 dryingRack (back, under the window)
-  { x: 1060, y: 470 }, // 3 kiln (back right)
-  { x: 820, y: 640 },  // 4 glazeTable (front right)
-  { x: 130, y: 470 },  // 5 shelf (back left)
-  { x: 1070, y: 680 }, // 6 marketStall (front right corner)
-  { x: 1330, y: 640 }, { x: 1520, y: 480 }, { x: 1660, y: 640 }, { x: 1700, y: 470 }, { x: 1400, y: 470 },
-];
 
 const DRAW: Record<StationKind, (p: StationProps) => preact.JSX.Element> = {
   prepBench: PrepBench, wheel: Wheel, dryingRack: DryingRack, kiln: Kiln, glazeTable: GlazeTable, shelf: Shelf, marketStall: MarketStall,
@@ -32,9 +25,6 @@ const WORKER_SPOT: Partial<Record<StationKind, { dx: number; dy: number; behind:
   glazeTable: { dx: -20, dy: -70, behind: true },
 };
 const IDLE_SPOTS = [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }];
-/** Wall between the broom and the drying rack, under the museum poster and above the kaolin block (hit area 311–379 × 286–404).
- *  Task 4 moves this into SPOTS.cabinet and draws the cabinet in its SurpriseLayer. */
-export const CABINET_SPOT = { x: 345, y: 300 };
 
 /** Without onStation the scene is read-only (visiting a friend). */
 type Props = {
@@ -43,6 +33,8 @@ type Props = {
   onCabinet?: () => void;
   /** Server time of the last album visit; newer curiosities make the cabinet sparkle. */
   albumSeen?: number;
+  /** Replaces the live surprises (tests, dev); the scene's own scheduler still runs underneath. */
+  surprises?: SurpriseView;
 };
 
 function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: number; pose: Pose; onWorker: (id: string) => void; i: number }) {
@@ -55,8 +47,10 @@ function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: numbe
   );
 }
 
-export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, onMasterwork, highlight, onCabinet, albumSeen = 0 }: Props) {
+export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, onMasterwork, highlight, onCabinet, albumSeen = 0, surprises }: Props) {
   const readOnly = !onStation;
+  const live = useSurprises('workshop', state, readOnly);
+  const sx = surprises ?? live;
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
   const pins = state.designs.filter((d) => !d.origin).slice(-4).reverse().map((design) => ({ design, glaze: state.glazes.find((g) => g.id === design.glazeId) }));
@@ -67,14 +61,13 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const ordered = [...state.stations].sort((a, b) => SLOTS[a.slot].y - SLOTS[b.slot].y);
   const idle = state.workers.filter((w) => !w.stationId);
   const catAwake = state.batches.length === 0;
-  const curiosities = Object.values(state.curiosities ?? {});
+  const catPosed = catPlay(sx.plays) !== null;
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
         <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} />
-        <Cabinet x={CABINET_SPOT.x} y={CABINET_SPOT.y} found={curiosities.length} fresh={!readOnly && curiosities.some((t) => t > albumSeen)} onClick={readOnly ? undefined : onCabinet} />
         <Plinths records={state.masterworks} onClick={readOnly ? undefined : onMasterwork} />
-        <Cat x={760} y={652} sleeping={!catAwake} />
+        {!catPosed && <WorkshopCat x={SPOTS.catHome.x} y={SPOTS.catHome.y} pose={catAwake ? 'awake' : 'sleep'} still={sx.still} />}
         {ordered.map((st) => {
           const pos = SLOTS[st.slot];
           const { running, waiting } = byStation(st);
@@ -92,6 +85,7 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
           );
         })}
         {idle.map((w, i) => <Person w={w} i={i} x={IDLE_SPOTS[i % 3].x + Math.floor(i / 3) * 40} y={IDLE_SPOTS[i % 3].y} pose="sleep" onWorker={onWorker} />)}
+        <SurpriseLayer state={state} sx={readOnly && !sx.readOnly ? { ...sx, readOnly } : sx} onCabinet={readOnly ? undefined : onCabinet} albumSeen={albumSeen} />
         {highlight && (() => {
           const st = state.stations.find((x) => x.kind === highlight);
           if (!st) return null;

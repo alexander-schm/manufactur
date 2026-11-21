@@ -63,7 +63,8 @@
 .toast-stack { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: min(92vw, 460px); }
 .toast { pointer-events: auto; background: var(--card); border: 2.2px solid var(--line); box-shadow: var(--shadow); padding: 8px 16px; animation: pop-in .35s ease-out; font-size: 1.05em; text-align: center; }
 .toast.error { background: #fde3dc; }
-.toast.discovery { background: #fff3c4; }
+.toast.discovery, .toast.curiosity { background: #fff3c4; }
+.toast.curiosity { pointer-events: none; }
 
 .badge { display: inline-block; border: 1.6px solid var(--line); border-radius: 999px; padding: 0 10px; font-size: .85em; background: var(--card-2); }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
