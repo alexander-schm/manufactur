@@ -2,6 +2,7 @@
  * Static room decor for the workshop (1200×700 per room). Ported from docs/art/gen_scene.py.
  * Wall 0..470, floor 470..700.
  */
+import type { ComponentChildren } from 'preact';
 import { memo } from 'preact/compat';
 import type { Design, GlazeRecipe, Tier } from '../../../shared/types';
 import { inkStyle } from '../ink';
@@ -36,7 +37,8 @@ function StringLights({ x0, x1 }: { x0: number; x1: number }) {
   );
 }
 
-function Window({ x, y }: { x: number; y: number }) {
+/** The window behind the outside layer: frame, glass with the sky, the hills and the tree. December puts snow on the hills and the tree. */
+function WindowBack({ x, y, december }: { x: number; y: number; december?: boolean }) {
   const w = 200, h = 180;
   return (
     <g>
@@ -48,10 +50,38 @@ function Window({ x, y }: { x: number; y: number }) {
       <path d={`M${x} ${y + 158} Q${x + 80} ${y + 138} ${x + w} ${y + 156} L${x + w} ${y + h} L${x} ${y + h} Z`} fill="var(--g2)" opacity="0.9" />
       <path d={`M${x + 52} ${y + 138} L${x + 52} ${y + 114}`} style={S} />
       <circle cx={x + 52} cy={y + 106} r="15" fill="var(--g2)" style={S} />
+      {december && (
+        <g data-snowcap>
+          {/* snow lies on the back hills, the front meadow and the little tree */}
+          <path d={`M${x} ${y + 140} Q${x + 53} ${y + 100} ${x + 106} ${y + 128} Q${x + 160} ${y + 106} ${x + w} ${y + 132} L${x + w} ${y + 141} Q${x + 182} ${y + 133} ${x + 166} ${y + 139} Q${x + 150} ${y + 124} ${x + 128} ${y + 136} Q${x + 112} ${y + 140} ${x + 100} ${y + 136} Q${x + 80} ${y + 124} ${x + 60} ${y + 132} Q${x + 40} ${y + 128} ${x + 24} ${y + 141} Q${x + 12} ${y + 136} ${x} ${y + 148} Z`} fill="#fbfdff" />
+          <path d={`M${x} ${y + 158} Q${x + 80} ${y + 138} ${x + w} ${y + 156} L${x + w} ${y + h} L${x} ${y + h} Z`} fill="#eef5fa" />
+          <path d={`M${x + 20} ${y + 166} q14 -4 28 0 M${x + 120} ${y + 162} q16 -5 32 0`} fill="none" stroke="#c9dbe8" stroke-width="2" stroke-linecap="round" />
+          <path d={`M${x + 39} ${y + 99} A15 15 0 0 1 ${x + 65} ${y + 99} Q${x + 61} ${y + 103} ${x + 57} ${y + 99} Q${x + 52} ${y + 104} ${x + 47} ${y + 99} Q${x + 43} ${y + 103} ${x + 39} ${y + 99} Z`} fill="#fbfdff" style={inkStyle(1.2)} />
+        </g>
+      )}
       <path d={`M${x + 90} ${y + 74} q5 -5 10 0 q5 -5 10 0 M${x + 118} ${y + 88} q4 -4 8 0 q4 -4 8 0`} fill="none" style={T} class="birds" />
+    </g>
+  );
+}
+
+/** The window's muntins and the glint on the glass, drawn over whatever is outside. */
+export function WindowMullions({ x, y }: { x: number; y: number }) {
+  const w = 200, h = 180;
+  return (
+    <g data-window-mullions>
       <path d={`M${x + w / 2} ${y} L${x + w / 2} ${y + h} M${x} ${y + h / 2} L${x + w} ${y + h / 2}`} stroke="var(--woodDark)" stroke-width="8" />
       <path d={`M${x + w / 2} ${y} L${x + w / 2} ${y + h} M${x} ${y + h / 2} L${x + w} ${y + h / 2}`} fill="none" style={S} />
       <path d={`M${x + 14} ${y + 40} l18 -18 M${x + 14} ${y + 56} l32 -32`} stroke="#fff" stroke-width="4" opacity="0.6" stroke-linecap="round" />
+    </g>
+  );
+}
+
+/** The window in front of the outside layer: muntins, curtains, the sill and its plants. */
+function WindowFront({ x, y }: { x: number; y: number }) {
+  const w = 200, h = 180;
+  return (
+    <g>
+      <WindowMullions x={x} y={y} />
       {/* curtains */}
       <path d={`M${x - 22} ${y - 16} L${x + 34} ${y - 16} Q${x + 22} ${y + 50} ${x + 40} ${y + 90} Q${x + 8} ${y + 116} ${x - 14} ${y + 194} L${x - 22} ${y + 194} Z`} fill="var(--curtain)" style={S} />
       <path d={`M${x + w + 22} ${y - 16} L${x + w - 34} ${y - 16} Q${x + w - 22} ${y + 50} ${x + w - 40} ${y + 90} Q${x + w - 8} ${y + 116} ${x + w + 14} ${y + 194} L${x + w + 22} ${y + 194} Z`} fill="var(--curtain)" style={S} />
@@ -152,7 +182,7 @@ function Rug({ x, y }: { x: number; y: number }) {
 
 function Broom({ x, y }: { x: number; y: number }) {
   return (
-    <g>
+    <g data-broom>
       <path d={`M${x} ${y} L${x + 30} ${y - 190}`} stroke="var(--woodDark)" stroke-width="7" />
       <path d={`M${x} ${y} L${x + 30} ${y - 190}`} fill="none" style={S} />
       <path d={`M${x - 18} ${y + 8} L${x - 10} ${y - 40} L${x + 14} ${y - 35} L${x + 22} ${y + 12} Z`} fill="var(--sun)" style={S} />
@@ -184,26 +214,40 @@ function Walls({ x0, width }: { x0: number; width: number }) {
   );
 }
 
-/** Room 1 decor. Memoised: only redraws when the pinned designs change. */
-export const Room = memo(function Room({ pins, room2, tier, decor = [] }: { pins: Pin[]; room2: boolean; tier: Tier; decor?: string[] }) {
+type RoomProps = {
+  pins: Pin[]; room2: boolean; tier: Tier; decor?: string[];
+  /** December: snow on the hills in the windows, and the broom is tidied away for the tree. */
+  december?: boolean;
+  /** What is outside room 1's window (the surprise `WindowLayer`): drawn over the glass, under the muntins, curtains and sill. */
+  outside?: ComponentChildren;
+};
+
+/** Room 1 decor. Memoised: only redraws when its props change. */
+export const Room = memo(function Room({ pins, room2, tier, decor = [], december = false, outside }: RoomProps) {
   return (
     <g>
       <g filter="url(#wobble)">
         <Walls x0={0} width={1200} />
-        <Window x={420} y={78} />
+        <WindowBack x={420} y={78} december={december} />
         <Pinboard x={700} y={90} pins={pins} />
         <Clock x={910} y={120} />
         <Rug x={370} y={600} />
-        <Broom x={276} y={474} />
+        {!december && <Broom x={276} y={474} />}
         {room2 && (
           <g>
             <Walls x0={1200} width={600} />
             <path d="M1170 470 L1170 210 Q1170 150 1200 150 Q1230 150 1230 210 L1230 470 Z" fill="var(--woodDark)" style={S} />
             <path d="M1180 470 L1180 214 Q1180 162 1200 162 Q1220 162 1220 214 L1220 470 Z" fill="var(--wall)" />
-            <Window x={1420} y={90} />
+            <WindowBack x={1420} y={90} december={december} />
             <Rug x={1300} y={610} />
           </g>
         )}
+      </g>
+      {outside}
+      {/* the window fronts go over the outside layer; same wobble, so they read as one drawing with the frames */}
+      <g filter="url(#wobble)">
+        <WindowFront x={420} y={78} />
+        {room2 && <WindowFront x={1420} y={90} />}
       </g>
       {/* name board under the pinboard: clear of window, pinboard, clock and every decor spot */}
       <TierSign tier={tier} x={800} y={272} />

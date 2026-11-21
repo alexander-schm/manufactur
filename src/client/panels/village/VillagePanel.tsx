@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { GameState } from '../../../shared/types';
 import type { Member, VillageView } from '../../../shared/village/types';
 import { BUILDINGS } from '../../../shared/village/buildings';
@@ -6,6 +6,8 @@ import { marketDayAt } from '../../../shared/village/benefits';
 import { PROJECTS } from '../../../shared/village/projects';
 import { api } from '../../api';
 import { VillageMap } from '../../art/village/VillageMap';
+import { moodAt } from '../../surprises/calendar';
+import { browserEnv } from '../../surprises/env';
 import { clockOffset, me, now, view } from '../../store';
 import { hhmm, T } from '../../strings';
 import { Button } from '../../ui/Button';
@@ -47,6 +49,8 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
   useEffect(() => { if (scrollTo && body.current) { body.current.scrollIntoView?.({ block: 'start' }); setScrollTo(false); } }, [scrollTo, tab, village.value]);
   useEffect(() => { if (tab === 'news') markNewsSeen(); }, [tab, village.value]);
   const v = village.value, meId = me.value?.playerId ?? '', s = view.value;
+  // the workshop scheduler's clock (server time, shifted by a dev `&clock=`)
+  const env = useMemo(browserEnv, []);
   const museumBuilt = (v?.projects.levels.museum ?? 0) > 0;
   useEffect(() => { if (museum && v && !museumBuilt) { setMuseum(false); setScrollTo(true); } }, [museum, v, museumBuilt]);
   if (!v) return <p class="muted">Das Dorf wird geladen …</p>;
@@ -84,10 +88,12 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
   }
 
   const t = now.value + clockOffset.value; // server time, like the panels below
+  const local = env.local(env.now());
+  const mood = moodAt(local, s ? env.local(s.createdAt) : local);
   return (
     <div class="village-panel">
       {s && <MarketDayBanner s={s} now={t} />}
-      <VillageMap village={v} meId={meId} now={t} onHouse={openHouse} onBoard={() => setTab('trade')} onBuilding={onBuilding} />
+      <VillageMap village={v} meId={meId} now={t} mood={mood} onHouse={openHouse} onBoard={() => setTab('trade')} onBuilding={onBuilding} />
       {v.members.length < 2 && (
         <div class="invite-hint">
           <strong>Allein ist’s schön – zusammen noch schöner!</strong> Großaufträge gibt es ab zwei Leuten. Schick deinen Freunden diesen Link:

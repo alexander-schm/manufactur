@@ -4,7 +4,9 @@ import { WorkshopScene } from '../../src/client/art/workshop/WorkshopScene';
 import { mockWorkshop } from '../../src/client/dev/ScenePage';
 import { browserEnv, memoryStore, readDevFlags } from '../../src/client/surprises/env';
 import { SURPRISES } from '../../src/client/surprises/defs';
-import { HIT_RECTS, SPOTS, catSpot, stationRect, type Rect } from '../../src/client/surprises/spots';
+import { HIT_RECTS, SPOTS, TREE_BOXES, VILLAGE_SPOTS, catSpot, stationRect, xmasStallRect, type Rect } from '../../src/client/surprises/spots';
+import { BUILDING_SPOTS, PLOTS, PROJECT_SPOTS, VillageMap } from '../../src/client/art/village/VillageMap';
+import { mockVillage } from '../../src/client/dev/mockVillage';
 import type { LocalTime, Mood, Play, SurpriseView } from '../../src/client/surprises/types';
 import { shouldRecord } from '../../src/client/surprises/useSurprises';
 import { CARD_ART } from '../../src/client/art/surprises/cards';
@@ -148,6 +150,126 @@ describe('surprises in the workshop scene', () => {
     const html = render(<WorkshopScene state={mockWorkshop(T0)} now={T0} onStation={() => {}} />);
     expect(html).toContain('data-hit="cat"');
     expect(poseOf(html)).toBe('sleep');
+  });
+});
+
+describe('December', () => {
+  const DEC: Mood = { ...DAY_MOOD, december: true };
+  const scene = (sx: SurpriseView) => render(<WorkshopScene state={mockWorkshop(T0)} now={T0} onStation={() => {}} surprises={sx} />);
+
+  it('December in the workshop: snow in the window, the little tree, the broom tidied away', () => {
+    const html = scene(still([], { calendar: ['dezember'], mood: DEC }));
+    expect(html).toContain('data-surprise="dezember"');
+    expect(html).toContain('data-tree');
+    expect(html).not.toContain('data-broom');
+    expect((html.match(/class="flake"/g) ?? []).length).toBeGreaterThanOrEqual(14);
+    expect(html).toContain('data-snowcap');
+    expect(html).not.toMatch(/NaN|undefined/);
+    const plain = scene(still([]));
+    expect(plain).toContain('data-broom');
+    expect(plain).not.toContain('data-tree');
+    expect(plain).not.toContain('data-surprise="dezember"');
+    expect(plain).not.toContain('class="flake"');
+    expect(plain).not.toContain('data-snowcap');
+  });
+
+  it('snow falls inside the glass: clipped to the window, above the sky, below muntins, curtains and sill decor', () => {
+    const s = mockWorkshop(T0);
+    s.decorPlaced = ['porzellanvoegel', 'blumenkasten'];
+    const html = render(<WorkshopScene state={s} now={T0} onStation={() => {}} surprises={still([], { calendar: ['dezember'], mood: DEC })} />);
+    const at = (needle: string) => { const i = html.indexOf(needle); expect(i, needle).toBeGreaterThanOrEqual(0); return i; };
+    const outside = at('clip-path="url(#window-clip)"');
+    expect(at('id="window-clip"')).toBeLessThan(outside);
+    expect(at('fill="var(--sky)"')).toBeLessThan(outside);
+    expect(at('data-window-mullions')).toBeGreaterThan(outside);
+    expect(at('fill="var(--curtain)"')).toBeGreaterThan(outside);
+    expect(at('data-decor="porzellanvoegel"')).toBeGreaterThan(outside);
+    expect(at('data-decor="blumenkasten"')).toBeGreaterThan(outside);
+    expect(html.indexOf('class="flake"')).toBeGreaterThan(outside);
+    expect(html.lastIndexOf('class="flake"')).toBeLessThan(html.indexOf('data-window-mullions'));
+    const w = SPOTS.window;
+    const clip = /id="window-clip"[^>]*>\s*<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)"/.exec(html);
+    expect(clip?.slice(1).map(Number)).toEqual([w.x, w.y, w.w, w.h]);
+    // the muntins are drawn without December too
+    expect(scene(still([]))).toContain('data-window-mullions');
+  });
+
+  it('still snow: flakes keep their places without any falling loop', () => {
+    const stillHtml = scene(still([], { calendar: ['dezember'], mood: DEC }));
+    expect(stillHtml).toContain('class="snow still"');
+    expect(stillHtml).not.toContain('snow-loop');
+    const moving = scene(still([], { calendar: ['dezember'], mood: DEC, still: false }));
+    expect((moving.match(/class="snow-loop/g) ?? []).length).toBe(2);
+  });
+
+  it('rain streaks fall in the window when the mood says rain', () => {
+    expect(scene(still([], { mood: { ...DAY_MOOD, rain: true } }))).toContain('data-rain');
+    expect(scene(still([]))).not.toContain('data-rain');
+  });
+
+  it('the tree stands clear of the shelf, the drying rack, the cabinet and the floor decor (kaolinbrocken, steinzeugtopf)', () => {
+    expect(SPOTS.tree).toEqual({ x: 282, y: 488 });
+    const s = mockWorkshop(T0);
+    const shelf = s.stations.find((st) => st.kind === 'shelf')!, rack = s.stations.find((st) => st.kind === 'dryingRack')!;
+    const blockers: [string, Rect][] = [
+      ['shelf', stationRect('shelf', shelf.slot)], ['dryingRack', stationRect('dryingRack', rack.slot)], ['cabinet', HIT_RECTS.cabinet!],
+      ['kaolinbrocken', { x: 326, y: 430, w: 43, h: 56 }], ['steinzeugtopf', { x: 836, y: 414, w: 60, h: 64 }], ['museumsplakat', { x: 324, y: 192, w: 60, h: 78 }],
+    ];
+    for (const box of TREE_BOXES(SPOTS.tree)) for (const [name, b] of blockers) expect(intersects(box, b), name).toBe(false);
+    const html = scene(still([], { calendar: ['dezember'], mood: DEC }));
+    // drawn behind the stations, like the broom it replaces
+    expect(html.indexOf('data-tree')).toBeLessThan(html.indexOf('data-station='));
+  });
+
+  it('December in the village: the Christmas stall stands on the square only in December', () => {
+    const v = mockVillage(10, ['tongrube', 'markthalle', 'gemeinschaftsofen']);
+    const map = (mood?: Mood) => render(<VillageMap village={v} meId="p1" now={1_800_000_000_000} onHouse={() => {}} onBuilding={() => {}} mood={mood} />);
+    const dec = map(DEC);
+    expect(dec).toContain('data-xmas-stall');
+    expect(dec).not.toMatch(/NaN|undefined/);
+    expect(dec).not.toContain('role="button" data-xmas-stall');
+    expect(map(DAY_MOOD)).not.toContain('data-xmas-stall');
+    expect(map()).not.toContain('data-xmas-stall');
+  });
+
+  it('the Christmas stall clears every house, building, project site, the well, the notice board, the level decorations and the paths', () => {
+    const r = xmasStallRect(VILLAGE_SPOTS.xmasStall);
+    const blockers: [string, Rect][] = [];
+    // a house: figure 112 left, yard prop up to 150 right, chimney smoke 172 up; its name sign below
+    PLOTS.forEach((p, i) => {
+      blockers.push([`house ${i}`, { x: p.x - 112, y: p.y - 172, w: 262, h: 198 }], [`sign ${i}`, { x: p.x - 98, y: p.y + 22, w: 104, h: 38 }]);
+      blockers.push([`free plot ${i}`, { x: p.x - 74, y: p.y - 86, w: 148, h: 104 }]);
+    });
+    for (const [id, p] of Object.entries(BUILDING_SPOTS)) blockers.push([id, { x: p.x - 140, y: p.y - 200, w: 280, h: 250 }]);
+    for (const [id, p] of Object.entries(PROJECT_SPOTS)) blockers.push([id, { x: p.x - 160, y: p.y - 260, w: 320, h: 320 }]);
+    blockers.push(['well', { x: 654, y: 378, w: 92, h: 104 }], ['notice board', { x: 770, y: 366, w: 120, h: 160 }]);
+    blockers.push(['blumenbeete', { x: 575, y: 380, w: 80, h: 45 }], ['blumenbeete', { x: 810, y: 526, w: 80, h: 45 }]);
+    for (const [x, y] of [[520, 500], [630, 590], [770, 590], [900, 450]]) blockers.push(['laterne', { x: x - 8, y: y - 74, w: 30, h: 76 }]);
+    blockers.push(['maibaum', { x: 520, y: 314, w: 72, h: 214 }], ['wimpel', { x: 550, y: 355, w: 286, h: 50 }]);
+    blockers.push(['baenke', { x: 618, y: 500, w: 166, h: 42 }], ['rosenbogen', { x: 662, y: 546, w: 76, h: 96 }]);
+    for (const [x, y, s] of [[40, 420, 1], [560, 620, 0.8], [880, 680, 0.75], [260, 110, 0.9], [700, 120, 0.7]]) blockers.push(['tree', { x: x - 40 * s, y: y - 104 * s, w: 80 * s, h: 114 * s }]);
+    blockers.push(['sheep', { x: 575, y: 585, w: 50, h: 35 }], ['pond', { x: 925, y: 484, w: 120, h: 52 }]);
+    for (const [name, b] of blockers) expect(intersects(r, b), name).toBe(false);
+    // the lanes from the square to the six core plots (20 wide) and the main street (44 wide) stay free
+    const lanes = PLOTS.slice(0, 6).map((p) => ({ a: { x: 700, y: 470 }, c: { x: (700 + p.x) / 2 + 30, y: (470 + p.y) / 2 + 20 }, b: { x: p.x, y: p.y + 10 }, half: 10 }));
+    lanes.push({ a: { x: 700, y: 1150 }, c: { x: 690, y: 820 }, b: { x: 700, y: 560 }, half: 22 });
+    for (const { a, c, b, half } of lanes) for (let t = 0; t <= 1; t += 0.01) {
+      const x = (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y = (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c.y + t * t * b.y;
+      expect(intersects(r, { x: x - half, y: y - half, w: 2 * half, h: 2 * half }), `lane to ${b.x},${b.y} at t=${t.toFixed(2)}`).toBe(false);
+    }
+  });
+
+  it('the dezember def: a rare calendar surprise in the window, all December', () => {
+    const d = SURPRISES.find((x) => x.id === 'dezember')!;
+    expect(d).toMatchObject({ where: 'window', trigger: { kind: 'calendar' }, rarity: 'R', album: ['dezember'] });
+    const ctx = (mood: Mood) => ({ s: newGame('p', 1, T0), now: T0, local: LOCAL, mood, readOnly: false, touch: false, reducedMotion: false });
+    expect(d.when!(ctx(DEC))).toBe(true);
+    expect(d.when!(ctx(DAY_MOOD))).toBe(false);
+    expect(CURIOSITIES.dezember).toBeDefined();
+    const html = render(<svg>{CARD_ART.dezember!()}</svg>);
+    expect(html).toContain('class="flake"');
+    expect(html).toContain('data-tree');
+    expect(html).not.toMatch(/NaN|undefined/);
   });
 });
 

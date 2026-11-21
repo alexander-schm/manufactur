@@ -2,7 +2,9 @@ import { makeCharacter } from '../../../shared/character';
 import type { GameState, Station, StationKind, Worker } from '../../../shared/types';
 import { Character, type Pose } from '../character/Character';
 import { WorkshopCat } from '../surprises/Cat';
+import { ChristmasTree } from '../surprises/Seasonal';
 import { SurpriseLayer, catPlay } from '../surprises/SurpriseLayer';
+import { WindowLayer } from '../surprises/WindowLayer';
 import { SPOTS } from '../../surprises/spots';
 import type { SurpriseView } from '../../surprises/types';
 import { useSurprises } from '../../surprises/useSurprises';
@@ -62,11 +64,14 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const idle = state.workers.filter((w) => !w.stationId);
   const catAwake = state.batches.length === 0;
   const catPosed = catPlay(sx.plays) !== null;
+  const december = sx.calendar.includes('dezember');
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
-        <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} />
+        <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} december={december} outside={<WindowLayer sx={sx} />} />
         <Plinths records={state.masterworks} onClick={readOnly ? undefined : onMasterwork} />
+        {/* the December tree stands where the broom leans, behind the stations like the broom */}
+        {december && <ChristmasTree x={SPOTS.tree.x} y={SPOTS.tree.y} still={sx.still} />}
         {!catPosed && <WorkshopCat x={SPOTS.catHome.x} y={SPOTS.catHome.y} pose={catAwake ? 'awake' : 'sleep'} still={sx.still} />}
         {ordered.map((st) => {
           const pos = SLOTS[st.slot];

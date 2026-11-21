@@ -5,7 +5,10 @@ import { BUILDING_ORDER } from '../../../shared/village/buildings';
 import { COMPLETIONS_PER_BUILDING } from '../../../shared/village/joint';
 import { villageLevel } from '../../../shared/village/level';
 import { PROJECTS } from '../../../shared/village/projects';
+import { VILLAGE_SPOTS } from '../../surprises/spots';
+import type { Mood } from '../../surprises/types';
 import { inkStyle } from '../ink';
+import { ChristmasStall } from '../surprises/Seasonal';
 import { VillageBuilding } from './Buildings';
 import { LevelDecorations } from './Decorations';
 import { GreatKilnArt, kilnFill, kilnPhase } from './GreatKiln';
@@ -114,11 +117,15 @@ function NoticeBoard({ x, y, offers, requests }: { x: number; y: number; offers:
   );
 }
 
-type Props = { village: VillageView; meId: string; now: number; onHouse: (playerId: string) => void; onBuilding: (id: string) => void; onBoard?: () => void };
+type Props = {
+  village: VillageView; meId: string; now: number; onHouse: (playerId: string) => void; onBuilding: (id: string) => void; onBoard?: () => void;
+  /** The moment's mood (December brings the Christmas stall). */
+  mood?: Mood;
+};
 
 const StaticLandscape = memo(Landscape);
 
-export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }: Props) {
+export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard, mood }: Props) {
   const bySlot = new Map(village.members.map((m) => [m.houseSlot, m]));
   const built = new Set(village.buildings);
   const nextIdx = BUILDING_ORDER.findIndex((b) => !built.has(b));
@@ -159,6 +166,10 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
   items.push({ y: 500, el: <g onClick={onBoard} role="button" aria-label="Tauschbrett"><NoticeBoard x={830} y={500} offers={village.offers.length} requests={village.requests.length} /></g> });
   for (const [x, y, s] of [[40, 420, 1], [1370, 420, 1.1], [560, 620, 0.8], [880, 680, 0.75], [30, 760, 1.2], [1380, 770, 1], [260, 110, 0.9], [1120, 100, 0.85], [700, 120, 0.7]] as const) {
     items.push({ y, el: <Tree x={x} y={y} s={s} /> });
+  }
+  if (mood?.december) {
+    const p = VILLAGE_SPOTS.xmasStall;
+    items.push({ y: p.y, el: <ChristmasStall x={p.x} y={p.y} /> });
   }
   items.push({ y: 610, el: <Sheep x={590} y={610} /> }, { y: 600, el: <Sheep x={800} y={600} flip /> });
   items.sort((a, b) => a.y - b.y);

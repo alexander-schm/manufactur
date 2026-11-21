@@ -25,3 +25,20 @@
 @keyframes cat-bristle { 0%, 100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
 .scene .cat.still *, .curio-art .cat * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .scene .cat * { animation: none !important; } }
+
+/* December: snow outside the window (two loops, each set drawn twice one glass-height apart, so the fall tiles) */
+.scene .snow-loop { animation: snow-fall 11s linear infinite; }
+.scene .snow-loop.far { animation-duration: 17s; opacity: .8; }
+@keyframes snow-fall { 0% { transform: translate(0, 0) } 50% { transform: translate(5px, 90px) } 100% { transform: translate(0, 180px) } }
+.scene .rain-loop { animation: rain-fall .9s linear infinite; }
+@keyframes rain-fall { from { transform: translateY(0) } to { transform: translateY(180px) } }
+/* the tree's porcelain bauble twinkles slowly */
+.scene .xmas-tree .twinkle .bauble-glow { animation: bauble-twinkle 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes bauble-twinkle { 0%, 100% { opacity: .25; transform: scale(.7) } 50% { opacity: .95; transform: scale(1.15) } }
+.scene .xmas-tree.still * { animation: none !important; }
+/* the stall's pot steams */
+.village-map .xmas-steam { animation: xmas-steam 2.6s ease-out infinite; }
+@keyframes xmas-steam { 0% { transform: translateY(2px); opacity: 0 } 30% { opacity: .95 } 100% { transform: translateY(-7px); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) {
+  .scene .snow-loop, .scene .rain-loop, .scene .xmas-tree *, .village-map .xmas-steam { animation: none !important; }
+}

@@ -1,7 +1,9 @@
 import { VillageMap } from '../art/village/VillageMap';
+import { moodAt } from '../surprises/calendar';
+import { browserEnv } from '../surprises/env';
 import { mockVillage, type MockVillageOpts } from './mockVillage';
 
-/** `#village&n=5&kiln=firing&project=rathaus:1:2&levels=dorfbrunnen:2,museum:1&level=12&offered=glockenturm,museum` */
+/** `#village&clock=2026-12-12T11:00&n=5&kiln=firing&project=rathaus:1:2&levels=dorfbrunnen:2,museum:1&level=12&offered=glockenturm,museum` */
 export function VillagePage() {
   const q = new URLSearchParams(location.hash.split('&').slice(1).join('&'));
   const n = Number(q.get('n') ?? 5);
@@ -16,5 +18,9 @@ export function VillagePage() {
   if (q.has('offered')) opts.offered = q.get('offered')!.split(',');
   const buildings = ['tongrube', 'markthalle', ...(opts.kiln ? ['gemeinschaftsofen'] : [])];
   const v = mockVillage(n, buildings, now, opts);
-  return <div style={{ padding: '12px' }}><VillageMap village={v} meId="p1" now={now} onHouse={(id) => console.log(id)} onBuilding={(id) => console.log(id)} /></div>;
+  // the mood follows `&clock=` like the workshop's
+  const env = browserEnv();
+  const local = env.local(env.now());
+  const mood = moodAt(local, local);
+  return <div style={{ padding: '12px' }}><VillageMap village={v} meId="p1" now={now} mood={mood} onHouse={(id) => console.log(id)} onBuilding={(id) => console.log(id)} /></div>;
 }

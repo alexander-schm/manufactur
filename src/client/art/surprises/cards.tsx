@@ -1,6 +1,7 @@
 import { inkStyle } from '../ink';
 import type { AlbumCard } from '../../panels/albumLogic';
 import { WorkshopCat, type CatPose } from './Cat';
+import { ChristmasTree } from './Seasonal';
 import './surprises.css';
 
 const S = inkStyle(2.2);
@@ -10,7 +11,35 @@ const D = inkStyle(1.2);
 export const CARD_ART: Record<string, () => preact.JSX.Element> = {
   'katze-streicheln': () => <CatCard pose="purr" />,
   'katze-beleidigt': () => <CatCard pose="swat" />,
+  dezember: () => <DecemberCard />,
 };
+
+/** A snowy window on the wall with the little tree beside it. */
+function DecemberCard() {
+  const flakes: [number, number, number][] = [[24, 26, 2.4], [44, 50, 2], [62, 22, 2.6], [80, 44, 2], [34, 70, 2.2], [70, 66, 2.4], [52, 34, 1.6], [86, 74, 1.8]];
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M0 104 Q80 100 160 104 L160 120 L0 120 Z" fill="var(--floor)" style={inkStyle(1.6)} />
+      {/* the window */}
+      <rect x="10" y="10" width="88" height="80" fill="var(--woodDark)" style={S} />
+      <rect x="16" y="16" width="76" height="68" fill="var(--sky)" />
+      <rect x="16" y="16" width="76" height="68" fill="#e4eef6" opacity="0.4" />
+      <path d="M16 66 Q36 52 56 62 Q74 54 92 62 L92 84 L16 84 Z" fill="#fbfdff" />
+      <path d="M16 76 Q52 68 92 75 L92 84 L16 84 Z" fill="#eef5fa" />
+      <path d="M36 64 L36 56" style={D} />
+      <circle cx="36" cy="51" r="6" fill="var(--g2)" style={D} />
+      <path d="M30 50 Q36 43 42 50 Q39 48 36 51 Q33 48 30 50 Z" fill="#fbfdff" />
+      {flakes.map(([x, y, r]) => <circle class="flake" cx={x} cy={y} r={r} fill="#fff" stroke="#b9cfdf" stroke-width="0.7" />)}
+      <path d="M54 16 L54 84 M16 50 L92 50" stroke="var(--woodDark)" stroke-width="4" />
+      <path d="M54 16 L54 84 M16 50 L92 50" fill="none" style={D} />
+      <rect x="16" y="16" width="76" height="68" fill="none" style={S} />
+      <path d="M6 92 L102 92 L98 98 L10 98 Z" fill="var(--wood)" style={S} />
+      {/* the tree */}
+      <g transform="translate(128 112) scale(0.78) translate(-282 -488)"><ChristmasTree x={282} y={488} still /></g>
+    </g>
+  );
+}
 
 /** The scene's cat in a still pose, on a little rug, centred in the card. */
 function CatCard({ pose }: { pose: CatPose }) {
