@@ -18,22 +18,25 @@ export interface StationDef {
   /** shelf: max stored pieces; kiln: max pieces per firing; stall: pieces sold per minute */
   capacity?: number[];
   maxWorkers: number;
+  /** how many batches run side by side, by level (index = level-1); absent means one */
+  bays?: number[];
 }
 
+const BAYS = [1, 1, 1, 1, 1, 2, 2];
 const ppm = (base: number) => [1, 1.4, 1.96, 2.74, 3.84, 4.6, 5.5].map((f) => base * f);
 
 export const STATIONS: Record<StationKind, StationDef> = {
   prepBench: { kind: 'prepBench', name: 'Knetbank', description: 'Hier wird der Ton geschlagen und geknetet, bis keine Luftblasen mehr drin sind.',
-    stage: 'prepare', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [60, 180, 500, 1400, 8000, 30000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2 },
+    stage: 'prepare', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [60, 180, 500, 1400, 8000, 30000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2, bays: BAYS },
   wheel: { kind: 'wheel', name: 'Töpferscheibe', description: 'Das Herz der Werkstatt. Hier bekommt der Ton seine Form.',
-    stage: 'form', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [80, 220, 600, 1600, 9000, 32000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2 },
+    stage: 'form', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [80, 220, 600, 1600, 9000, 32000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2, bays: BAYS },
   dryingRack: { kind: 'dryingRack', name: 'Trockengestell', description: 'Frisch gedrehte Stücke müssen in Ruhe lederhart trocknen.',
-    stage: 'dry', usesWorkers: false, piecesPerMinute: ppm(12), upgradeCost: [50, 150, 420, 1200, 7000, 26000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 0 },
+    stage: 'dry', usesWorkers: false, piecesPerMinute: ppm(12), upgradeCost: [50, 150, 420, 1200, 7000, 26000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 0, bays: BAYS },
   kiln: { kind: 'kiln', name: 'Brennofen', description: 'Zweimal geht jedes Stück hinein: zum Schrühbrand und zum Glasurbrand.',
     stage: 'bisque', stage2: 'glazeFire', usesWorkers: false, piecesPerMinute: ppm(12), upgradeCost: [120, 320, 800, 2000, 10000, 36000], rufRequired: [10, 30, 80, 200, 300, 450],
     capacity: [12, 20, 32, 48, 72, 96, 120], maxWorkers: 0 },
   glazeTable: { kind: 'glazeTable', name: 'Glasurtisch', description: 'Eintauchen, übergießen, bemalen – hier bekommen die Stücke ihre Farbe.',
-    stage: 'glaze', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [70, 200, 560, 1500, 8500, 31000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2 },
+    stage: 'glaze', usesWorkers: true, piecesPerMinute: ppm(12), upgradeCost: [70, 200, 560, 1500, 8500, 31000], rufRequired: [10, 30, 80, 200, 300, 450], maxWorkers: 2, bays: BAYS },
   shelf: { kind: 'shelf', name: 'Regal', description: 'Fertige Ware wartet hier auf Kundschaft.',
     stage: null, usesWorkers: false, piecesPerMinute: [0, 0, 0, 0, 0, 0, 0], upgradeCost: [40, 120, 360, 1000, 6000, 24000], rufRequired: [0, 20, 60, 150, 300, 450],
     capacity: [60, 100, 160, 260, 400, 560, 760], maxWorkers: 0 },

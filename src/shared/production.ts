@@ -97,6 +97,16 @@ export function batchMaterials(state: GameState, design: Design, count: number):
   return need;
 }
 
+/** How many batches this station works on side by side. */
+export function baysOf(st: Station): number {
+  return getStationDef(st.kind).bays?.[st.level - 1] ?? 1;
+}
+
+/** Kiln space a batch takes up. */
+export function kilnLoad(_s: GameState, b: Batch): number {
+  return b.count;
+}
+
 export function kilnCapacity(state: GameState): number {
   const kiln = state.stations.find((s) => s.kind === 'kiln')!;
   return getStationDef('kiln').capacity![kiln.level - 1];

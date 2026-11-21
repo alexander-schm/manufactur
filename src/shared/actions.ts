@@ -241,12 +241,13 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
     case 'handTouch': {
       const st = s.stations.find((x) => x.id === a.stationId) ?? fail('Unbekannte Station');
       if ((s.cooldowns[st.id] ?? 0) > now) fail('Deine Hände brauchen noch eine Pause');
-      const b = s.batches.find((x) => x.stationId === st.id && x.startedAt !== null && !x.blocked);
-      if (!b) fail('Hier läuft gerade nichts');
-      const end = b!.startedAt! + b!.durationMs;
-      const remaining = Math.max(0, end - now);
-      b!.durationMs = Math.round(now - b!.startedAt! + remaining / HAND_TOUCH_SPEED);
-      b!.touch = HAND_TOUCH_SPEED;
+      const running = s.batches.filter((x) => x.stationId === st.id && x.startedAt !== null && !x.blocked);
+      if (running.length === 0) fail('Hier läuft gerade nichts');
+      for (const b of running) {
+        const remaining = Math.max(0, b.startedAt! + b.durationMs - now);
+        b.durationMs = Math.round(now - b.startedAt! + remaining / HAND_TOUCH_SPEED);
+        b.touch = HAND_TOUCH_SPEED;
+      }
       s.cooldowns[st.id] = now + HAND_TOUCH_COOLDOWN_MS;
       return;
     }

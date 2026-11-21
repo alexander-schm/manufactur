@@ -3,7 +3,7 @@ import { SPECIALTIES } from './village/specialties';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { addOrder, nextOrderTime } from './orders';
 import { applyMilestones } from './progression';
-import { kilnCapacity, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
+import { baysOf, kilnCapacity, kilnLoad, qualityTier, stageDurationMs, startNewBatch, stationForStage, workersAt } from './production';
 import { nextRandom } from './rng';
 import { newId } from './state';
 import { STAGES, type Batch, type GameState, type Station } from './types';
@@ -12,6 +12,13 @@ const MIN = 60_000;
 export const AWAY_LOG_AFTER_MS = 10 * MIN;
 /** Standing orders keep at most this many batches in the pipeline. */
 export const STANDING_PIPELINE = 4;
+/** Standing orders keep the pipeline fed in proportion to the wheel's bays. */
+export function standingPipeline(s: GameState): number {
+  let bays = 1;
+  for (const st of s.stations) if (st.kind === 'wheel') { const n = baysOf(st); if (n > bays) bays = n; }
+  return STANDING_PIPELINE * bays;
+}
+
 const MAX_ITER = 500_000;
 
 const isRunning = (b: Batch) => b.startedAt !== null;
@@ -53,17 +60,20 @@ function stationsOfKind(s: GameState, kind: Station['kind']): Station[] {
 }
 
 function canStartOn(s: GameState, st: Station, b: Batch): boolean {
-  const here = s.batches.filter((x) => x.stationId === st.id && isRunning(x));
-  if (st.kind === 'kiln') {
-    const used = here.reduce((a, x) => a + x.count, 0);
-    return used + b.count <= kilnCapacity(s);
+  let n = 0;
+  let used = 0;
+  for (const x of s.batches) {
+    if (x.stationId !== st.id || !isRunning(x)) continue;
+    n++;
+    used += kilnLoad(s, x);
   }
-  return here.length === 0;
+  if (st.kind === 'kiln') return used + kilnLoad(s, b) <= kilnCapacity(s);
+  return n < baysOf(st);
 }
 
 export function startWork(s: GameState, t: number): void {
   // standing order: keep the pipeline fed
-  if (s.standing && s.batches.length < STANDING_PIPELINE && !s.batches.some((b) => b.stage === 'prepare')) {
+  if (s.standing && s.batches.length < standingPipeline(s) && !s.batches.some((b) => b.stage === 'prepare')) {
     const design = s.designs.find((d) => d.id === s.standing!.designId);
     if (design) startNewBatch(s, design, s.standing.batchSize, s.standing.autoBuy, (p) => newId(s, p));
     else s.standing = null;
