@@ -10,6 +10,7 @@ import { lendAHand } from './help';
 import { SUBSTITUTE_FACTOR } from './goods';
 import { loadKiln, loadKilnMasterwork } from './kiln';
 import { completeJointOrder, contributeTo, ensureJointOrders, isComplete, maxContribution } from './joint';
+import { contributeToProject } from './projectActions';
 import { addNews, validateVillageAction, vid } from './state';
 import { tickVillage } from './tick';
 import type { Delivery, Give, GiveRef, KilnReturn, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
@@ -241,6 +242,12 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
       const err = loadKilnMasterwork(v, actor, me, a.designId, a.wood, now);
       if (err) return err;
       events.push('Dein Meisterstück steht im Gemeinschaftsofen – das Feuer entscheidet mit.');
+      break;
+    }
+    case 'contributeProject': {
+      const out = contributeToProject(v, actor, me, a, now, events);
+      if (typeof out === 'string') return out;
+      deliveries.push(...out);
       break;
     }
     default:

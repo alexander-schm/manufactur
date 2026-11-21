@@ -137,7 +137,12 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
       if (!isCount(a.wood, KILN_WOOD_MAX) || a.wood < KILN_WOOD_MIN) return `Ein Meisterstück braucht ${KILN_WOOD_MIN} bis ${KILN_WOOD_MAX} Holz`;
       return null;
     case 'contributeProject':
-      return 'Noch nicht verfügbar';
+      if (typeof a.projectId !== 'string') return 'Unbekanntes Projekt';
+      if (!Number.isInteger(a.part) || a.part < 0) return 'Diesen Teil gibt es nicht';
+      if (a.source !== 'own' && a.source !== 'store' && a.source !== 'substitute') return 'Woher denn?';
+      if (!isCount(a.count, 100_000_000)) return 'Ungültige Menge';
+      if (a.masterworkIds !== undefined && (!Array.isArray(a.masterworkIds) || a.masterworkIds.length > 10 || !a.masterworkIds.every((id) => typeof id === 'string'))) return 'Unbekanntes Meisterstück';
+      return null;
     case 'help':
       if (!isMember(a.target)) return 'Diese Person wohnt nicht im Dorf';
       if (a.target === actorId) return 'Bei dir selbst packst du ja sowieso mit an';

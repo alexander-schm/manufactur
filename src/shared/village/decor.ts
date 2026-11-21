@@ -17,6 +17,12 @@ export const DECOR: Record<string, DecorDef> = {
   meisterbrief: { id: 'meisterbrief', name: 'Meisterbrief', spot: 'wall' },
   porzellanvoegel: { id: 'porzellanvoegel', name: 'Porzellanvögel', spot: 'window' },
   kronleuchter: { id: 'kronleuchter', name: 'Kronleuchter', spot: 'ceiling' },
+  // grand projects (art follows in the map/decor art task)
+  brunnenfliese: { id: 'brunnenfliese', name: 'Brunnenfliese', spot: 'wall' },
+  tischglocke: { id: 'tischglocke', name: 'Kleine Messingglocke', spot: 'window' },
+  museumsplakat: { id: 'museumsplakat', name: 'Museumsplakat', spot: 'wall' },
+  kaolinbrocken: { id: 'kaolinbrocken', name: 'Kaolinbrocken', spot: 'floor' },
+  ratssiegel: { id: 'ratssiegel', name: 'Ratssiegel', spot: 'wall' },
 };
 
 export const MAX_DECOR_PLACED = 4;
