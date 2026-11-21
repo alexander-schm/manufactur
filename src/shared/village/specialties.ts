@@ -1,6 +1,7 @@
 import { MATERIALS, own } from '../content';
 import { pick } from '../rng';
 import type { GameState } from '../types';
+import { kaolinFactor } from './benefits';
 
 export interface SpecialtyDef { material: string; name: string; yieldPerHour: number; prop: 'clay' | 'ore' | 'copper' | 'crystal' | 'wood' }
 
@@ -37,6 +38,7 @@ export function shopPrice(state: GameState, material: string): number {
   // basic clay stays affordable for everyone; colourants and wood are what you trade for
   else if (v && v.members >= 2 && own(SPECIALTIES, material) && (m.kind === 'colorant' || m.kind === 'fuel')) price = m.price * FOREIGN_SPECIALTY_FACTOR;
   if (material === 'ton' && v?.buildings.includes('tongrube')) price *= 0.8;
+  if (material === 'kaolin') price *= kaolinFactor(state);
   return round2(price);
 }
 

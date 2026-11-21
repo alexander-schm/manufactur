@@ -1,6 +1,7 @@
 import { recordCollection } from './collection';
 import { bodyOf, getStationDef, getTrait, own } from './content';
 import { SPECIALTIES } from './village/specialties';
+import { trickleVillageRuf } from './village/benefits';
 import { addGoods, goodsTotal, shelfCapacity, stallRate, stallSalesBetween, stallStock } from './market';
 import { finishMasterwork } from './masterwork';
 import { addOrder, nextOrderTime } from './orders';
@@ -155,6 +156,7 @@ function trickle(s: GameState, from: number, to: number): void {
 function sell(s: GameState, from: number, to: number): void {
   if (to <= from) return;
   trickle(s, from, to);
+  trickleVillageRuf(s, from, to);
   const r = stallSalesBetween(s, from, to);
   if (s.away) { s.away.sold += r.sold; s.away.talerEarned = Math.round((s.away.talerEarned + r.taler) * 100) / 100; }
   if (r.sold > 0) tryUnblock(s);

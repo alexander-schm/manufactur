@@ -1,10 +1,13 @@
 import { EFFECTS, bodyOf, getBody, getForm, getStationDef, own } from './content';
+import { marketDayAt, nextMarketEdge, projectLevel } from './village/benefits';
 import type { Design, GameState, GoodsStack } from './types';
 
 export const QUALITY_MUL: Record<1 | 2 | 3, number> = { 1: 0.8, 2: 1, 3: 1.3 };
 export const STALL_PRICE_FACTOR = 0.8;
 export const MARKTHALLE_PRICE_FACTOR = 0.9;
-export const stallPriceFactor = (s: GameState) => (s.village?.buildings.includes('markthalle') ? MARKTHALLE_PRICE_FACTOR : STALL_PRICE_FACTOR);
+const baseStallFactor = (s: GameState) => (s.village?.buildings.includes('markthalle') ? MARKTHALLE_PRICE_FACTOR : STALL_PRICE_FACTOR);
+/** Sell factor at instant t: the market day's factor inside its window, else the usual one. */
+export const stallPriceFactor = (s: GameState, t: number) => marketDayAt(s, t)?.factor ?? baseStallFactor(s);
 
 export function pieceValue(state: GameState, stack: Pick<GoodsStack, 'designId' | 'quality' | 'effect'>): number {
   const design = state.designs.find((d) => d.id === stack.designId);
@@ -82,6 +85,23 @@ export function stallStock(state: GameState): number {
  * the pieces open orders need.
  */
 export function stallSalesBetween(state: GameState, from: number, to: number): { sold: number; taler: number } {
+  if (to <= from || projectLevel(state, 'glockenturm') <= 0) return sellSegment(state, from, to, stallPriceFactor(state, from));
+  // market day: split at its start/end so each part sells at its own factor
+  let sold = 0;
+  let taler = 0;
+  let cur = from;
+  while (cur < to) {
+    const edge = nextMarketEdge(state, cur);
+    const end = edge === null ? to : Math.min(to, edge);
+    const r = sellSegment(state, cur, end, stallPriceFactor(state, cur));
+    sold += r.sold;
+    taler += r.taler;
+    cur = end;
+  }
+  return { sold, taler: Math.round(taler * 100) / 100 };
+}
+
+function sellSegment(state: GameState, from: number, to: number, factor: number): { sold: number; taler: number } {
   const rate = stallRate(state);
   if (to <= from || rate <= 0) return { sold: 0, taler: 0 };
   if (offeredCount(state) === 0) { state.stallCarry = 0; return { sold: 0, taler: 0 }; }
@@ -108,7 +128,7 @@ export function stallSalesBetween(state: GameState, from: number, to: number): {
     budget.left[i] -= k;
     g.count -= k;
     sold += k;
-    taler += k * pieceValue(state, g) * stallPriceFactor(state);
+    taler += k * pieceValue(state, g) * factor;
   }
   if (state.goods.some((g) => g.count === 0)) state.goods = state.goods.filter((g) => g.count > 0);
   taler = Math.round(taler * 100) / 100;

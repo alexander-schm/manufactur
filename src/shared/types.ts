@@ -198,4 +198,8 @@ export interface VillageSnapshot {
   trickleCarry: number;
   /** member count — foreign specialties only cost more once there's someone to trade with */
   members: number;
+  /** completed village project levels (id -> level), delivered by the village */
+  projects?: Record<string, number>;
+  /** fractional Ruf carried between catch-ups */
+  rufCarry?: number;
 }
