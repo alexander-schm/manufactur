@@ -26,7 +26,7 @@ test/         Vitest (shared, client, worker) + test/e2e/smoke.mjs
 ```bash
 npm install
 npx wrangler d1 migrations apply manufaktur --local   # einmalig
-echo "DEV_FAST=1" > .dev.vars                         # nur lokal: erlaubt /api/dev/warp für Tests
+echo "DEV_FAST=1" > .dev.vars                         # nur lokal: erlaubt /api/dev/warp und /api/dev/grant für Tests
 npm run dev                                            # http://localhost:5173
 ```
 
@@ -37,6 +37,11 @@ Entwickler-Seiten (nur im Dev-Modus):
 - `/#people`: Leute
 - `/#scene`: Werkstatt
 - `/#game&panel=orders`: Spielbildschirm mit Testdaten
+
+Entwickler-API (nur mit `DEV_FAST=1`, sonst 404; angemeldet):
+
+- `POST /api/dev/warp { minutes }`: lässt so viel Spielzeit vergehen
+- `POST /api/dev/grant { taler?, ruf? }`: schreibt Taler und Ruf gut (je 0…10 000 000), z. B. um die Manufaktur zu testen
 
 ## Testen
 

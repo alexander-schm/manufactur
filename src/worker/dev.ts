@@ -33,3 +33,41 @@ export async function handleWarp(req: Request, env: Env): Promise<Response> {
   await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(s), who.playerId).run();
   return json({ ok: true });
 }
+
+export const MAX_GRANT = 10_000_000;
+
+/** Validates a grant body: each of taler/ruf absent or a finite number 0…MAX_GRANT. */
+export function parseGrant(body: { taler?: unknown; ruf?: unknown }): { taler: number; ruf: number } | null {
+  const out = { taler: 0, ruf: 0 };
+  for (const k of ['taler', 'ruf'] as const) {
+    const v = body[k];
+    if (v === undefined) continue;
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > MAX_GRANT) return null;
+    out[k] = v;
+  }
+  return out;
+}
+
+/** Add Taler and Ruf to a stored state. Dev/testing only. */
+export function grant(state: GameState, g: { taler: number; ruf: number }): GameState {
+  const s = structuredClone(state);
+  s.taler = Math.round((s.taler + g.taler) * 100) / 100;
+  s.ruf += g.ruf;
+  return s;
+}
+
+/** POST /api/dev/grant {taler?, ruf?} — only when env.DEV_FAST === '1'. */
+export async function handleGrant(req: Request, env: Env): Promise<Response> {
+  if (env.DEV_FAST !== '1') return error(404, 'Nicht gefunden');
+  const who = await requirePlayer(req, env);
+  if (who instanceof Response) return who;
+  const parsed = await readBody<{ taler?: unknown; ruf?: unknown }>(req);
+  if ('error' in parsed) return parsed.error;
+  const g = parseGrant(parsed.value);
+  if (!g) return error(400, 'taler/ruf 0…10000000');
+  const row = await env.DB.prepare('SELECT state FROM workshops WHERE player_id = ?').bind(who.playerId).first<{ state: string }>();
+  if (!row) return error(404, 'Keine Werkstatt');
+  const s = grant(JSON.parse(row.state), g);
+  await env.DB.prepare('UPDATE workshops SET state = ? WHERE player_id = ?').bind(JSON.stringify(s), who.playerId).run();
+  return json({ ok: true });
+}

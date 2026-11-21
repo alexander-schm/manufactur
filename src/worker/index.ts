@@ -1,5 +1,5 @@
 import { handleFound, handleJoin, handleLogin, handleLogout, handleMe } from './auth';
-import { handleWarp } from './dev';
+import { handleGrant, handleWarp } from './dev';
 import { handleVillageAction, handleVillageView, handleVisit } from './village';
 export { VillageDO } from './village';
 import { handleAction, handleGetState } from './game';
@@ -37,6 +37,8 @@ export default {
           return await handleAction(req, env);
         case 'POST /api/dev/warp':
           return await handleWarp(req, env);
+        case 'POST /api/dev/grant':
+          return await handleGrant(req, env);
         case 'GET /api/village':
           return await handleVillageView(req, env);
         case 'POST /api/village/action':

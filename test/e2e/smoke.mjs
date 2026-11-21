@@ -1,5 +1,6 @@
 // End-to-end smoke test. Usage: node test/e2e/smoke.mjs <baseUrl> [--no-fast]
-// With a dev server that has DEV_FAST=1 (see .dev.vars) it also plays a few minutes via /api/dev/warp.
+// With a dev server that has DEV_FAST=1 (see .dev.vars) it also plays a few minutes via /api/dev/warp
+// and the endgame (Manufaktur, stoneware, a masterwork) via /api/dev/grant.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
@@ -74,6 +75,43 @@ await a.reload({ waitUntil: 'networkidle' });
 await a.waitForSelector('.scene');
 await a.waitForTimeout(1500);
 await a.screenshot({ path: 'docs/screens/smoke-after-play.png' });
+
+// 5) endgame: grant, buy the Manufaktur, keep stoneware clay in stock, start a masterwork and let it finish
+const act = async (action) => {
+  const cur = (await api(a, 'GET', '/api/state')).json.state;
+  const res = await api(a, 'POST', '/api/action', { action, version: cur.version });
+  if (res.status !== 200) fail(`${action.type} ${res.status} ${JSON.stringify(res.json)}`);
+  return res.json.state;
+};
+r = await api(a, 'POST', '/api/dev/grant', { taler: 60000, ruf: 320 });
+if (r.status !== 200) fail(`grant ${r.status} ${JSON.stringify(r.json)}`);
+st = await act({ type: 'upgradeTier' });
+if (st.tier !== 'manufaktur') fail(`tier is ${st.tier}`);
+if (!st.commission) fail('no masterwork commission after the Manufaktur');
+if (!st.glazes.some((g) => g.id === 'klar-steinzeug')) fail('no stoneware starter glaze');
+await act({ type: 'setKeepStock', material: 'steinzeugton', target: 100 });
+r = await api(a, 'POST', '/api/dev/warp', { minutes: 1 });
+if (r.status !== 200) fail(`warp ${r.status}`);
+st = (await api(a, 'GET', '/api/state')).json.state;
+if (!(st.materials.steinzeugton >= 100)) fail(`keep-in-stock did not top up: steinzeugton=${st.materials.steinzeugton}`);
+const becher = st.designs.find((d) => d.form === 'becher' && !d.origin);
+st = await act({ type: 'saveDesign', design: { ...becher, id: 'new', name: 'Steinzeugbecher', body: 'steinzeug', glazeId: 'klar-steinzeug' } });
+const stoneware = st.designs.find((d) => d.name === 'Steinzeugbecher');
+if (!stoneware || stoneware.body !== 'steinzeug') fail('stoneware design not saved');
+st = await act({ type: 'startMasterwork', designId: stoneware.id });
+if (!st.batches.some((b) => b.masterwork)) fail('masterwork did not start');
+r = await api(a, 'POST', '/api/dev/warp', { minutes: 24 * 60 });
+if (r.status !== 200) fail(`warp ${r.status}`);
+st = (await api(a, 'GET', '/api/state')).json.state;
+if (st.masterworks.length !== 1) fail(`expected one finished masterwork, got ${st.masterworks.length}`);
+console.log(`endgame: ${st.tier}, steinzeugton ${st.materials.steinzeugton}, masterwork ${st.masterworks[0].prestige}`);
+// the screenshot shows the workshop and the masterwork's finish card, not the away card and the milestone queue
+st = await act({ type: 'ackAway' });
+for (const id of st.milestonesDone.filter((m) => !st.milestonesAcked.includes(m))) await act({ type: 'ackMilestone', id });
+await a.reload({ waitUntil: 'networkidle' });
+await a.waitForSelector('.scene');
+await a.waitForTimeout(1500);
+await a.screenshot({ path: 'docs/screens/smoke-endgame.png' });
 if (errors.length) fail('page errors: ' + errors.join(' | '));
 console.log('SMOKE OK');
 await browser.close();
