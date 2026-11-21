@@ -109,3 +109,5 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .body-lump[aria-pressed='true'] { background: var(--g5); }
 .body-lump:disabled { opacity: .55; cursor: not-allowed; }
 .body-lump .muted { font-size: .8em; }
+.shop-row { flex-wrap: wrap; }
+.shop-buy { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }

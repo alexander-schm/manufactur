@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { BUILD_COST, HAND_TOUCH_COOLDOWN_MS } from '../../shared/actions';
-import { getStationDef, STATIONS } from '../../shared/content';
-import { kilnCapacity } from '../../shared/production';
+import { getStationDef, nextTier, stationTierGate, STATIONS } from '../../shared/content';
+import { baysOf, kilnCapacity } from '../../shared/production';
 import type { GameState, Station, StationKind } from '../../shared/types';
 import { makeCharacter } from '../../shared/character';
 import { Character } from '../art/character/Character';
@@ -12,6 +12,7 @@ import { formatDuration } from './logic';
 import { MarketPanel } from './MarketPanel';
 import { ownDesigns } from '../../shared/village/apply';
 import { DecorSection } from './village/DecorPanel';
+import { TierSection } from './TierSection';
 import type { PanelId } from './PanelHost';
 
 const STAGE_LABEL: Record<string, string> = { prepare: 'Kneten', form: 'Drehen', dry: 'Trocknen', bisque: 'Schrühbrand', glaze: 'Glasieren', glazeFire: 'Glasurbrand' };
@@ -20,8 +21,11 @@ function upgradeEffect(st: Station): string {
   const def = getStationDef(st.kind);
   if (st.kind === 'shelf') return `Platz für ${def.capacity![st.level]} statt ${def.capacity![st.level - 1]} Stück`;
   if (st.kind === 'marketStall') return `verkauft ${def.capacity![st.level]} statt ${def.capacity![st.level - 1]} Stück/min`;
-  if (st.kind === 'kiln') return `+40 % schneller, ${def.capacity![st.level]} statt ${def.capacity![st.level - 1]} Stück pro Brand`;
-  return '+40 % schneller';
+  const ppm = def.piecesPerMinute;
+  const gain = `+${Math.round((ppm[st.level] / ppm[st.level - 1] - 1) * 100)} % schneller`;
+  if (st.kind === 'kiln') return `${gain}, ${def.capacity![st.level]} statt ${def.capacity![st.level - 1]} Stück pro Brand`;
+  const bay = (def.bays?.[st.level] ?? 1) > (def.bays?.[st.level - 1] ?? 1) ? ', +1 Arbeitsplatz' : '';
+  return gain + bay;
 }
 
 function Production({ s }: { s: GameState }) {
@@ -46,7 +50,14 @@ function Production({ s }: { s: GameState }) {
       {s.standing && (
         <label class="check"><input type="checkbox" checked={s.standing.autoBuy} onChange={(e) => dispatch({ type: 'setStanding', designId: s.standing!.designId, batchSize: s.standing!.batchSize, autoBuy: e.currentTarget.checked })} />Fehlendes Material automatisch nachkaufen</label>
       )}
-      {current && <Button small variant="quiet" onClick={() => dispatch({ type: 'queueBatch', designId: current, count: Math.min(size, cap) })}>Eine Extra-Charge einlegen</Button>}
+      <h4 style={{ marginBottom: '4px' }}>Extra-Charge</h4>
+      <div class="design-pick">
+        {ownDesigns(s).map((d) => (
+          <button onClick={() => dispatch({ type: 'queueBatch', designId: d.id, count: Math.min(size, cap) })}>
+            <DesignPot s={s} d={d} size={48} /><div>{d.name}</div>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }
@@ -59,6 +70,7 @@ export function StationPanel({ s, stationId, onOpen }: { s: GameState; stationId
   const t = now.value + (serverTime() - Date.now());
   const running = s.batches.filter((b) => b.stationId === st.id && b.startedAt !== null);
   const waiting = s.batches.filter((b) => b.startedAt === null && b.stage === def.stage || (b.startedAt === null && def.stage2 && b.stage === def.stage2));
+  const bays = baysOf(st);
   const here = s.workers.filter((w) => w.stationId === st.id);
   const cooldown = Math.max(0, (s.cooldowns[st.id] ?? 0) - t);
   return (
@@ -66,15 +78,16 @@ export function StationPanel({ s, stationId, onOpen }: { s: GameState; stationId
       <p class="muted">{def.description}</p>
       <section class="panel-section">
         <h3>Gerade</h3>
+        {bays > 1 && <p class="muted">Arbeitsplätze: {bays}</p>}
         {running.length === 0 && <p>Hier ist gerade nichts zu tun{waiting.length ? '' : ' – es wartet auch nichts'}.</p>}
-        {running.map((b) => {
+        {running.map((b, i) => {
           const d = s.designs.find((x) => x.id === b.designId);
           const p = b.blocked ? 1 : Math.min(1, (t - b.startedAt!) / Math.max(1, b.durationMs));
           return (
             <div class="card-row" style={{ marginBottom: '8px' }}>
               {d && <DesignPot s={s} d={d} size={52} />}
               <div class="grow">
-                <div>{STAGE_LABEL[b.stage]}: {b.count}× {d?.name}</div>
+                <div>{bays > 1 ? `Platz ${i + 1}/${bays} · ` : ''}{STAGE_LABEL[b.stage]}: {b.count}× {d?.name}</div>
                 <div class="progressbar"><div style={{ width: `${(p * 100).toFixed(1)}%` }} /></div>
                 <div class="muted" style={{ fontSize: '.85em' }}>{b.blocked ? 'Fertig – aber das Regal ist voll! Verkaufe etwas oder baue das Regal aus.' : `noch ${formatDuration(b.startedAt! + b.durationMs - t)}`}</div>
               </div>
@@ -113,7 +126,13 @@ export function StationPanel({ s, stationId, onOpen }: { s: GameState; stationId
 function UpgradeBox({ s, st }: { s: GameState; st: Station }) {
   const def = STATIONS[st.kind];
   if (!s.unlocks.includes('upgrades')) return <section class="panel-section"><h3>Stufe {st.level}</h3><p class="muted">Ausbauen geht ab 10 Ruf.</p></section>;
-  if (st.level >= 5) return <section class="panel-section"><h3>Stufe 5 – ganz ausgebaut!</h3></section>;
+  const top = def.upgradeCost.length + 1;
+  if (st.level >= top) return <section class="panel-section"><h3>Stufe {top} – ganz ausgebaut!</h3></section>;
+  const gate = stationTierGate(s, st.level);
+  if (gate) {
+    const nt = nextTier(s);
+    return <section class="panel-section"><h3>Stufe {st.level}</h3><p class="muted">{gate}.</p>{nt && <p class="muted" style={{ fontSize: '.85em' }}>Die {nt.name} findest du oben in der Werkstatt.</p>}</section>;
+  }
   const cost = def.upgradeCost[st.level - 1], ruf = def.rufRequired[st.level - 1];
   return (
     <section class="panel-section">
@@ -129,6 +148,7 @@ function UpgradeBox({ s, st }: { s: GameState; st: Station }) {
 export function WorkshopPanel({ s, onOpen }: { s: GameState; onOpen: (id: PanelId, arg?: string) => void }) {
   return (
     <div>
+      <TierSection s={s} />
       <div class="cards">
         {[...s.stations].sort((a, b) => a.slot - b.slot).map((st) => (
           <button class="card card-row" style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit' }} onClick={() => onOpen('station', st.id)}>
