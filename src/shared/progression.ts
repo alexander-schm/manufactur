@@ -31,6 +31,10 @@ const hasStoneware = (s: GameState): boolean => {
   for (const k of s.collection) if (k.includes('|steinzeug|')) return true;
   return false;
 };
+const hasPorcelain = (s: GameState): boolean => {
+  for (const k of s.collection) if (k.includes('|porzellan|')) return true;
+  return false;
+};
 const hasPrestige = (s: GameState, rank: number): boolean => {
   for (const r of s.masterworks) if (PRESTIGE_RANK[r.prestige] >= rank) return true;
   return false;
@@ -55,6 +59,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'ruf72', text: 'Man erkennt deine Stücke schon von Weitem (72 Ruf)!', unlocks: ['zeichen'], done: (s) => s.ruf >= 72 },
   { id: 'ruf250', text: 'Weit über das Tal hinaus bekannt (250 Ruf)!', unlocks: ['rahmen-punkte'], done: (s) => s.ruf >= 250 },
   { id: 'tierManufaktur', tier: 'manufaktur', text: 'Aus der Werkstatt wird eine Manufaktur!', unlocks: ['steinzeug', 'teekanne', 'meisterstuecke'], done: (s) => tierAtLeast(s, 'manufaktur') },
+  { id: 'ruf1000', text: 'Am Hof spricht man von dir (1000 Ruf)!', unlocks: ['muster-schuppen'], done: (s) => s.ruf >= 1000 },
   { id: 'tierHofmanufaktur', tier: 'hofmanufaktur', text: 'Ernannt zur Hofmanufaktur!', unlocks: ['porzellan', 'figur', 'fliese'], done: (s) => tierAtLeast(s, 'hofmanufaktur') },
   { id: 'firstStoneware', text: 'Dein erstes Stück aus Steinzeug!', unlocks: [], decor: ['steinzeugtopf'], done: hasStoneware },
   { id: 'ruf400', text: 'Händler fragen nach deinem Namen (400 Ruf)!', unlocks: ['muster-ranken'], done: (s) => s.ruf >= 400 },
@@ -68,6 +73,10 @@ export const MILESTONES: Milestone[] = [
   { id: 'firstMasterwork', text: 'Dein erstes Meisterstück!', unlocks: [], decor: ['meisterbrief'], done: (s) => s.masterworks.length >= 1 },
   { id: 'masterworkSilver', text: 'Ein Meisterstück in Silber!', unlocks: ['rahmen-sonne'], done: (s) => hasPrestige(s, PRESTIGE_RANK.silver) },
   { id: 'masterworkGold', text: 'Ein Meisterstück in Gold!', unlocks: ['rahmen-gold'], done: (s) => hasPrestige(s, PRESTIGE_RANK.gold) },
+  { id: 'firstPorcelain', text: 'Dein erstes Stück Porzellan!', unlocks: [], decor: ['porzellanvoegel'], done: hasPorcelain },
+  { id: 'allPorcelainEffects', text: 'Alle Porzellan-Effekte entdeckt!', unlocks: [], decor: ['kronleuchter'], done: (s) => allBodyEffects(s, 'porzellan') },
+  { id: 'ruf1500', text: 'Eine Legende unter Töpfern (1500 Ruf)!', unlocks: ['kunde-hofgaertnerin'], done: (s) => s.ruf >= 1500 },
+  { id: 'ruf2500', text: 'Dein Name steht in den Geschichtsbüchern (2500 Ruf)!', unlocks: ['rahmen-krone'], done: (s) => s.ruf >= 2500 },
 ];
 
 export const BOOST_AFTER_MS = 24 * 3_600_000;

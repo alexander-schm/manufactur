@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getForm } from '../../src/shared/content';
+import { BODIES, getForm } from '../../src/shared/content';
 import { matchEffect } from '../../src/shared/discovery';
 import { validateDesign } from '../../src/shared/design';
 import { newId } from '../../src/shared/ids';
@@ -44,6 +44,32 @@ function midGame(): GameState {
   return s;
 }
 
+const OELFLECK: GlazeRecipe = {
+  id: 'g-oel', name: 'Ölfleck', base: 'opak', colorant: 'eisenoxid', colorantPct: 8,
+  firing: { temp: 'hoch', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#1b1a1f', effect: 'oelfleck', body: 'steinzeug',
+};
+
+/** A fresh Manufaktur: the mid-game workshop promoted, every station at level 7, 320 Ruf, 2000 Taler, plus a stoneware vase with an Ölfleck glaze. */
+function manufakturStart(): GameState {
+  const s = midGame();
+  s.tier = 'manufaktur';
+  for (const u of ['steinzeug', 'teekanne', 'meisterstuecke', 'rahmen-punkte']) if (!s.unlocks.includes(u)) s.unlocks.push(u);
+  for (const st of s.stations) st.level = 7;
+  s.ruf = 320;
+  s.taler = 2000;
+  s.glazes.push(structuredClone(BODIES.steinzeug.starterGlaze!), structuredClone(OELFLECK));
+  const vase: Design = {
+    id: newId(s, 'd'), name: 'Steinzeugvase', form: 'vase', body: 'steinzeug', profile: { ...getForm('vase').profileDefaults },
+    handle: 'none', rim: 'plain', glazeId: 'g-oel', pattern: 'none', patternColor: '#2b2420',
+  };
+  s.designs.push(vase);
+  s.stallDesignIds.push(vase.id);
+  const held = MILESTONES.filter((m) => m.done(s)).map((m) => m.id);
+  s.milestonesDone = [...held];
+  s.milestonesAcked = [...held];
+  return s;
+}
+
 describe('endgame pacing', () => {
   it('the mid-game setup is what it claims to be', () => {
     const s = midGame();
@@ -60,5 +86,22 @@ describe('endgame pacing', () => {
     expect(r.tierDay.manufaktur).toBeGreaterThanOrEqual(1);
     expect(r.tierDay.manufaktur).toBeLessThanOrEqual(6);
     expect(r.state.tier).toBe('manufaktur');
+  });
+
+  it('the Manufaktur setup is what it claims to be', () => {
+    const s = manufakturStart();
+    expect(s.tier).toBe('manufaktur');
+    expect(s.stations.every((st) => st.level === 7)).toBe(true);
+    expect(matchEffect(OELFLECK)).toBe('oelfleck');
+    for (const d of s.designs) expect(validateDesign(d, s), d.name).toBeNull();
+    expect(s.milestonesDone).toContain('tierManufaktur');
+    expect(s.milestonesDone).not.toContain('ruf1000');
+  });
+
+  it('from the Manufaktur, the Hofmanufaktur takes a few weeks', { timeout: 300_000 }, () => {
+    const r = endgameBot(manufakturStart(), 45);
+    expect(r.tierDay.hofmanufaktur).toBeGreaterThanOrEqual(10);
+    expect(r.tierDay.hofmanufaktur).toBeLessThanOrEqual(40);
+    expect(r.state.tier).toBe('hofmanufaktur');
   });
 });

@@ -8,7 +8,7 @@ import { validateDesign } from '../../src/shared/design';
 import { shelfCapacity } from '../../src/shared/market';
 import { checkMilestones, MILESTONES, touchSeen } from '../../src/shared/progression';
 import type { GameState } from '../../src/shared/types';
-import { manufakturGame, plainGame, T0 } from './helpers';
+import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
 
 const MIN = 60_000;
 const H = 60 * MIN;
@@ -205,5 +205,40 @@ describe('milestone ladder (Manufaktur range)', () => {
     expect(plain.ok && 'frame' in plain.state.makerMark).toBe(false);
     expect(validateDesign({ ...s.designs[0], pattern: 'karo' }, s)).toBe('Dieses Muster ist noch nicht freigeschaltet');
     expect(validateDesign({ ...s.designs[0], pattern: 'karo' }, { ...s, unlocks: [...s.unlocks, 'muster-karo'] })).toBeNull();
+  });
+});
+
+describe('milestone ladder (court range)', () => {
+  it('the court ladder fires', () => {
+    const s = hofGame();
+    expect(s.milestonesDone).toContain('ruf1000');
+    s.milestonesDone = s.milestonesDone.filter((id) => id !== 'ruf1000');
+    s.ruf = 2500;
+    s.collection.push('figur|porzellan|-');
+    for (const e of Object.values(EFFECTS)) if (e.body === 'porzellan') s.glazes.push({ ...s.glazes[0], id: `g-${e.id}`, effect: e.id });
+    const r = checkMilestones(s);
+    for (const id of ['ruf1000', 'firstPorcelain', 'allPorcelainEffects', 'ruf1500', 'ruf2500']) expect(r.state.milestonesDone).toContain(id);
+    expect(r.state.decor).toEqual(expect.arrayContaining(['porzellanvoegel', 'kronleuchter']));
+    expect(r.state.decorPlaced).toEqual(expect.arrayContaining(['porzellanvoegel', 'kronleuchter']));
+    expect(r.state.unlocks).toEqual(expect.arrayContaining(['muster-schuppen', 'kunde-hofgaertnerin', 'rahmen-krone']));
+    expect(r.events.some((e) => e.kind === 'unlock' && e.id === 'kronleuchter')).toBe(true);
+  });
+  it('court milestones wait for their conditions', () => {
+    const s = hofGame();
+    s.ruf = 1499;
+    s.collection.push('figur|steinzeug|-');
+    const blau = Object.values(EFFECTS).find((e) => e.body === 'porzellan')!;
+    s.glazes.push({ ...s.glazes[0], id: 'g-one', effect: blau.id });
+    const r = checkMilestones(s).state;
+    for (const id of ['firstPorcelain', 'allPorcelainEffects', 'ruf1500', 'ruf2500']) expect(r.milestonesDone).not.toContain(id);
+    expect(r.unlocks).not.toContain('rahmen-krone');
+    expect(r.decor).not.toContain('kronleuchter');
+  });
+  it('the court ladder sits after the Hofmanufaktur and every Part 2 cosmetic is granted by some milestone', () => {
+    const ids = MILESTONES.map((m) => m.id);
+    expect(ids.indexOf('ruf1000')).toBeLessThan(ids.indexOf('tierHofmanufaktur'));
+    expect(ids.indexOf('tierHofmanufaktur')).toBeLessThan(ids.indexOf('firstPorcelain'));
+    const granted = MILESTONES.flatMap((m) => [...m.unlocks, ...(m.decor ?? [])]);
+    for (const c of ['rahmen-krone', 'muster-schuppen', 'kunde-hofgaertnerin', 'porzellanvoegel', 'kronleuchter']) expect(granted, c).toContain(c);
   });
 });

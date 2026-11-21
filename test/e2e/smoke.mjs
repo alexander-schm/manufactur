@@ -1,6 +1,6 @@
 // End-to-end smoke test. Usage: node test/e2e/smoke.mjs <baseUrl> [--no-fast]
 // With a dev server that has DEV_FAST=1 (see .dev.vars) it also plays a few minutes via /api/dev/warp
-// and the endgame (Manufaktur, stoneware, a masterwork) via /api/dev/grant.
+// and the endgame (Manufaktur, stoneware, a masterwork, Hofmanufaktur, porcelain) via /api/dev/grant.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
@@ -105,6 +105,20 @@ if (r.status !== 200) fail(`warp ${r.status}`);
 st = (await api(a, 'GET', '/api/state')).json.state;
 if (st.masterworks.length !== 1) fail(`expected one finished masterwork, got ${st.masterworks.length}`);
 console.log(`endgame: ${st.tier}, steinzeugton ${st.materials.steinzeugton}, masterwork ${st.masterworks[0].prestige}`);
+// 6) the court: grant, buy the Hofmanufaktur, buy kaolin, save a porcelain figurine
+r = await api(a, 'POST', '/api/dev/grant', { taler: 2600000, ruf: 1000 }); // Hofmanufaktur price 2 500 000 + kaolin
+if (r.status !== 200) fail(`grant ${r.status} ${JSON.stringify(r.json)}`);
+st = await act({ type: 'upgradeTier' });
+if (st.tier !== 'hofmanufaktur') fail(`tier is ${st.tier}`);
+if (!st.glazes.some((g) => g.id === 'klar-porzellan')) fail('no porcelain starter glaze');
+if (!st.unlocks.includes('muster-schuppen')) fail('ruf1000 milestone did not unlock muster-schuppen');
+const kaolin0 = st.materials.kaolin ?? 0;
+st = await act({ type: 'buyMaterial', material: 'kaolin', amount: 10 });
+if (st.materials.kaolin !== kaolin0 + 10) fail(`kaolin ${kaolin0} → ${st.materials.kaolin}`);
+st = await act({ type: 'saveDesign', design: { ...becher, id: 'new', name: 'Porzellaneule', form: 'figur', variant: 'eule', body: 'porzellan', glazeId: 'klar-porzellan', handle: 'none', rim: 'plain', pattern: 'none', profile: { height: 0.5, belly: 0.6, neck: 0.5, foot: 0.5, rim: 0.5 } } });
+const eule = st.designs.find((d) => d.name === 'Porzellaneule');
+if (!eule || eule.body !== 'porzellan' || eule.form !== 'figur' || eule.variant !== 'eule') fail('porcelain figurine not saved');
+console.log(`court: ${st.tier}, kaolin ${st.materials.kaolin}, design ${eule.name}`);
 // the screenshot shows the workshop and the masterwork's finish card, not the away card and the milestone queue
 st = await act({ type: 'ackAway' });
 for (const id of st.milestonesDone.filter((m) => !st.milestonesAcked.includes(m))) await act({ type: 'ackMilestone', id });
