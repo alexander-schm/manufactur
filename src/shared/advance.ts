@@ -93,10 +93,18 @@ export function startWork(s: GameState, t: number): void {
   for (const b of s.batches) if (!isRunning(b) && !b.blocked) { waiting = true; break; }
   if (!waiting) return;
   // the masterwork gets the first free bay
-  for (const b of s.batches) if (b.masterwork && !isRunning(b)) { tryStart(s, b, t); break; }
+  let kilnHeld = false;
+  for (const b of s.batches) {
+    if (!b.masterwork || isRunning(b)) continue;
+    tryStart(s, b, t);
+    // still waiting for kiln space: let the kiln drain instead of refilling it with normal batches
+    kilnHeld = !isRunning(b) && stationForStage(b.stage) === 'kiln';
+    break;
+  }
   // later stages first so the pipeline drains
   for (let i = STAGES.length - 1; i >= 0; i--) {
     const stage = STAGES[i];
+    if (kilnHeld && stationForStage(stage) === 'kiln') continue;
     for (const b of s.batches) {
       if (b.stage !== stage || isRunning(b) || b.blocked) continue;
       tryStart(s, b, t);

@@ -133,19 +133,23 @@ export function finishMasterwork(s: GameState, b: Batch, t: number): void {
   s.batches = s.batches.filter((x) => x !== b);
   const design = s.designs.find((d) => d.id === b.designId);
   const c = s.commission;
-  if (!design || !c) return;
-  const metList = criteriaMet(s, design, c);
+  // without its design there is nothing to show; still keep a patron waiting
+  if (!design) { s.commission ??= generateCommission(s); return; }
+  const metList = c ? criteriaMet(s, design, c) : [];
   const met = metList.filter(Boolean).length;
   const quality = qualityTier(b.quality);
-  const prestige = prestigeFor(met, metList.length, quality);
-  const mul = PRESTIGE_MUL[prestige];
-  s.taler += Math.round(c.rewardTaler * mul);
-  s.ruf += Math.round(c.rewardRuf * mul);
+  // no patron to judge it (should not happen): the piece is kept, but earns nothing
+  const prestige = c ? prestigeFor(met, metList.length, quality) : 'bronze';
+  if (c) {
+    const mul = PRESTIGE_MUL[prestige];
+    s.taler += Math.round(c.rewardTaler * mul);
+    s.ruf += Math.round(c.rewardRuf * mul);
+  }
   const glaze = glazeForDesign(s, design);
   // a masterwork always shows its glaze's effect: no chance roll
   const effect = glaze?.effect ?? null;
   s.masterworks.push({
-    id: newId(s, 'mw'), commissionId: c.id, patronName: c.patronName, design: structuredClone(design),
+    id: newId(s, 'mw'), commissionId: c?.id ?? '', patronName: c?.patronName ?? '', design: structuredClone(design),
     glazeColor: glaze?.color ?? getBody(bodyOf(design)).clearColor, effect, quality, met, total: metList.length, prestige, finishedAt: t, acked: false,
   });
   recordCollection(s, design.form, bodyOf(design), effect);

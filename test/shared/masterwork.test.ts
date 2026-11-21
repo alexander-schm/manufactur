@@ -5,9 +5,9 @@ import { collectionKey } from '../../src/shared/collection';
 import { FORMS, PATRONS, bodyOf } from '../../src/shared/content';
 import { colorFamily, validateDesign } from '../../src/shared/design';
 import {
-  COMMISSION_SWAP_COST, PRESTIGE_MUL, criteriaMet, describeCriterion, generateCommission, masterworkInProgress, predictMasterwork, prestigeFor,
+  COMMISSION_SWAP_COST, MASTERWORK_QUALITY_BONUS, PRESTIGE_MUL, finishMasterwork, criteriaMet, describeCriterion, generateCommission, masterworkInProgress, predictMasterwork, prestigeFor,
 } from '../../src/shared/masterwork';
-import { MASTERWORK_KILN_SHARE, kilnCapacity, kilnLoad } from '../../src/shared/production';
+import { MASTERWORK_KILN_SHARE, batchQuality, kilnCapacity, kilnLoad, productionWorkers } from '../../src/shared/production';
 import { newId } from '../../src/shared/state';
 import type { Batch, Commission, Design, GameState, GlazeRecipe, Stage } from '../../src/shared/types';
 import { manufakturGame, plainGame, T0 } from './helpers';
@@ -149,7 +149,7 @@ describe('masterworks', () => {
     expect(a.materials.glasurbasis).toBe(base - 3);
     expect(a.batches).toHaveLength(1);
     expect(a.batches[0]).toMatchObject({ count: 1, stage: 'prepare', masterwork: true, designId: d.id });
-    expect(a.batches[0].quality).toBe(Math.min(100, a.batches[0].quality));
+    expect(a.batches[0].quality).toBe(Math.min(100, batchQuality(a, d, productionWorkers(a)) + MASTERWORK_QUALITY_BONUS));
     expect(masterworkInProgress(a)).toBe(a.batches[0]);
     expect(rejected(a, { type: 'startMasterwork', designId: d.id })).toMatch(/schon ein Meisterstück/);
     expect(rejected(plainGame(), { type: 'startMasterwork', designId: plainGame().designs[0].id })).toMatch(/ab der Manufaktur/);
@@ -183,6 +183,70 @@ describe('masterworks', () => {
     expect(a.masterworks.length).toBe(0);
     expect(a.batches[0]).toMatchObject({ stage: 'glazeFire', durationMs: 4 * H, startedAt: T0 + 14 * H });
     expect(advance(a, T0 + 18 * H).masterworks.length).toBe(1);
+  });
+
+  it('a masterwork starts 10 quality points above a normal batch of the same design', () => {
+    const s = manufakturGame();
+    s.commission = generateCommission(s);
+    const d = s.designs[0];
+    expect(MASTERWORK_QUALITY_BONUS).toBe(10);
+    // compare against the state the action ran on (catch-up may grow the worker first)
+    const a = ok(s, { type: 'startMasterwork', designId: d.id });
+    const normal = batchQuality(a, d, productionWorkers(a));
+    expect(normal).toBeLessThan(90);
+    expect(masterworkInProgress(a)!.quality).toBe(normal + 10);
+    expect(predictMasterwork(a, d).quality).toBe(normal + 10 >= 75 ? 3 : normal + 10 >= 40 ? 2 : 1);
+    // a very skilled hand: the bonus is capped at 100
+    s.workers[0].traits = ['perfektionist', 'perfektionist'];
+    const strong = ok(s, { type: 'startMasterwork', designId: d.id });
+    const base = batchQuality(strong, d, productionWorkers(strong));
+    expect(base).toBeGreaterThan(90);
+    expect(masterworkInProgress(strong)!.quality).toBe(100);
+  });
+
+  it('[Review Focus 5] a busy kiln drains for the waiting masterwork instead of refilling with small batches', () => {
+    const s = manufakturGame(); s.commission = generateCommission(s); s.standing = null; s.stallDesignIds = [];
+    const kiln = s.stations.find((x) => x.kind === 'kiln')!;
+    expect(kilnCapacity(s)).toBe(72);
+    const running = (id: string, endH: number): Batch => ({ ...waiting(s, id, 'bisque', 20), stationId: kiln.id, startedAt: T0, durationMs: endH * H });
+    // 60 of 72 in the kiln, ending one after another; five more small batches queue behind
+    s.batches = [running('r1', 1), running('r2', 2), running('r3', 3), waiting(s, 'm', 'bisque', 1, true)];
+    for (let i = 1; i <= 5; i++) s.batches.push(waiting(s, `w${i}`, 'bisque', 20));
+    const a = advance(s, T0 + 1 * H + 1);
+    // 40 used after r1: the masterwork (36) does not fit yet, and no small batch takes the freed room
+    expect(a.batches.find((b) => b.id === 'm')!.startedAt).toBeNull();
+    expect(a.batches.filter((b) => b.id.startsWith('w') && b.startedAt !== null)).toHaveLength(0);
+    const b = advance(a, T0 + 2 * H + 1);
+    expect(b.batches.find((x) => x.id === 'm')!.startedAt).toBe(T0 + 2 * H);
+    // afterwards everything still gets fired: 8 batches of 20
+    const done = advance(b, T0 + 40 * H);
+    expect(done.masterworks).toHaveLength(1);
+    expect(done.goods.reduce((n, g) => n + g.count, 0)).toBe(160);
+    expect(done.batches).toHaveLength(0);
+  });
+
+  it('finishing without a commission keeps the piece, pays nothing and brings a new patron', () => {
+    const s = manufakturGame();
+    s.commission = null;
+    const b = { ...waiting(s, 'm', 'glazeFire', 1, true), startedAt: T0, durationMs: 4 * H };
+    s.batches = [b];
+    const taler = s.taler, ruf = s.ruf;
+    finishMasterwork(s, b, T0 + 4 * H);
+    expect(s.batches).toHaveLength(0);
+    expect(s.masterworks).toHaveLength(1);
+    expect(s.masterworks[0]).toMatchObject({ commissionId: '', prestige: 'bronze', met: 0, total: 0, finishedAt: T0 + 4 * H });
+    expect(s.taler).toBe(taler);
+    expect(s.ruf).toBe(ruf);
+    expect(s.commission).not.toBeNull();
+    // and without its design: no record, but still a commission
+    const t = manufakturGame();
+    t.commission = null;
+    const lost = { ...waiting(t, 'm', 'glazeFire', 1, true), designId: 'gone' };
+    t.batches = [lost];
+    finishMasterwork(t, lost, T0);
+    expect(t.batches).toHaveLength(0);
+    expect(t.masterworks).toHaveLength(0);
+    expect(t.commission).not.toBeNull();
   });
 
   it('a masterwork takes half the kiln', () => {
