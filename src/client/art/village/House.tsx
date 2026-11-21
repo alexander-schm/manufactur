@@ -4,6 +4,7 @@ import type { Member } from '../../../shared/village/types';
 import { SPECIALTIES } from '../../../shared/village/specialties';
 import { Character } from '../character/Character';
 import { inkStyle } from '../ink';
+import { MarkFrame } from '../markFrame';
 
 const S = inkStyle(2.2);
 const T = { ...inkStyle(1.2), opacity: 0.7 };
@@ -19,6 +20,7 @@ function Emblem({ m, x, y }: { m: Member; x: number; y: number }) {
   return (
     <g>
       <circle cx={x} cy={y} r="14" fill="#fffaf0" style={inkStyle(1.8)} />
+      <MarkFrame frame={m.makerMark.frame} x={x} y={y} r={18} color={c} />
       <g fill="none" stroke={c} stroke-width="2">{shape}</g>
       <text x={x} y={y + 4} text-anchor="middle" font-size="10" font-family="var(--font-hand)" fill={c}>{m.makerMark.letter}</text>
     </g>

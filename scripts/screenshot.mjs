@@ -19,6 +19,8 @@ for (const [name, viewport, mobile] of [['desktop', { width: 1280, height: 800 }
   await page.waitForTimeout(wait);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   const out = `docs/screens/${prefix}-${name}.png`;
+  // body is a 100%-height scroll container; let it grow so a full-page shot paints everything
+  if (fullPage) { await page.addStyleTag({ content: 'html, body { height: auto !important; }' }); await page.waitForTimeout(300); }
   await page.screenshot({ path: out, fullPage });
   console.log(`${out}  horizontalOverflow=${overflow}px${errors.length ? '  ERRORS: ' + errors.join(' | ') : ''}`);
   await ctx.close();

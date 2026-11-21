@@ -1,6 +1,6 @@
-import { FORMS } from '../../shared/content';
 import { glazeColor } from '../../shared/discovery';
-import type { Design, FiringSettings, GlazeRecipe, PatternKind } from '../../shared/types';
+import { BODIES, FORMS, FRAMES } from '../../shared/content';
+import type { BodyId, Design, FiringSettings, GlazeRecipe, PatternKind } from '../../shared/types';
 import { Pot } from '../art/Pot';
 
 const F = (temp: FiringSettings['temp'], atmosphere: FiringSettings['atmosphere'], cooling: FiringSettings['cooling']): FiringSettings => ({ temp, atmosphere, cooling });
@@ -20,14 +20,22 @@ const EFFECT_GLAZES: [string, Pick<GlazeRecipe, 'base' | 'colorant' | 'colorantP
   ['kristall', { base: 'matt', colorant: 'kobalt', colorantPct: 2, firing: F('hoch', 'oxidierend', 'langsam') }],
 ];
 
-function design(form: string, i: number, pattern: PatternKind = 'none'): Design {
+const EXTREMES = [
+  { height: 0, belly: 0, neck: 0, foot: 0, rim: 0 },
+  { height: 1, belly: 1, neck: 1, foot: 1, rim: 1 },
+  { height: 1, belly: 0, neck: 1, foot: 0, rim: 1 },
+  { height: 0, belly: 1, neck: 0, foot: 1, rim: 0 },
+  { height: 0.5, belly: 1, neck: 1, foot: 0, rim: 1 },
+];
+
+function design(form: string, i: number, pattern: PatternKind = 'none', body: BodyId = 'irdenware'): Design {
   const d = FORMS[form].profileDefaults;
   const v = [-0.3, 0, 0.3][i % 3];
   const c = (x: number) => Math.max(0, Math.min(1, x));
   return {
     id: `${form}${i}`, name: '', form, pattern, patternColor: '#fff8ec',
     profile: { height: c(d.height + v), belly: c(d.belly - v * 0.6), neck: c(d.neck + v * 0.5), foot: c(d.foot), rim: c(d.rim + v * 0.4) },
-    handle: FORMS[form].handleAllowed ? (['round', 'ear', 'loop'] as const)[i % 3] : 'none', rim: (['plain', 'rolled', 'flared'] as const)[i % 3], glazeId: '', body: 'irdenware',
+    handle: FORMS[form].handleAllowed ? (['round', 'ear', 'loop'] as const)[i % 3] : 'none', rim: (['plain', 'rolled', 'flared'] as const)[i % 3], glazeId: '', body,
   };
 }
 
@@ -53,6 +61,42 @@ export function PotsPage() {
         <h3>Effekte</h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {EFFECT_GLAZES.flatMap(([eff, g]) => ['vase', 'schale', 'becher'].map((f) => <div style={{ textAlign: 'center' }}><Pot design={design(f, 1)} glazeColor={glazeColor(g)} effect={eff} size={110} /><div>{eff}</div></div>))}
+        </div>
+      </section>
+      <section>
+        <h3>Tonsorten</h3>
+        {Object.values(BODIES).map((b) => (
+          <div>
+            <div>{b.name}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {Object.keys(FORMS).map((f) => <Pot design={design(f, 1, 'none', b.id)} glazeColor={b.clearColor} size={76} />)}
+              {Object.keys(FORMS).map((f, i) => <Pot design={design(f, 1, PATTERNS[(i % 4) + 1], b.id)} glazeColor={glazeColor(GLAZES[(i % 4) + 1])} size={76} />)}
+            </div>
+          </div>
+        ))}
+      </section>
+      <section>
+        <h3>Teekanne – extreme Profile</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {EXTREMES.map((p, i) => <Pot design={{ ...design('teekanne', i, 'none'), id: `tk${i}`, profile: p, handle: (['round', 'ear', 'loop'] as const)[i % 3] }} glazeColor={glazeColor(GLAZES[(i % 4) + 1])} size={110} />)}
+        </div>
+      </section>
+      <section>
+        <h3>Neue Muster</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {(['ranken', 'karo'] as const).flatMap((pt) => Object.keys(FORMS).map((f, i) => <Pot design={design(f, i, pt, i % 2 ? 'steinzeug' : 'irdenware')} glazeColor={glazeColor(GLAZES[(i % 4) + 1])} size={96} />))}
+        </div>
+      </section>
+      <section>
+        <h3>Rahmen</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {Object.values(FRAMES).map((fr, i) => <div style={{ textAlign: 'center' }}><Pot design={design(['becher', 'vase', 'teekanne', 'schale', 'teller'][i % 5], 1)} glazeColor={glazeColor(GLAZES[(i % 4) + 1])} size={150} fit mark={{ shape: (['heart', 'star', 'circle', 'leaf'] as const)[i % 4], letter: 'A', color: i % 2 ? '#2b2420' : '#b44c36', frame: fr.id }} /><div>{fr.name}</div></div>)}
+        </div>
+      </section>
+      <section>
+        <h3>Silhouetten</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {Object.keys(FORMS).map((f) => <Pot design={design(f, 1)} glazeColor="#3f6fb5" size={76} silhouette />)}
         </div>
       </section>
     </div>

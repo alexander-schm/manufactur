@@ -11,6 +11,8 @@ export interface PotShape {
   rim: { cx: number; cy: number; rx: number; ry: number };
   handle?: string;
   spout?: string;
+  /** a lid resting on the rim (Teekanne): dome over the rim ellipse, knob radius */
+  lid?: { cx: number; cy: number; rx: number; ry: number; knob: number };
   /** y where the glaze ends and raw clay shows */
   footY: number;
   bandY: number;
@@ -38,6 +40,21 @@ function controlPoints(form: string, p: ProfileParams, rimStyle: Design['rim']):
       const rim = clamp(26 + p.rim * 12 + flare, foot + 10, 46);
       const belly = clamp(rim * (0.82 + p.belly * 0.16), foot + 4, rim);
       return [[foot, BASE_Y], [foot + 3, BASE_Y - H * 0.12], [belly, BASE_Y - H * 0.55], [rim, BASE_Y - H]];
+    }
+    case 'teekanne': {
+      // round-bellied, short neck, a gallery wide enough for the lid
+      const H = clamp(30 + p.height * 34, 24, 70);
+      const foot = 8 + p.foot * 10;
+      const belly = clamp(20 + p.belly * 18, foot + 6, 40);
+      const neck = clamp(9 + p.neck * 10, 8, belly - 6);
+      const rim = clamp(neck + (p.rim - 0.3) * 6 + flare * 0.5, 8, belly - 4);
+      return [
+        [foot, BASE_Y],
+        [foot + (belly - foot) * 0.7, BASE_Y - H * 0.12],
+        [belly, BASE_Y - H * 0.45],
+        [neck + (belly - neck) * 0.62, BASE_Y - H * 0.8],
+        [rim, BASE_Y - H],
+      ];
     }
     default: {
       const tall = form === 'vase' ? 1.15 : form === 'krug' ? 1.05 : 0.85;
@@ -111,7 +128,7 @@ export function potShape(form: string, p: ProfileParams, rimStyle: Design['rim']
     const xA = CX + halfWidthAt(right, yA) - 1.5;
     const xB = CX + halfWidthAt(right, yB) - 1.5;
     const reach = handle === 'loop' ? 17 : handle === 'ear' ? 9 : 13;
-    const out = Math.max(xA, xB) + reach;
+    const out = Math.min(106, Math.max(xA, xB) + reach);
     handlePath = `M${r2(xA)} ${r2(yA)} C${r2(out)} ${r2(yA - (handle === 'ear' ? 6 : 2))} ${r2(out)} ${r2(yB + 2)} ${r2(xB)} ${r2(yB)}`;
   }
   let spout: string | undefined;
@@ -119,5 +136,16 @@ export function potShape(form: string, p: ProfileParams, rimStyle: Design['rim']
     const x = CX - rx;
     spout = `M${r2(x + 1)} ${r2(topY + 4)} Q${r2(x - 5)} ${r2(topY + 1)} ${r2(x - 7)} ${r2(topY - 3)} L${r2(x + 3)} ${r2(topY - 0.5)} Z`;
   }
-  return { body, rim, handle: handlePath, spout, footY, bandY, bandHalfWidth, topY: r2(topY), maxHalfWidth: r2(maxHalfWidth) };
+  let lid: PotShape['lid'];
+  if (form === 'teekanne') {
+    lid = { cx: CX, cy: rim.cy, rx: r2(rx + 1.2), ry: r2(rim.ry + 0.4), knob: r2(clamp(rx * 0.22, 2, 3.4)) };
+    // S-curved spout from the lower belly on the left, rising to about rim height
+    const yLo = BASE_Y - H * 0.2, yHi = BASE_Y - H * 0.48;
+    const xLo = CX - halfWidthAt(right, yLo) + 2, xHi = CX - halfWidthAt(right, yHi) + 2;
+    const left = CX - maxHalfWidth;
+    const tx = Math.max(-6, left - 13 - H * 0.08), ty = Math.max(topY - 2, BASE_Y - H * 0.98);
+    spout = `M${r2(xHi)} ${r2(yHi)} C${r2(left - 5)} ${r2(yHi + 0.5)} ${r2(tx + 3.5)} ${r2(ty + 8)} ${r2(tx + 1.6)} ${r2(ty)}`
+      + ` L${r2(tx - 1.6)} ${r2(ty + 1)} C${r2(tx - 1)} ${r2(ty + 11)} ${r2(left - 10)} ${r2(yLo + 1)} ${r2(xLo)} ${r2(yLo)} Z`;
+  }
+  return { body, rim, handle: handlePath, spout, lid, footY, bandY, bandHalfWidth, topY: r2(topY), maxHalfWidth: r2(maxHalfWidth) };
 }
