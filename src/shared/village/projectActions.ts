@@ -136,7 +136,8 @@ export function contributeToProject(v: VillageState, actor: GameState, me: Membe
   if (units > max) {
     // the 70 % rule speaks first whenever it is the tighter limit
     if (max < left) return 'Mehr als 70 % einer Bauphase darf niemand allein geben – lass den anderen etwas übrig!';
-    return `Es fehlen nur noch ${p.kind === 'taler' ? fmtTaler(left) : left}`;
+    // said in what the actor gives: Taler formatted, substitutes in earthenware pieces (three per missing one)
+    return `Es fehlen nur noch ${p.kind === 'taler' ? fmtTaler(left) : a.source === 'substitute' ? left * SUBSTITUTE_FACTOR : left}`;
   }
   const taken = takeContribution(v, actor, me.playerId, p, a);
   if (typeof taken === 'string') return taken;

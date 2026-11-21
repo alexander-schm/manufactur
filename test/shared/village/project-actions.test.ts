@@ -201,6 +201,13 @@ describe('the 70 % rule', () => {
     const size = partSize(w.v.projects.active!.parts[0]);
     const r = runAction(w.v, w.ws, 'p2', { type: 'contributeProject', projectId: 'glockenturm', part: 0, count: size, source: 'own' });
     expect(r.error).toBe(`Es fehlen nur noch ${size - 1}`);
+    // substitutes are counted in earthenware pieces, three per missing piece
+    const gi = w.v.projects.active!.parts.findIndex((p) => p.kind === 'goods');
+    const gp = w.v.projects.active!.parts[gi] as Extract<ActivePart, { kind: 'goods' }>;
+    const most = runAction(w.v, w.ws, 'p2', give(w, 'p2', gi, partSize(gp) - 2));
+    expect(most.error).toBeNull();
+    const sub = runAction(most.v, most.ws, 'p1', { type: 'contributeProject', projectId: 'glockenturm', part: gi, count: 9, source: 'substitute', designId: designId(gp, true), quality: 3, effect: null });
+    expect(sub.error).toBe('Es fehlen nur noch 6');
   });
 
   it('property: one actor greedily filling everything never completes a stage; a second actor finishes it', () => {

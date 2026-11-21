@@ -209,6 +209,8 @@ describe('substitutes and body/effect parts', () => {
     const ref = { designId: 'dk', quality: 2 as const, effect: null };
     expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 1, source: 'own', ...ref }).error).toBe('Das ist der falsche Ton');
     expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 4, source: 'substitute', ...ref }).error).toBe('Ersatz aus Irdenware geht nur in Dreierpacks');
+    // 4 left = 12 earthenware pieces: 15 is too many, and the message counts pieces
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 15, source: 'substitute', ...ref }).error).toBe('Es fehlen nur noch 12');
     // 4 left, 6 substitutes = 2 units: accepted
     const r = run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 6, source: 'substitute', ...ref });
     expect(r.error).toBeNull();

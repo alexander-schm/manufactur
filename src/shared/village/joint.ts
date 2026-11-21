@@ -132,7 +132,8 @@ export function contributeTo(o: JointOrder, partIndex: number, actor: GameState,
   const left = p.count - p.filled;
   if (left <= 0) return 'Dieser Teil ist schon fertig';
   const units = source === 'substitute' ? Math.floor(count / SUBSTITUTE_FACTOR) : count;
-  if (units > left) return `Es fehlen nur noch ${left}`;
+  // said in pieces: a substitute needs three earthenware pieces per missing one
+  if (units > left) return `Es fehlen nur noch ${source === 'substitute' && p.kind === 'goods' ? left * SUBSTITUTE_FACTOR : left}`;
   if (p.kind === 'material') {
     if (source === 'substitute') return 'Dafür gibt es keinen Ersatz';
     const base = own(MATERIALS, p.material)!.price;
