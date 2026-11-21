@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { decorationsFor } from '../../../shared/village/level';
 import { inkStyle } from '../ink';
 
@@ -104,7 +105,7 @@ function RoseArch({ x, y }: { x: number; y: number }) {
 }
 
 /** Small things around the village square, one more every 5 village levels. */
-export function LevelDecorations({ level }: { level: number }) {
+function Decorations({ level }: { level: number }) {
   const on = new Set(decorationsFor(level));
   return (
     <g class="level-decorations">
@@ -117,3 +118,6 @@ export function LevelDecorations({ level }: { level: number }) {
     </g>
   );
 }
+
+/** Depends only on the level, so it is skipped on clock ticks. */
+export const LevelDecorations = memo(Decorations);

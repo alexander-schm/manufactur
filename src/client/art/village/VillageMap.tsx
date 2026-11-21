@@ -1,4 +1,5 @@
 import { memo } from 'preact/compat';
+import { useMemo, useRef } from 'preact/hooks';
 import type { VillageView } from '../../../shared/village/types';
 import { BUILDING_ORDER } from '../../../shared/village/buildings';
 import { COMPLETIONS_PER_BUILDING } from '../../../shared/village/joint';
@@ -123,6 +124,17 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
   const nextIdx = BUILDING_ORDER.findIndex((b) => !built.has(b));
   const progress = village.completedJoint % COMPLETIONS_PER_BUILDING;
   const level = villageLevel(village);
+  // stable per-id click handlers, so memoized sites and the kiln are not re-rendered by a new inline callback
+  const latest = useRef(onBuilding);
+  latest.current = onBuilding;
+  const select = useMemo(() => {
+    const cache = new Map<string, () => void>();
+    return (id: string) => {
+      let h = cache.get(id);
+      if (!h) cache.set(id, (h = () => latest.current(id)));
+      return h;
+    };
+  }, []);
   // draw back-to-front by y so houses overlap naturally
   const items: { y: number; el: preact.JSX.Element }[] = [];
   PLOTS.forEach((p, slot) => {
@@ -136,12 +148,12 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
   });
   if (built.has('gemeinschaftsofen')) {
     const p = BUILDING_SPOTS.gemeinschaftsofen;
-    items.push({ y: p.y, el: <g class="vbuilding" data-building="gemeinschaftsofen" role="button" aria-label="Gemeinschaftsofen" onClick={() => onBuilding('gemeinschaftsofen')}><GreatKilnArt x={p.x} y={p.y} phase={kilnPhase(village.greatKiln, now)} fill={kilnFill(village.greatKiln)} /></g> });
+    items.push({ y: p.y, el: <g class="vbuilding" data-building="gemeinschaftsofen" role="button" aria-label="Gemeinschaftsofen" onClick={select('gemeinschaftsofen')}><GreatKilnArt x={p.x} y={p.y} phase={kilnPhase(village.greatKiln, now)} fill={kilnFill(village.greatKiln)} /></g> });
   }
   const { active, offered, levels } = village.projects;
   for (const [id, p] of Object.entries(PROJECT_SPOTS)) {
     const building = active?.projectId === id ? { level: active.level, stage: active.stage, stages: PROJECTS[id].stages.length } : null;
-    items.push({ y: p.y, el: <ProjectSite id={id} x={p.x} y={p.y} level={levels[id] ?? 0} building={building} offered={offered.includes(id)} onClick={() => onBuilding(id)} /> });
+    items.push({ y: p.y, el: <ProjectSite id={id} x={p.x} y={p.y} level={levels[id] ?? 0} building={building} offered={offered.includes(id)} onClick={select(id)} /> });
   }
   items.push({ y: 470, el: <Well x={700} y={470} /> });
   items.push({ y: 500, el: <g onClick={onBoard} role="button" aria-label="Tauschbrett"><NoticeBoard x={830} y={500} offers={village.offers.length} requests={village.requests.length} /></g> });

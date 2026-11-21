@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import { PROJECTS, ROMAN } from '../../../shared/village/projects';
 import { inkStyle } from '../ink';
 
@@ -336,13 +337,18 @@ export type SiteBuilding = { level: 1 | 2 | 3; stage: number; stages: number } |
  * A grand-project spot on the map. `level` = highest completed level (0 = never built);
  * `building` = the level under construction here, if any.
  */
-export function ProjectSite({ id, x, y, level, building, offered, onClick }: { id: string; x: number; y: number; level: number; building: SiteBuilding; offered: boolean; onClick: () => void }) {
+type SiteProps = { id: string; x: number; y: number; level: number; building: SiteBuilding; offered: boolean; onClick: () => void };
+
+function ProjectSiteArt({ id, x, y, level, building, offered, onClick }: SiteProps) {
   const def = PROJECTS[id];
   const look = DRAW[id];
   if (!def || !look) return null;
   const shownLevel = building?.level ?? level;
   const stage = building ? building.stage : level > 0 ? def.stages.length : 0;
   const Draw = look.draw;
+  // a generous, invisible tap target: the whole drawing when something stands here, the staked plot and its sign otherwise
+  const hitTop = building || level > 0 ? y - look.h + 20 : y - 100;
+  const hit = <rect x={x - look.hw - 24} y={hitTop} width={look.hw * 2 + 48} height={y + 46 - hitTop} fill="transparent" />;
   const root = { class: 'vbuilding project-site', 'data-project-site': id, 'data-stage': stage, 'data-level': shownLevel, onClick, role: 'button' as const };
 
   if (building) {
@@ -353,6 +359,7 @@ export function ProjectSite({ id, x, y, level, building, offered, onClick }: { i
     const label = `${def.name} ${ROMAN[building.level - 1]} · ${building.stage}/${building.stages}`;
     return (
       <g {...root} aria-label={`Baustelle: ${label}`}>
+        {hit}
         <ellipse cx={x} cy={y + 4} rx={look.hw + 24} ry="20" fill="url(#hatch)" opacity="0.35" />
         {building.level === 1 && <Plot x={x} y={y} hw={look.hw} />}
         <g opacity="0.3" style={{ strokeDasharray: '7 6' }}><Draw x={x} y={y} level={building.level} /></g>
@@ -368,6 +375,7 @@ export function ProjectSite({ id, x, y, level, building, offered, onClick }: { i
     const text = offered ? `Zur Wahl: ${def.name}` : 'Bauplatz';
     return (
       <g {...root} aria-label={text}>
+        {hit}
         <Plot x={x} y={y} hw={look.hw} />
         <Sign x={x + (offered ? 0 : 10)} y={y - 12} text={text} fill={offered ? 'var(--sun)' : '#fffaf0'} />
       </g>
@@ -375,9 +383,20 @@ export function ProjectSite({ id, x, y, level, building, offered, onClick }: { i
   }
   return (
     <g {...root} aria-label={`${def.name} ${ROMAN[level - 1]}`}>
+        {hit}
       <ellipse cx={x} cy={y + 4} rx={look.hw + 20} ry="20" fill="url(#hatch)" opacity="0.35" />
       <g filter="url(#wobble-soft)"><Draw x={x} y={y} level={level} /></g>
       <text x={x} y={y + look.label} text-anchor="middle" font-size="18" font-family="var(--font-hand)" fill="var(--line)">{def.name} {ROMAN[level - 1]}</text>
     </g>
   );
 }
+
+/**
+ * Equal sites skip re-rendering (the map re-renders with the 4 Hz clock). `onClick` is ignored:
+ * VillageMap hands each site a stable handler that always calls the latest `onBuilding`.
+ */
+export const sameSite = (a: SiteProps, b: SiteProps): boolean =>
+  a.id === b.id && a.x === b.x && a.y === b.y && a.level === b.level && a.offered === b.offered &&
+  a.building?.level === b.building?.level && a.building?.stage === b.building?.stage && a.building?.stages === b.building?.stages;
+
+export const ProjectSite = memo(ProjectSiteArt, sameSite);

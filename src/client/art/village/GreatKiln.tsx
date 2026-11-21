@@ -1,3 +1,4 @@
+import { memo } from 'preact/compat';
 import type { GreatKiln } from '../../../shared/village/types';
 import { GREAT_KILN_CAPACITY } from '../../../shared/village/kilnRules';
 import { inkStyle } from '../ink';
@@ -34,7 +35,7 @@ function Woodpile({ x, y }: { x: number; y: number }) {
 }
 
 /** The village's great wood kiln: a domed brick oven with a chimney and a woodpile. (x, y) = centre of the ground line. */
-export function GreatKilnArt({ x, y, phase, fill }: { x: number; y: number; phase: KilnPhase; fill: number }) {
+function GreatKilnDrawing({ x, y, phase, fill }: { x: number; y: number; phase: KilnPhase; fill: number }) {
   const pots = phase === 'loading' ? Math.max(1, Math.min(POT_SLOTS.length, Math.round(fill * POT_SLOTS.length))) : 0;
   const door = `M${x - 24} ${y - 8} L${x - 24} ${y - 40} Q${x - 24} ${y - 64} ${x} ${y - 64} Q${x + 24} ${y - 64} ${x + 24} ${y - 40} L${x + 24} ${y - 8} Z`;
   const dome = `M${x - 72} ${y - 8} L${x - 72} ${y - 48} Q${x - 70} ${y - 124} ${x} ${y - 126} Q${x + 70} ${y - 124} ${x + 72} ${y - 48} L${x + 72} ${y - 8} Z`;
@@ -91,3 +92,6 @@ export function GreatKilnArt({ x, y, phase, fill }: { x: number; y: number; phas
     </g>
   );
 }
+
+/** Only redraws when the phase or the fill changes, not on every clock tick. */
+export const GreatKilnArt = memo(GreatKilnDrawing);

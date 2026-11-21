@@ -1,3 +1,4 @@
+import { options, type VNode } from 'preact';
 import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { GreatKilnArt } from '../../src/client/art/village/GreatKiln';
@@ -76,5 +77,36 @@ describe('village long goals on the map', () => {
     const all = render(<svg><LevelDecorations level={30} /></svg>);
     for (const d of LEVEL_DECORATIONS) expect(all).toContain(`data-decoration="${d.id}"`);
     expect(all).not.toMatch(/NaN|undefined/);
+  });
+
+  it('a clock tick (new now, same village) re-renders no project site, kiln or decoration; a new stage does', () => {
+    // capture the props VillageMap hands to the memoized components, then ask preact's memo whether it would re-render
+    const capture = (el: preact.JSX.Element) => {
+      const seen: VNode[] = [];
+      const prev = options.vnode;
+      options.vnode = (vn) => {
+        if (vn.type === ProjectSite || vn.type === GreatKilnArt || vn.type === LevelDecorations) seen.push(vn);
+        prev?.(vn);
+      };
+      try { render(el); } finally { options.vnode = prev; }
+      return seen;
+    };
+    const wouldUpdate = (a: VNode, b: VNode): boolean => {
+      const ctx = { props: a.props } as { props: unknown; shouldComponentUpdate?: (p: unknown) => boolean };
+      (a.type as unknown as (this: typeof ctx, p: unknown) => void).call(ctx, a.props);
+      return ctx.shouldComponentUpdate!(b.props);
+    };
+    const opts = { kiln: 'firing' as const, project: { id: 'rathaus', level: 1 as const, stage: 2 }, levels: { museum: 2 }, level: 30 };
+    const v = mockVillage(4, ['gemeinschaftsofen'], T0, opts);
+    const map = (village: typeof v, now: number) => <VillageMap village={village} meId="p1" now={now} onHouse={noop} onBuilding={() => {}} />;
+    const a = capture(map(v, T0));
+    const b = capture(map(structuredClone(v), T0 + 250));
+    expect(a.length).toBe(7); // 5 sites, the kiln, the decorations
+    a.forEach((vn, i) => expect(wouldUpdate(vn, b[i])).toBe(false));
+
+    const next = mockVillage(4, ['gemeinschaftsofen'], T0, { ...opts, project: { id: 'rathaus', level: 1, stage: 3 } });
+    const c = capture(map(next, T0 + 500));
+    const changed = a.filter((vn, i) => wouldUpdate(vn, c[i])).map((vn) => (vn.props as { id?: string }).id);
+    expect(changed).toEqual(['rathaus']);
   });
 });

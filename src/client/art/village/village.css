@@ -13,3 +13,4 @@
 .village-map .ribbon, .village-art .ribbon { animation: sway 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
 .village-map .lantern-glow, .village-art .lantern-glow { animation: kiln-pulse 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes kiln-pulse { 0%, 100% { opacity: 0.45; transform: scale(0.94); } 50% { opacity: 0.85; transform: scale(1.05); } }
+.village-map .level-decorations { pointer-events: none; }
