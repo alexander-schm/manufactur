@@ -56,13 +56,14 @@ function Progress({ x, y, batch, now }: { x: number; y: number; batch?: Batch; n
 }
 
 /** A little gold star ribbon on a masterwork in progress. */
-function MasterworkTag({ x, y }: { x: number; y: number }) {
+/** A little rosette star marking a masterwork, anchored at its centre; `scale` shrinks it in place. */
+function MasterworkTag({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   const pts = Array.from({ length: 10 }, (_, i) => {
     const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 4 : 9;
     return `${(x + r * Math.cos(a)).toFixed(1)} ${(y + r * Math.sin(a)).toFixed(1)}`;
   });
   return (
-    <g class="masterwork-tag" data-masterwork="">
+    <g class="masterwork-tag" data-masterwork="" transform={scale !== 1 ? `translate(${x} ${y}) scale(${scale}) translate(${-x} ${-y})` : undefined}>
       <path d={`M${x - 4} ${y + 4} L${x - 9} ${y + 20} L${x - 4} ${y + 16} L${x - 1} ${y + 21} Z M${x + 4} ${y + 4} L${x + 9} ${y + 20} L${x + 4} ${y + 16} L${x + 1} ${y + 21} Z`} fill="var(--kiln)" style={inkStyle(1.1)} />
       <path d={`M${pts.join(' L')} Z`} fill="var(--sun)" style={inkStyle(1.5)} />
     </g>
@@ -248,7 +249,7 @@ export function GlazeTable({ x, y, state, running, waiting, now }: StationProps)
             <g style={{ animationDelay: `${i * 0.4}s` }} class={on ? 'dip' : undefined}>
               <ScenePot x={px} y={top} size={items.length > 2 ? 40 : items.length > 1 ? 46 : 52} design={d} color={on ? glazeColorOf(state, d) : BISQUE} />
             </g>
-            {b.masterwork && <MasterworkTag x={px} y={top - 62} />}
+            {b.masterwork && items.length <= 2 && <MasterworkTag x={px + 16} y={top - 34} scale={0.7} />}
           </g>
         ) : null;
       })}
@@ -260,6 +261,8 @@ export function GlazeTable({ x, y, state, running, waiting, now }: StationProps)
         : running.length > 1
         ? running.map((b, i) => <Progress x={left + w + 14} y={top - 22 - i * 50} batch={b} now={now} />)
         : <Progress x={left + w + 10} y={top - 70} batch={running[0]} now={now} />}
+      {/* three bays crowd the worker behind the pots, so the star pins onto that bay's gauge instead */}
+      {items.length > 2 && items.map(({ b }, i) => (b.masterwork ? <MasterworkTag x={left + 80 + i * 48 + 15} y={top + 18} scale={0.7} /> : null))}
     </g>
   );
 }
@@ -327,7 +330,6 @@ export function PrepBench({ x, y, state, running, now }: StationProps) {
         return (
           <g>
             <path d={`M${lx - 30} ${top} Q${lx - 28} ${top - 30} ${lx} ${top - 32} Q${lx + 28} ${top - 30} ${lx + 30} ${top} Z`} fill={d ? rawClay(d) : CLAY} style={{ ...S, animationDelay: `${i * 0.3}s` }} class={b ? 'knead' : undefined} />
-            {b?.masterwork && <MasterworkTag x={lx + 22} y={top - 40} />}
           </g>
         );
       })}
@@ -343,6 +345,10 @@ export function PrepBench({ x, y, state, running, now }: StationProps) {
       {running.length > 1
         ? running.map((b, i) => <Progress x={left + (running.length > 2 ? 38 : 58) + i * lumpStep} y={top + 36} batch={b} now={now} />)
         : <Progress x={left + w - 10} y={top - 52} batch={running[0]} now={now} />}
+      {/* the worker stands right behind the lumps, so the masterwork star pins onto its gauge */}
+      {running.map((b, i) => (!b.masterwork ? null : running.length > 1
+        ? <MasterworkTag x={left + (running.length > 2 ? 38 : 58) + i * lumpStep + 15} y={top + 18} scale={0.7} />
+        : <MasterworkTag x={left + w + 5} y={top - 70} scale={0.7} />))}
     </g>
   );
 }

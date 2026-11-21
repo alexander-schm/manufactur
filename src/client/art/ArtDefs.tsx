@@ -31,6 +31,12 @@ export function ArtDefs() {
           <stop offset="55%" stop-color="#fffdf6" stop-opacity="0.6" />
           <stop offset="100%" stop-color="#fffdf6" stop-opacity="0" />
         </radialGradient>
+        {/* Ochsenblut: deep red pooling towards the foot */}
+        <linearGradient id="ochsenblut-pool" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#5a0a12" stop-opacity="0" />
+          <stop offset="35%" stop-color="#5a0a12" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="#5a0a12" stop-opacity="0.6" />
+        </linearGradient>
       </defs>
     </svg>
   );

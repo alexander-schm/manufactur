@@ -1,9 +1,9 @@
 import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { MarkFrame } from '../../src/client/art/markFrame';
-import { Pot } from '../../src/client/art/Pot';
+import { Effect, Pot } from '../../src/client/art/Pot';
 import { potShape } from '../../src/client/art/potShape';
-import { BODIES, FORMS, FRAMES } from '../../src/shared/content';
+import { BODIES, EFFECTS, FORMS, FRAMES } from '../../src/shared/content';
 import { PATTERN_UNLOCK } from '../../src/shared/design';
 import type { BodyId, PatternKind } from '../../src/shared/types';
 
@@ -122,6 +122,27 @@ describe('Pot art: porcelain, figurines, tiles, Schuppen, crown', () => {
       const html = render(<Pot design={piece(form, { pattern: 'schuppen', patternColor: '#123456' })} glazeColor="#3f6fb5" />);
       expect((html.match(/data-scale/g) ?? []).length).toBeGreaterThanOrEqual(6);
       expect(html).toContain('#123456');
+    }
+  });
+});
+
+describe('[Final fix #2] effect overlays', () => {
+  it('every effect draws an overlay of at most ~40 elements on pots, plates, tiles and figures', () => {
+    const shape = potShape('vase', FORMS.vase.profileDefaults, 'plain', 'none');
+    for (const id of Object.keys(EFFECTS)) {
+      const overlay = Effect({ s: shape, effect: id, seed: 12345, base: '#3f6fb5' });
+      expect(overlay, id).not.toBeNull();
+      const html = render(overlay!);
+      expect(html, id).not.toMatch(/NaN|undefined/);
+      expect((html.match(/<(circle|ellipse|path|rect)\b/g) ?? []).length, id).toBeGreaterThan(0);
+      expect((html.match(/<(circle|ellipse|path|rect)\b/g) ?? []).length, id).toBeLessThanOrEqual(40);
+      for (const form of ['becher', 'teller', 'fliese', 'figur']) {
+        const design = { ...cup, form, profile: FORMS[form].profileDefaults, pattern: 'none' as PatternKind, body: (EFFECTS[id].body ?? 'irdenware') as BodyId };
+        const plain = render(<Pot design={design} glazeColor="#3f6fb5" />);
+        const withEffect = render(<Pot design={design} glazeColor="#3f6fb5" effect={id} />);
+        expect(withEffect.length, `${id} on ${form}`).toBeGreaterThan(plain.length);
+        expect(withEffect, `${id} on ${form}`).not.toMatch(/NaN|undefined/);
+      }
     }
   });
 });

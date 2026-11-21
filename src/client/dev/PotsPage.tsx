@@ -20,6 +20,18 @@ const EFFECT_GLAZES: [string, Pick<GlazeRecipe, 'base' | 'colorant' | 'colorantP
   ['kristall', { base: 'matt', colorant: 'kobalt', colorantPct: 2, firing: F('hoch', 'oxidierend', 'langsam') }],
 ];
 
+/** The stoneware and porcelain effects, each with a recipe that finds it. */
+const BODY_EFFECT_GLAZES: [string, BodyId, Pick<GlazeRecipe, 'base' | 'colorant' | 'colorantPct' | 'firing'>][] = [
+  ['oelfleck', 'steinzeug', { base: 'opak', colorant: 'eisenoxid', colorantPct: 8, firing: F('hoch', 'oxidierend', 'langsam') }],
+  ['hasenfell', 'steinzeug', { base: 'transparent', colorant: 'eisenoxid', colorantPct: 5, firing: F('hoch', 'reduzierend', 'langsam') }],
+  ['shino', 'steinzeug', { base: 'matt', colorant: null, colorantPct: 0, firing: F('hoch', 'oxidierend', 'langsam') }],
+  ['salzglasur', 'steinzeug', { base: 'transparent', colorant: 'salz', colorantPct: 3, firing: F('hoch', 'oxidierend', 'schnell') }],
+  ['blancdechine', 'porzellan', { base: 'opak', colorant: null, colorantPct: 0, firing: F('hoch', 'oxidierend', 'langsam') }],
+  ['blauweiss', 'porzellan', { base: 'transparent', colorant: 'kobalt', colorantPct: 1.5, firing: F('hoch', 'oxidierend', 'langsam') }],
+  ['ochsenblut', 'porzellan', { base: 'opak', colorant: 'kupferoxid', colorantPct: 4, firing: F('hoch', 'reduzierend', 'langsam') }],
+  ['eierschale', 'porzellan', { base: 'matt', colorant: null, colorantPct: 0, firing: F('hoch', 'oxidierend', 'schnell') }],
+];
+
 const EXTREMES = [
   { height: 0, belly: 0, neck: 0, foot: 0, rim: 0 },
   { height: 1, belly: 1, neck: 1, foot: 1, rim: 1 },
@@ -63,6 +75,17 @@ export function PotsPage() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {EFFECT_GLAZES.flatMap(([eff, g]) => ['vase', 'schale', 'becher'].map((f) => <div style={{ textAlign: 'center' }}><Pot design={design(f, 1)} glazeColor={glazeColor(g)} effect={eff} size={110} /><div>{eff}</div></div>))}
         </div>
+      </section>
+      <section>
+        <h3>Edle Effekte</h3>
+        {BODY_EFFECT_GLAZES.map(([eff, body, g]) => (
+          <div>
+            <div>{eff}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {['vase', 'becher', 'schale', 'teller', 'teekanne', 'figur', 'fliese'].map((f, i) => <Pot design={{ ...design(f, i, 'none', body), id: `${eff}${f}` }} glazeColor={glazeColor(g)} effect={eff} size={96} />)}
+            </div>
+          </div>
+        ))}
       </section>
       <section>
         <h3>Tonsorten</h3>

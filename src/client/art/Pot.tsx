@@ -189,6 +189,103 @@ export function Effect({ s, effect, seed, base }: { s: PotShape; effect: string;
           })}
         </g>
       );
+    case 'oelfleck':
+      // silvery oil-spot drops floating on the upper two thirds, each with a tiny bright core
+      return (
+        <g data-effect="oelfleck">
+          {Array.from({ length: 12 }, (_, i) => {
+            const x = CX - w * 0.85 + rnd(seed, i) * 1.7 * w, y = top + 4 + rnd(seed, i + 20) * h * 0.6, r = 1 + rnd(seed, i + 40) * 1.5;
+            return (
+              <g>
+                <circle cx={x.toFixed(1)} cy={y.toFixed(1)} r={r.toFixed(2)} fill="#e8eef2" opacity="0.6" />
+                <circle cx={(x - r * 0.3).toFixed(1)} cy={(y - r * 0.3).toFixed(1)} r={(r * 0.4).toFixed(2)} fill="#fff" opacity="0.75" />
+              </g>
+            );
+          })}
+        </g>
+      );
+    case 'hasenfell': {
+      // fine brown hare's-fur streaks running down from below the rim
+      const n = 12;
+      return (
+        <g data-effect="hasenfell" stroke-linecap="round" fill="none" opacity="0.65">
+          {Array.from({ length: n }, (_, i) => {
+            const x = CX - w + ((i + 0.5) / n) * 2 * w + (rnd(seed, i) - 0.5) * 2.4;
+            const y0 = top + h * 0.15 + rnd(seed, i + 30) * 3, len = h * (0.3 + rnd(seed, i + 60) * 0.3);
+            const bend = (rnd(seed, i + 90) - 0.5) * 3;
+            return <path d={`M${x.toFixed(1)} ${y0.toFixed(1)} q${bend.toFixed(1)} ${(len / 2).toFixed(1)} ${(bend * 0.4).toFixed(1)} ${len.toFixed(1)}`} stroke={i % 3 === 1 ? '#e8b878' : '#5a3418'} stroke-width={(0.8 + rnd(seed, i + 120) * 0.6).toFixed(2)} />;
+          })}
+        </g>
+      );
+    }
+    case 'shino':
+      // milky glaze with a few warm, soft blushes (two layers each so the edge stays soft)
+      return (
+        <g data-effect="shino">
+          {Array.from({ length: 4 }, (_, i) => {
+            const x = CX - w * 0.75 + rnd(seed, i) * 1.5 * w, y = top + 6 + rnd(seed, i + 10) * (h - 14);
+            const rx = 6 + rnd(seed, i + 20) * 6, ry = 4 + rnd(seed, i + 30) * 4;
+            return (
+              <g fill="#e89a6a">
+                <ellipse cx={x.toFixed(1)} cy={y.toFixed(1)} rx={(rx * 1.35).toFixed(1)} ry={(ry * 1.35).toFixed(1)} opacity="0.18" />
+                <ellipse cx={x.toFixed(1)} cy={y.toFixed(1)} rx={rx.toFixed(1)} ry={ry.toFixed(1)} opacity="0.3" />
+              </g>
+            );
+          })}
+        </g>
+      );
+    case 'salzglasur': {
+      // orange-peel skin: a dense stipple a shade darker than the glaze
+      const ink = mix(base, '#000000', 0.25);
+      return (
+        <g data-effect="salzglasur" fill={ink} opacity="0.5">
+          {Array.from({ length: 36 }, (_, i) => <circle cx={(CX - w + rnd(seed, i) * 2 * w).toFixed(1)} cy={(top + 2 + rnd(seed, i + 50) * (h - 4)).toFixed(1)} r={(0.6 + rnd(seed, i + 100) * 0.4).toFixed(2)} />)}
+        </g>
+      );
+    }
+    case 'blancdechine':
+      // warm ivory wash with one soft vertical highlight
+      return (
+        <g data-effect="blancdechine">
+          <rect x="0" y={top} width="100" height={h} fill="#fff4dc" opacity="0.3" />
+          <path d={`M${(CX + w * 0.4).toFixed(1)} ${(top + h * 0.15).toFixed(1)} L${(CX + w * 0.36).toFixed(1)} ${(top + h * 0.8).toFixed(1)}`} stroke="#fffdf6" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+        </g>
+      );
+    case 'blauweiss': {
+      // one or two cobalt brush tendrils with little leaves, painted under the clear glaze
+      const tendrils = 1 + Math.floor(rnd(seed, 1) * 2);
+      return (
+        <g data-effect="blauweiss" stroke="#22408a" fill="none" stroke-linecap="round" opacity="0.8">
+          {Array.from({ length: tendrils }, (_, t) => {
+            const y = top + h * (tendrils === 1 ? 0.45 : 0.3 + t * 0.35) + (rnd(seed, t + 5) - 0.5) * 4;
+            const amp = 3 + rnd(seed, t + 7) * 2, x0 = CX - w - 2, step = (2 * w + 4) / 4;
+            let d = `M${x0.toFixed(1)} ${y.toFixed(1)}`;
+            for (let k = 0; k < 4; k++) d += ` q${(step / 2).toFixed(1)} ${(k % 2 ? amp : -amp).toFixed(1)} ${step.toFixed(1)} 0`;
+            const leaves = Array.from({ length: 4 }, (_, k) => {
+              const lx = x0 + step * (k + 0.5), ly = y + (k % 2 ? amp : -amp) * 0.5, dir = k % 2 ? 1 : -1;
+              return <path d={`M${lx.toFixed(1)} ${ly.toFixed(1)} q${(3 * dir).toFixed(1)} ${(-4.5 * dir).toFixed(1)} ${(6.5 * dir).toFixed(1)} ${(-2 * dir).toFixed(1)} q${(-3 * dir).toFixed(1)} ${(3.4 * dir).toFixed(1)} ${(-6.5 * dir).toFixed(1)} ${(2 * dir).toFixed(1)} Z`} fill="#22408a" stroke-width="0.6" />;
+            });
+            return <g><path d={d} stroke-width="1.4" />{leaves}</g>;
+          })}
+        </g>
+      );
+    }
+    case 'ochsenblut':
+      // deep red pooling towards the foot, fading up to the glaze colour, and a lighter line where the glaze thins at the rim
+      return (
+        <g data-effect="ochsenblut">
+          <rect x="0" y={top} width="100" height={h} fill="url(#ochsenblut-pool)" />
+          <path d={`M${(CX - w).toFixed(1)} ${(top + 3).toFixed(1)} Q${CX} ${(top + 6).toFixed(1)} ${(CX + w).toFixed(1)} ${(top + 3).toFixed(1)}`} stroke={mix(base, '#ffffff', 0.45)} stroke-width="1.4" fill="none" opacity="0.6" />
+        </g>
+      );
+    case 'eierschale':
+      // eggshell-thin: a pale, translucent band at the top and a faint glow from inside
+      return (
+        <g data-effect="eierschale">
+          <ellipse cx={CX} cy={(top + h * 0.55).toFixed(1)} rx={(w * 0.65).toFixed(1)} ry={(h * 0.3).toFixed(1)} fill="#fffaf0" opacity="0.18" />
+          <path d={`M0 ${top} H100 V${(top + h * 0.2).toFixed(1)} Q75 ${(top + h * 0.24).toFixed(1)} 50 ${(top + h * 0.2).toFixed(1)} Q25 ${(top + h * 0.16).toFixed(1)} 0 ${(top + h * 0.2).toFixed(1)} Z`} fill="#ffffff" opacity="0.35" />
+        </g>
+      );
     default:
       return null;
   }

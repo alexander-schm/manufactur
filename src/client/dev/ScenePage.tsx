@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { advance } from '../../shared/advance';
 import { glazeColor } from '../../shared/discovery';
 import { newGame, rollWorker } from '../../shared/state';
-import type { GameState } from '../../shared/types';
+import type { Batch, GameState, StationKind } from '../../shared/types';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
 import { mockEndgame } from './mockEndgame';
 
@@ -32,9 +32,27 @@ export function mockWorkshop(now: number): GameState {
   return s;
 }
 
+const MW_STAGE: Partial<Record<StationKind, Batch['stage']>> = { prepBench: 'prepare', wheel: 'form', glazeTable: 'glaze' };
+
+/** `&mw=wheel` moves the masterwork to that station; `&bays=1` clears the other batches there (a waiting batch may still move into a freed bay). */
+function placeMasterwork(s: GameState, hash: string): GameState {
+  const kind = /mw=(\w+)/.exec(hash)?.[1] as StationKind | undefined;
+  const mw = s.batches.find((b) => b.masterwork);
+  const st = kind && s.stations.find((x) => x.kind === kind);
+  if (!mw || !st || !MW_STAGE[st.kind]) return s;
+  mw.stage = MW_STAGE[st.kind]!;
+  mw.stationId = st.id;
+  const bays = Number(/bays=(\d)/.exec(hash)?.[1] ?? 0);
+  if (bays) {
+    const others = s.batches.filter((b) => b !== mw && b.stationId === st.id);
+    s.batches = s.batches.filter((b) => !others.slice(Math.max(0, bays - 1)).includes(b));
+  }
+  return s;
+}
+
 export function ScenePage() {
   const [now, setNow] = useState(Date.now());
-  const [state] = useState(() => (location.hash.includes('endgame') ? mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur') : mockWorkshop(Date.now())));
+  const [state] = useState(() => (location.hash.includes('endgame') ? placeMasterwork(mockEndgame(Date.now(), location.hash.includes('hof') ? 'hofmanufaktur' : 'manufaktur'), location.hash) : mockWorkshop(Date.now())));
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
   const view = advance(state, now);
   return (
