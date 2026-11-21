@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { makeCharacter } from '../../../shared/character';
 import { MATERIALS } from '../../../shared/content';
 import { fmtTaler } from '../../../shared/format';
@@ -7,7 +8,6 @@ import { levelBonus, villageLevel } from '../../../shared/village/level';
 import {
   instantiateStage, MAX_PROJECT_LEVEL, MAX_STAGE_SHARE, maxProjectUnits, partSize, PROJECT_ORDER, PROJECTS, ROMAN, stageShares,
 } from '../../../shared/village/projects';
-import { villageStorePrice } from '../../../shared/village/specialties';
 import { activeMembers } from '../../../shared/village/state';
 import type { ActivePart, ActiveProject, ProjectPart, VillageAction, VillageView } from '../../../shared/village/types';
 import { Character } from '../../art/character/Character';
@@ -18,7 +18,7 @@ import { Paper } from '../../ui/Paper';
 import { villageDispatch } from '../../villageStore';
 import { Stars } from '../common';
 import { SWATCH } from './GivePicker';
-import { goodsLabel, GoodsButtons } from './JointOrdersPanel';
+import { goodsLabel, GoodsButtons, StoreButton } from './JointOrdersPanel';
 
 type Contribute = (a: VillageAction) => void;
 type Props = { v: VillageView; s: GameState; meId: string; now: number; onContribute: Contribute };
@@ -32,6 +32,39 @@ export function projectPartLabel(p: ProjectPart): string {
   }
 }
 
+const TALER_STEPS = [0.1, 0.25, 0.5, 1];
+
+/**
+ * The amounts offered for a Taler part: 10, 25 and 50 % of what this player may still give, and all of it.
+ * Each is clamped to the Taler in hand; amounts that come out equal are offered once.
+ */
+export function talerChoices(left: number, taler: number): { label: string; amount: number }[] {
+  const have = Math.floor(taler), out: { label: string; amount: number }[] = [];
+  for (const f of TALER_STEPS) {
+    const want = f === 1 ? left : Math.max(1, Math.round(left * f));
+    const amount = Math.min(want, have);
+    if (amount <= 0 || out.some((c) => c.amount === amount)) continue;
+    out.push({ label: amount < want ? T.vl.talerAllMine : f === 1 ? T.vl.talerMost : T.vl.talerPct(f * 100), amount });
+  }
+  return out;
+}
+
+/** Pick an amount first, then give it: no single tap spends a fortune. */
+function TalerGive({ left, taler, give }: { left: number; taler: number; give: (count: number) => void }) {
+  const [picked, setPicked] = useState(0);
+  const choices = talerChoices(left, taler);
+  if (!choices.length) return <div class="row joint-actions"><span class="muted">{T.vl.noTaler}</span></div>;
+  const at = Math.min(picked, choices.length - 1);
+  return (
+    <div class="joint-actions taler-give">
+      <div class="chips">
+        {choices.map((c, i) => <button class="chip small" aria-pressed={i === at} data-taler-chip={c.amount} onClick={() => setPicked(i)}>{c.label}</button>)}
+      </div>
+      <Button small variant="good" onClick={() => give(choices[at].amount)}>{T.vl.giveTaler(choices[at].amount)}</Button>
+    </div>
+  );
+}
+
 /** What this player can put into one part right now (all limits from the shared 70 % rule). */
 function PartButtons({ v, s, meId, a, i, onContribute }: { v: VillageView; s: GameState; meId: string; a: ActiveProject; i: number; onContribute: Contribute }) {
   const p = a.parts[i];
@@ -41,12 +74,11 @@ function PartButtons({ v, s, meId, a, i, onContribute }: { v: VillageView; s: Ga
     onContribute({ type: 'contributeProject', projectId: a.projectId, part: i, ...extra });
   switch (p.kind) {
     case 'material': {
-      const have = Math.floor(s.materials[p.material] ?? 0), price = villageStorePrice(p.material);
+      const have = Math.floor(s.materials[p.material] ?? 0);
       return (
         <div class="row joint-actions">
           {have > 0 && <Button small variant="good" onClick={() => send({ count: Math.min(left, have), source: 'own' })}>{T.vl.fromStock(Math.min(left, have))}</Button>}
-          <Button small variant="quiet" title={`${fmtTaler(price)} Taler pro Stück`} disabled={s.taler < price}
-            onClick={() => send({ count: Math.max(1, Math.min(left, Math.floor(s.taler / price))), source: 'store' })}>{T.vl.buyInStore}</Button>
+          <StoreButton material={p.material} left={left} taler={s.taler} buy={(count) => send({ count, source: 'store' })} />
         </div>
       );
     }
@@ -56,10 +88,8 @@ function PartButtons({ v, s, meId, a, i, onContribute }: { v: VillageView; s: Ga
           <GoodsButtons s={s} p={p} left={left} give={(g, count, substitute) => send({ count, source: substitute ? 'substitute' : 'own', designId: g.designId, quality: g.quality, effect: g.effect })} />
         </div>
       );
-    case 'taler': {
-      const n = Math.min(left, Math.floor(s.taler));
-      return <div class="row joint-actions"><Button small variant="good" disabled={n <= 0} onClick={() => send({ count: n, source: 'own' })}>{T.vl.giveTaler(n)}</Button></div>;
-    }
+    case 'taler':
+      return <TalerGive left={left} taler={s.taler} give={(count) => send({ count, source: 'own' })} />;
     case 'masterwork': {
       const lent = new Set(v.lentMasterworks);
       const mine = s.masterworks.filter((m) => PRESTIGE_RANK[m.prestige] >= PRESTIGE_RANK[p.minPrestige] && !lent.has(`${meId}:${m.id}`));

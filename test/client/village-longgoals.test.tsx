@@ -12,7 +12,10 @@ import { PROJECTS } from '../../src/shared/village/projects';
 import { mockEndgame } from '../../src/client/dev/mockEndgame';
 import { GreatKilnPanel } from '../../src/client/panels/village/GreatKilnPanel';
 import { MuseumView } from '../../src/client/panels/village/MuseumView';
-import { ProjectCard, ProjectPanel } from '../../src/client/panels/village/ProjectPanel';
+import { ProjectCard, ProjectPanel, talerChoices } from '../../src/client/panels/village/ProjectPanel';
+import { storePurchase } from '../../src/client/panels/village/JointOrdersPanel';
+import { fmtTaler } from '../../src/shared/format';
+import { villageStorePrice } from '../../src/shared/village/specialties';
 import { MarketDayBanner, mapTarget, VillagePanel } from '../../src/client/panels/village/VillagePanel';
 import { clockOffset, now, serverState } from '../../src/client/store';
 import { T } from '../../src/client/strings';
@@ -147,9 +150,16 @@ describe('village long-goal panels', () => {
     expect(html).toContain('Dein Anteil: 0 % – höchstens 70 %');
     expect(html).toContain('aus Steinzeug');
     expect(html).toContain('50 aus deinem Lager');
-    expect(html).toContain('Im Dorfladen kaufen (3×)');
+    const ti = v.projects.active!.parts.findIndex((p) => p.kind === 'taler');
+    const tLeft = maxProjectUnits(v.projects.active!, ti, 'p1');
+    const store = storePurchase(maxProjectUnits(v.projects.active!, 0, 'p1'), s.taler, villageStorePrice('ton'));
+    expect(html).toContain(`Im Dorfladen kaufen: ${store.count}× · ${fmtTaler(store.cost)} Taler`);
     expect(html).toContain('Ersatz: 9× Krüge aus Irdenware'); // 10 pieces → 3 whole units → 9 pieces
-    expect(html).toMatch(/[\d.]+ Taler geben/);
+    // Taler: pick an amount first; 10 % is preselected, nothing spends everything in one tap
+    const choices = talerChoices(tLeft, s.taler);
+    for (const c of choices) expect(html).toContain(`data-taler-chip="${c.amount}"`);
+    expect(html).toMatch(new RegExp(`aria-pressed="true" data-taler-chip="${choices[0].amount}"`));
+    expect(html).toContain(`${fmtTaler(choices[0].amount)} Taler geben`);
     expect(html).not.toContain('Den Rest lässt du den anderen');
 
     // p1 gives everything the 70 % rule allows, part by part: nothing more to give
@@ -161,6 +171,24 @@ describe('village long-goal panels', () => {
     expect(capped).toContain('Den Rest lässt du den anderen – kein Dorfprojekt geht allein.');
     expect(capped).not.toContain('Taler geben');
     expect(capped).not.toContain('aus deinem Lager');
+  });
+
+  it('Taler amounts: 10, 25, 50 % and the most allowed, clamped to the Taler in hand, each amount once', () => {
+    expect(talerChoices(100_000, 1e9)).toEqual([
+      { label: '10 %', amount: 10_000 }, { label: '25 %', amount: 25_000 }, { label: '50 %', amount: 50_000 }, { label: 'So viel wie möglich', amount: 100_000 },
+    ]);
+    expect(talerChoices(100_000, 30_000.6)).toEqual([
+      { label: '10 %', amount: 10_000 }, { label: '25 %', amount: 25_000 }, { label: 'Alles, was du hast', amount: 30_000 },
+    ]);
+    expect(talerChoices(100_000, 5_000)).toEqual([{ label: 'Alles, was du hast', amount: 5_000 }]);
+    expect(talerChoices(3, 1e9)).toEqual([{ label: '10 %', amount: 1 }, { label: '50 %', amount: 2 }, { label: 'So viel wie möglich', amount: 3 }]);
+    expect(talerChoices(100_000, 0.5)).toEqual([]);
+    const s = s0();
+    s.taler = 0;
+    const v = mockVillage(3, [], T0, { project: { id: 'glockenturm', level: 1, stage: 0 } });
+    const html = render(<ProjectCard v={v} s={s} meId="p1" now={T0} onContribute={noop} />);
+    expect(html).toContain('Dafür hast du gerade keine Taler.');
+    expect(html).not.toContain('Taler geben');
   });
 
   it('a substitute is offered per earthenware stack and counted in whole threes', () => {

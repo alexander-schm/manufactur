@@ -104,6 +104,7 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .together { background: #fff3c4; border: 1.6px dashed var(--line); border-radius: 10px; padding: 6px 10px; font-size: .95em; }
 .joint-part { border-top: 1.6px dashed rgba(43,36,32,.25); padding: 8px 0; }
 .joint-actions { margin-top: 6px; }
+.taler-give .chips { margin-bottom: 6px; }
 .contributors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .contrib { display: inline-flex; align-items: center; gap: 2px; font-size: .9em; }
 

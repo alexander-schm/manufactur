@@ -37,6 +37,21 @@ export function fittingStacks(s: GameState, p: GoodsPart, substitute = false): {
   });
 }
 
+/** One tap in the village store: as many as are left and affordable (at least one, so the price shows). */
+export function storePurchase(left: number, taler: number, price: number): { count: number; cost: number; affordable: boolean } {
+  const cost = (n: number) => Math.round(price * n * 100) / 100;
+  let n = Math.max(0, Math.min(left, Math.floor(taler / price)));
+  while (n > 0 && cost(n) > taler) n--;
+  return { count: Math.max(1, n), cost: cost(Math.max(1, n)), affordable: n > 0 };
+}
+
+/** The village-store button: says how many it buys and what that costs, before the tap. */
+export function StoreButton({ material, left, taler, buy }: { material: string; left: number; taler: number; buy: (count: number) => void }) {
+  const price = villageStorePrice(material);
+  const { count, cost, affordable } = storePurchase(left, taler, price);
+  return <Button small variant="quiet" title={T.vl.storePriceHint(price)} disabled={!affordable} onClick={() => buy(count)}>{T.vl.buyInStore(count, cost)}</Button>;
+}
+
 /** Buttons for a goods part: one per fitting stack, plus earthenware substitutes in whole threes. `left` is in units. */
 export function GoodsButtons({ s, p, left, give }: { s: GameState; p: GoodsPart; left: number; give: (g: GoodsStack, count: number, substitute: boolean) => void }) {
   const own = fittingStacks(s, p);
@@ -89,7 +104,7 @@ export function JointOrderCard({ v, s, meId, order, onContribute }: { v: Village
             {left > 0 && (
               <div class="row joint-actions">
                 {p.kind === 'material' && haveMat > 0 && <Button small variant="good" onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.min(left, haveMat), source: 'own' })}>{T.vl.fromStock(Math.min(left, haveMat))}</Button>}
-                {p.kind === 'material' && <Button small variant="quiet" title={`${villageStorePrice(p.material)} Taler pro Stück`} disabled={s.taler < villageStorePrice(p.material)} onClick={() => onContribute({ type: 'contribute', jointId: order.id, part: i, count: Math.max(1, Math.min(left, Math.floor(s.taler / villageStorePrice(p.material)))), source: 'store' })}>{T.vl.buyInStore}</Button>}
+                {p.kind === 'material' && <StoreButton material={p.material} left={left} taler={s.taler} buy={(count) => onContribute({ type: 'contribute', jointId: order.id, part: i, count, source: 'store' })} />}
                 {p.kind === 'goods' && (
                   <GoodsButtons s={s} p={p} left={left} give={(g, count, substitute) => onContribute({ type: 'contribute', jointId: order.id, part: i, count, source: substitute ? 'substitute' : 'own', designId: g.designId, quality: g.quality, effect: g.effect })} />
                 )}

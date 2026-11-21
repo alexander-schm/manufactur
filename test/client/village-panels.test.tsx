@@ -2,9 +2,12 @@ import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { Room } from '../../src/client/art/workshop/Room';
 import { mockVillage } from '../../src/client/dev/mockVillage';
-import { JointOrderCard } from '../../src/client/panels/village/JointOrdersPanel';
+import { JointOrderCard, storePurchase } from '../../src/client/panels/village/JointOrdersPanel';
 import { OfferCard } from '../../src/client/panels/village/TradePanel';
+import { fmtTaler } from '../../src/shared/format';
 import { newGame } from '../../src/shared/state';
+import { maxContribution } from '../../src/shared/village/joint';
+import { villageStorePrice } from '../../src/shared/village/specialties';
 
 const T0 = 1_800_000_000_000;
 
@@ -28,6 +31,25 @@ describe('village panels', () => {
     const materialParts = o.parts.filter((p) => p.kind === 'material').length;
     expect((html.match(/Im Dorfladen kaufen/g) ?? []).length).toBe(materialParts);
     expect(html).toContain('Nur gemeinsam');
+  });
+  it('the village-store button says how many it buys and the total before the tap', () => {
+    expect(storePurchase(40, 10_000, 15)).toEqual({ count: 40, cost: 600, affordable: true });
+    expect(storePurchase(40, 100, 15)).toEqual({ count: 6, cost: 90, affordable: true });
+    expect(storePurchase(40, 10, 15)).toEqual({ count: 1, cost: 15, affordable: false });
+    expect(storePurchase(3, 0.29, 0.1)).toEqual({ count: 2, cost: 0.2, affordable: true });
+    const v = mockVillage(2, []);
+    const s = newGame('p1', 1, T0);
+    const o = v.jointOrders[0];
+    const i = o.parts.findIndex((p) => p.kind === 'material');
+    const p = o.parts[i] as Extract<typeof o.parts[number], { kind: 'material' }>;
+    const price = villageStorePrice(p.material);
+    s.taler = price * 3 + 1;
+    const want = Math.min(3, maxContribution(o, i, 'p1'));
+    const html = render(<JointOrderCard v={v} s={s} meId="p1" order={o} onContribute={() => {}} />);
+    expect(html).toContain(`Im Dorfladen kaufen: ${want}× · ${fmtTaler(price * want)} Taler`);
+    s.taler = 0;
+    const poor = render(<JointOrderCard v={v} s={s} meId="p1" order={o} onContribute={() => {}} />);
+    expect(poor).toMatch(new RegExp(`<button[^>]*disabled[^>]*>Im Dorfladen kaufen: 1× · ${fmtTaler(price)} Taler`));
   });
   it('a joint body part offers the substitute button', () => {
     const v = mockVillage(2, []);
