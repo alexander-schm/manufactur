@@ -4,15 +4,9 @@ import { applyDelta, applyVillageAction } from '../../../src/shared/village/appl
 import { ensureJointOrders, isComplete, JOINT_TEMPLATES, payout } from '../../../src/shared/village/joint';
 import { SPECIALTIES } from '../../../src/shared/village/specialties';
 import type { JointOrder, VillageAction, VillageState } from '../../../src/shared/village/types';
-import { T0, village } from './helpers';
+import { runAction, T0, village } from './helpers';
 
-function run(v: VillageState, ws: Record<string, GameState>, actor: string, a: VillageAction) {
-  const r = applyVillageAction(v, actor, ws[actor], a, T0 + 1000);
-  if (typeof r === 'string') return { v, ws, error: r };
-  const next = { ...ws, [actor]: r.actor };
-  for (const d of r.deliveries) next[d.to] = applyDelta(next[d.to], d.delta);
-  return { v: r.v, ws: next, error: null as string | null };
-}
+const run = runAction;
 
 /** Give a player plenty of everything a joint order could ask for. */
 function stock(g: GameState, o: JointOrder) {

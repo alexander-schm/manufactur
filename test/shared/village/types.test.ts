@@ -3,7 +3,7 @@ import { addMember, MAX_MEMBERS, newVillage, validateVillageAction } from '../..
 import type { Member, VillageAction } from '../../../src/shared/village/types';
 
 const T0 = 1_800_000_000_000;
-const member = (i: number): Omit<Member, 'specialty' | 'houseSlot'> => ({ playerId: `p${i}`, name: `Person${i}`, avatarSeed: i, makerMark: { shape: 'circle', letter: 'A', color: '#b44c36' }, joinedAt: T0, lastSeen: T0 });
+const member = (i: number): Omit<Member, 'specialty' | 'houseSlot' | 'tier'> => ({ playerId: `p${i}`, name: `Person${i}`, avatarSeed: i, makerMark: { shape: 'circle', letter: 'A', color: '#b44c36' }, joinedAt: T0, lastSeen: T0 });
 
 describe('village state', () => {
   it('members get different specialties and houses', () => {

@@ -1,7 +1,8 @@
 import { newGame } from '../../../src/shared/state';
-import type { GameState } from '../../../src/shared/types';
+import type { GameState, Tier } from '../../../src/shared/types';
+import { applyDelta, applyVillageAction } from '../../../src/shared/village/apply';
 import { addMember, newVillage } from '../../../src/shared/village/state';
-import type { VillageState } from '../../../src/shared/village/types';
+import type { VillageAction, VillageState } from '../../../src/shared/village/types';
 
 export const T0 = 1_800_000_000_000;
 
@@ -21,4 +22,19 @@ export function village(n = 2): { v: VillageState; ws: Record<string, GameState>
     ws[id] = g;
   }
   return { v, ws };
+}
+
+export function runAction(v: VillageState, ws: Record<string, GameState>, actor: string, a: VillageAction, now = T0 + 1000) {
+  const r = applyVillageAction(v, actor, ws[actor], a, now);
+  if (typeof r === 'string') return { v, ws, error: r as string | null, events: [] as string[] };
+  const next = { ...ws, [actor]: r.actor };
+  for (const d of r.deliveries) next[d.to] = applyDelta(next[d.to], d.delta);
+  return { v: r.v, ws: next, error: null as string | null, events: r.events as string[] };
+}
+
+/** Set a member's tier in both the workshop and the village roster. */
+export function setTier(v: VillageState, ws: Record<string, GameState>, id: string, tier: Tier) {
+  ws[id].tier = tier;
+  const m = v.members.find((x) => x.playerId === id);
+  if (m) m.tier = tier;
 }
