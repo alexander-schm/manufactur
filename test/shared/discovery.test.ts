@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction } from '../../src/shared/actions';
 import { colorFamily } from '../../src/shared/design';
-import { BODIES, type RecipeInput } from '../../src/shared/content';
+import { BODIES, EFFECTS, GREAT_KILN_EFFECTS, MATERIALS, isGreatKilnEffect, type RecipeInput } from '../../src/shared/content';
 import { glazeColor, hintFor, matchEffect } from '../../src/shared/discovery';
-import type { FiringSettings } from '../../src/shared/types';
-import { manufakturGame, plainGame, T0 } from './helpers';
+import type { BodyId, FiringSettings } from '../../src/shared/types';
+import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
 
 type R = RecipeInput;
 const f = (temp: FiringSettings['temp'], atmosphere: FiringSettings['atmosphere'], cooling: FiringSettings['cooling']): FiringSettings => ({ temp, atmosphere, cooling });
@@ -103,5 +103,33 @@ describe('discovery', () => {
     expect(matchEffect(porc({ base: 'matt', firing: f('hoch', 'oxidierend', 'schnell') }))).toBe('eierschale');
     expect(matchEffect(BODIES.porzellan.starterGlaze!)).toBeNull();
     expect(glazeColor(BODIES.porzellan.starterGlaze!)).toBe(BODIES.porzellan.starterGlaze!.color);
+  });
+
+  it('experiments never produce or hint a great-kiln effect', () => {
+    const colorants: (RecipeInput['colorant'])[] = [null, ...Object.values(MATERIALS).filter((m) => m.kind === 'colorant').map((m) => m.id as RecipeInput['colorant'])];
+    const grid: RecipeInput[] = [];
+    for (const base of ['transparent', 'matt', 'opak'] as const)
+      for (const colorant of colorants)
+        for (let colorantPct = 0; colorantPct <= 10; colorantPct++)
+          for (const temp of ['niedrig', 'mittel', 'hoch'] as const)
+            for (const atmosphere of ['oxidierend', 'reduzierend'] as const)
+              for (const cooling of ['schnell', 'langsam'] as const)
+                for (const body of Object.keys(BODIES) as BodyId[])
+                  grid.push({ base, colorant, colorantPct, firing: f(temp, atmosphere, cooling), body });
+    expect(grid.length).toBeGreaterThan(5000);
+    for (const r of grid) expect(isGreatKilnEffect(matchEffect(r)), JSON.stringify(r)).toBe(false);
+
+    const s = hofGame();
+    for (const e of Object.values(EFFECTS)) if (!e.greatKiln) s.glazes.push({ ...structuredClone(s.glazes[0]), id: `g-${e.id}`, effect: e.id });
+    const names = GREAT_KILN_EFFECTS.map((id) => EFFECTS[id].name);
+    expect(names).toEqual(['Ascheanflug', 'Flammenspur', 'Ascheglasur']);
+    for (const r of grid) {
+      const hint = hintFor(r, s);
+      for (const n of names) expect(hint ?? '').not.toContain(n);
+      for (const id of GREAT_KILN_EFFECTS) expect(hint).not.toBe(EFFECTS[id].hint);
+    }
+    expect(isGreatKilnEffect(null)).toBe(false);
+    expect(isGreatKilnEffect('seladon')).toBe(false);
+    expect(GREAT_KILN_EFFECTS.every((id) => isGreatKilnEffect(id) && EFFECTS[id].greatKiln === true)).toBe(true);
   });
 });

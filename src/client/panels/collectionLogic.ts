@@ -1,5 +1,5 @@
 import { colId, collectionEntries, rowId } from '../../shared/collection';
-import { BODIES, EFFECTS, EXTRA_COLORS, FORMS, getTier, tierRank } from '../../shared/content';
+import { BODIES, EFFECTS, EXTRA_COLORS, FORMS, getTier, isGreatKilnEffect, tierRank } from '../../shared/content';
 import { discoveredEffects } from '../../shared/discovery';
 import type { BodyId, Design, GameState } from '../../shared/types';
 
@@ -13,13 +13,17 @@ export interface CollectionCell {
 const defaultLook = (form: string, body: BodyId): CollectionCell['look']['design'] =>
   ({ form, profile: { ...FORMS[form].profileDefaults }, handle: 'none', rim: 'plain', pattern: 'none', patternColor: '#fff8ec', body, ...(FORMS[form].variants ? { variant: FORMS[form].variants![0].id } : {}) });
 
-/** One page of the book: rows are forms, columns are "no effect" plus every effect possible on that body. */
+/**
+ * One page of the book: rows are forms, columns are "no effect" plus every effect possible on that body.
+ * The great-kiln columns come last; one is named once any page holds a piece with that effect.
+ */
 export function collectionGrid(s: GameState, body: BodyId): { forms: string[]; effects: (string | null)[]; effectLabels: string[]; cells: CollectionCell[][] } {
   const page = collectionEntries().filter((e) => e.body === body);
   const forms = [...new Set(page.map((e) => e.form))];
   const effects = [...new Set(page.map((e) => e.effect))];
   const known = discoveredEffects(s);
-  const effectLabels = effects.map((e) => (e === null ? 'ohne' : known.includes(e) ? EFFECTS[e].name : '?'));
+  const kilnFound = (e: string) => s.collection.some((k) => k.endsWith(`|${e}`));
+  const effectLabels = effects.map((e) => (e === null ? 'ohne' : (isGreatKilnEffect(e) ? kilnFound(e) : known.includes(e)) ? EFFECTS[e].name : '?'));
   const have = new Set(s.collection);
   const own = s.designs.filter((d) => !d.origin && (d.body ?? 'irdenware') === body);
   const glazes = s.glazes.filter((g) => (g.body ?? 'irdenware') === body);
@@ -30,7 +34,8 @@ export function collectionGrid(s: GameState, body: BodyId): { forms: string[]; e
       return { key: entry.key, found: false, title, look: { design: defaultLook(form, body), glazeColor: BODIES[body].clearColor, effect: null } };
     }
     const d = own.filter((x) => x.form === form).at(-1);
-    const glaze = [...glazes].reverse().find((g) => g.effect === effect);
+    // great-kiln pieces come from no glaze recipe: they wear the body's clear glaze
+    const glaze = isGreatKilnEffect(effect) ? undefined : [...glazes].reverse().find((g) => g.effect === effect);
     const design = d ? { form, profile: d.profile, handle: d.handle, rim: d.rim, pattern: d.pattern, patternColor: d.patternColor, body, variant: d.variant } : defaultLook(form, body);
     const title = `${FORMS[form].name} · ${effect ? EFFECTS[effect].name : 'ohne Effekt'}`;
     return { key: entry.key, found: true, title, look: { design, glazeColor: glaze?.color ?? BODIES[body].clearColor, effect } };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
-import { collectionEntries, collectionPercent, recordCollection } from '../../src/shared/collection';
-import { BODIES, EXTRA_COLORS, FORMS } from '../../src/shared/content';
+import { colId, collectionEntries, collectionPercent, recordCollection, rowId } from '../../src/shared/collection';
+import { BODIES, EXTRA_COLORS, FORMS, GREAT_KILN_EFFECTS, isGreatKilnEffect } from '../../src/shared/content';
 import { migrateState, newGame } from '../../src/shared/state';
 import { T0, manufakturGame, withStanding } from './helpers';
 
@@ -70,11 +70,31 @@ describe('collection book', () => {
   it('percent', () => {
     const s = newGame('p', 1, T0);
     expect(collectionPercent(s)).toBe(0);
-    const all = collectionEntries();
+    const all = collectionEntries().filter((x) => !isGreatKilnEffect(x.effect));
     for (const x of all.slice(0, 24)) recordCollection(s, x.form, x.body, x.effect);
     expect(collectionPercent(s)).toBe(Math.floor((100 * 24) / all.length));
     const inBody = all.filter((x) => x.body === 'irdenware');
     const found = s.collection.filter((k) => k.split('|')[1] === 'irdenware').length;
     expect(collectionPercent(s, 'irdenware')).toBe(Math.floor((100 * found) / inBody.length));
+  });
+  it('great-kiln columns exist on every body page but do not change the percentage or row prizes', () => {
+    const e = collectionEntries();
+    const keys = new Set(e.map((x) => x.key));
+    for (const f of Object.keys(FORMS)) for (const b of Object.keys(BODIES)) for (const k of GREAT_KILN_EFFECTS) expect(keys.has(`${f}|${b}|${k}`), `${f}|${b}|${k}`).toBe(true);
+
+    const s = manufakturGame();
+    for (const x of e) if (x.body === 'irdenware' && !isGreatKilnEffect(x.effect)) recordCollection(s, x.form, x.body, x.effect);
+    expect(collectionPercent(s, 'irdenware')).toBe(100);
+    expect(s.collectionRewards).toContain(rowId('irdenware', 'becher'));
+    const total = collectionPercent(s);
+
+    recordCollection(s, 'becher', 'irdenware', 'ascheglasur');
+    expect(s.collection).toContain('becher|irdenware|ascheglasur');
+    expect(collectionPercent(s, 'irdenware')).toBe(100);
+    expect(collectionPercent(s)).toBe(total);
+    expect(s.collectionRewards).not.toContain(colId('irdenware', 'ascheglasur'));
+
+    for (const f of Object.keys(FORMS)) recordCollection(s, f, 'irdenware', 'ascheglasur');
+    expect(s.collectionRewards).toContain(colId('irdenware', 'ascheglasur'));
   });
 });

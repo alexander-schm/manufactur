@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyAction, type Action } from '../../src/shared/actions';
 import { advance } from '../../src/shared/advance';
 import { collectionEntries } from '../../src/shared/collection';
-import { EFFECTS, FRAMES, UNLOCKS, getForm } from '../../src/shared/content';
+import { EFFECTS, FRAMES, UNLOCKS, getForm, isGreatKilnEffect } from '../../src/shared/content';
 import { DECOR } from '../../src/shared/village/decor';
 import { validateDesign } from '../../src/shared/design';
 import { shelfCapacity } from '../../src/shared/market';
@@ -147,14 +147,15 @@ describe('milestone ladder (Manufaktur range)', () => {
     for (const u of ['rahmen-punkte', 'muster-ranken', 'kunde-sammlerin']) expect(r.unlocks).toContain(u);
   });
   it('collection milestones derive from the book size and stay done when it grows', () => {
-    const total = collectionEntries().length;
+    const book = collectionEntries().filter((e) => !isGreatKilnEffect(e.effect));
+    const total = book.length;
     const s = manufakturGame();
-    s.collection = collectionEntries().slice(0, Math.ceil(total * 0.25)).map((e) => e.key);
+    s.collection = book.slice(0, Math.ceil(total * 0.25)).map((e) => e.key);
     const r = checkMilestones(s).state;
     expect(r.milestonesDone).toContain('sammlung25');
     expect(r.milestonesDone).not.toContain('sammlung50');
     expect(r.unlocks).toContain('rahmen-doppel');
-    const full = manufakturGame(); full.collection = collectionEntries().map((e) => e.key);
+    const full = manufakturGame(); full.collection = book.map((e) => e.key);
     const f = checkMilestones(full).state;
     expect(f.decor).toContain('papierlampions');
     expect(f.unlocks).toEqual(expect.arrayContaining(['muster-karo', 'rahmen-kranz']));

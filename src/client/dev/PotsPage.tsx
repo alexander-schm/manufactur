@@ -1,5 +1,5 @@
 import { glazeColor } from '../../shared/discovery';
-import { BODIES, FORMS, FRAMES } from '../../shared/content';
+import { BODIES, FORMS, FRAMES, GREAT_KILN_EFFECTS } from '../../shared/content';
 import type { BodyId, Design, FiringSettings, GlazeRecipe, PatternKind } from '../../shared/types';
 import { Pot } from '../art/Pot';
 
@@ -83,6 +83,20 @@ export function PotsPage() {
             <div>{eff}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
               {['vase', 'becher', 'schale', 'teller', 'teekanne', 'figur', 'fliese'].map((f, i) => <Pot design={{ ...design(f, i, 'none', body), id: `${eff}${f}` }} glazeColor={glazeColor(g)} effect={eff} size={96} />)}
+            </div>
+          </div>
+        ))}
+      </section>
+      <section>
+        <h3>Gemeinschaftsofen</h3>
+        {GREAT_KILN_EFFECTS.map((eff) => (
+          <div>
+            <div>{eff}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {['vase', 'becher', 'schale', 'teller', 'teekanne', 'krug', 'figur', 'fliese'].map((f, i) => {
+                const body = (['irdenware', 'steinzeug', 'porzellan'] as BodyId[])[i % 3];
+                return <Pot design={{ ...design(f, i, 'none', body), id: `${eff}${f}` }} glazeColor={i % 2 ? BODIES[body].clearColor : glazeColor(GLAZES[(i % 4) + 1])} effect={eff} size={96} />;
+              })}
             </div>
           </div>
         ))}

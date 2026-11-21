@@ -16,6 +16,8 @@ export interface EffectDef {
   conditions: EffectCondition[];
   /** only found on this clay body; counts as one extra condition when ranking */
   body?: BodyId;
+  /** only from the village great kiln (Gemeinschaftsofen): never from experiments, never hinted */
+  greatKiln?: true;
 }
 
 const pct = (lo: number, hi: number) => (r: RecipeInput) => r.colorantPct >= lo && r.colorantPct <= hi;
@@ -143,4 +145,27 @@ export const EFFECTS: Record<string, EffectDef> = {
       { label: 'schnelles Abkühlen', test: (r) => r.firing.cooling === 'schnell' },
     ],
   },
+  ascheanflug: {
+    id: 'ascheanflug', name: 'Ascheanflug', valueMul: 2.2, greatKiln: true,
+    description: 'Feine Holzasche ist im Feuer auf die Schulter geflogen und zu grünlich-goldenen Tropfen geschmolzen.',
+    hint: 'Greta lächelt: „Das schafft kein Glasurrezept. Nur ein großes Holzfeuer – am besten mit vielen Leuten.“',
+    conditions: [],
+  },
+  flammenspur: {
+    id: 'flammenspur', name: 'Flammenspur', valueMul: 2.6, greatKiln: true,
+    description: 'Die Flamme hat ihren Weg über das Stück gemalt: warme, rötlich-orange Schlieren.',
+    hint: 'Greta zeigt auf den Gemeinschaftsofen: „Wo die Flamme entlangleckt, bleibt ihre Spur.“',
+    conditions: [],
+  },
+  ascheglasur: {
+    id: 'ascheglasur', name: 'Ascheglasur', valueMul: 3.4, greatKiln: true,
+    description: 'Eine dicke, glasig-grüne Haut aus geschmolzener Asche, mit Tropfen, die wie Tränen herablaufen.',
+    hint: 'Greta flüstert: „Nur wenn der große Ofen richtig heiß wird – viele Hände, viel Holz –, schmilzt die Asche zu Glas.“',
+    conditions: [],
+  },
 };
+
+/** The effects only the village great kiln can give. */
+export const GREAT_KILN_EFFECTS = ['ascheanflug', 'flammenspur', 'ascheglasur'] as const;
+
+export const isGreatKilnEffect = (id: string | null): boolean => !!id && EFFECTS[id]?.greatKiln === true;

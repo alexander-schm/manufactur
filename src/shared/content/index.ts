@@ -20,6 +20,7 @@ export type { MaterialDef } from './materials';
 export type { StationDef } from './stations';
 export type { TraitDef } from './traits';
 export type { EffectDef, RecipeInput } from './effects';
+export { GREAT_KILN_EFFECTS, isGreatKilnEffect } from './effects';
 export { bodyAvailable, bodyOf, getBody } from './bodies';
 export { getTier, nextTier, stationTierGate, tierAtLeast, tierForLevel, tierRank } from './tiers';
 export type { BodyDef } from './bodies';

@@ -19,7 +19,7 @@ function Swatch({ color, effect }: { color: string; effect: string | null }) {
 
 function GlazeBook({ s }: { s: GameState }) {
   const found = discoveredEffects(s);
-  const undiscovered = Object.values(EFFECTS).filter((e) => !found.includes(e.id));
+  const undiscovered = Object.values(EFFECTS).filter((e) => !e.greatKiln && !found.includes(e.id));
   const missing = undiscovered.filter((e) => !e.body || bodyAvailable(s, e.body));
   const hidden = undiscovered.filter((e) => e.body && !bodyAvailable(s, e.body));
   const hiddenTiers = [...new Set(hidden.map((e) => getBody(e.body!).tier))];

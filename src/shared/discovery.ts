@@ -51,7 +51,7 @@ export function glazeColor(r: RecipeInput): string {
 /** The most specific effect whose conditions all hold. */
 export function matchEffect(r: RecipeInput): string | null {
   const rank = (e: (typeof EFFECTS)[string]) => e.conditions.length + (e.body ? 1 : 0);
-  const all = Object.values(EFFECTS).filter((e) => !e.body || e.body === bodyOf(r)).sort((a, b) => rank(b) - rank(a));
+  const all = Object.values(EFFECTS).filter((e) => !e.greatKiln && (!e.body || e.body === bodyOf(r))).sort((a, b) => rank(b) - rank(a));
   for (const e of all) if (e.conditions.every((c) => c.test(r))) return e.id;
   return null;
 }
@@ -65,7 +65,7 @@ export function hintFor(r: RecipeInput, state: GameState): string | null {
   const known = discoveredEffects(state);
   let best: { name: string; hint: string; missing: string[]; matched: number } | null = null;
   for (const e of Object.values(EFFECTS)) {
-    if (known.includes(e.id)) continue;
+    if (e.greatKiln || known.includes(e.id)) continue;
     if (e.body && !bodyAvailable(state, e.body)) continue;
     const missing = e.conditions.filter((c) => !c.test(r)).map((c) => c.label);
     const matched = e.conditions.length - missing.length;

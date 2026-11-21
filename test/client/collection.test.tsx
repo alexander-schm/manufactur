@@ -81,4 +81,27 @@ describe('collection book', () => {
     expect(book).toContain('coll-grid');
     expect(book).not.toContain('Meine Glasuren');
   });
+
+  it('the book labels a found great-kiln column with its name, under the heading Gemeinschaftsofen', () => {
+    const s = plainGame();
+    const before = collectionGrid(s, 'irdenware');
+    const i = before.effects.indexOf('ascheglasur');
+    expect(i).toBeGreaterThan(0);
+    expect(before.effectLabels[i]).toBe('?');
+    const html0 = render(<CollectionBook s={s} />);
+    expect(html0.match(/Gemeinschaftsofen/g)).toHaveLength(1);
+    expect(html0).not.toContain('Ascheglasur');
+
+    s.collection.push('vase|steinzeug|ascheglasur');
+    const g = collectionGrid(s, 'irdenware');
+    expect(g.effectLabels[i]).toBe('Ascheglasur');
+    expect(g.effectLabels[g.effects.indexOf('flammenspur')]).toBe('?');
+    expect(g.cells[g.forms.indexOf('vase')][i].found).toBe(false);
+    s.collection.push('becher|irdenware|ascheglasur');
+    const cell = collectionGrid(s, 'irdenware').cells[g.forms.indexOf('becher')][i];
+    expect(cell).toMatchObject({ found: true, look: { glazeColor: BODIES.irdenware.clearColor, effect: 'ascheglasur' } });
+    const html = render(<CollectionBook s={s} />);
+    expect(html).toContain('Gemeinschaftsofen');
+    expect(html).toContain('Ascheglasur');
+  });
 });

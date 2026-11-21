@@ -1,4 +1,4 @@
-import { BODIES, EFFECTS, EXTRA_COLORS, FORMS, bodyOf, tierRank } from './content';
+import { BODIES, EFFECTS, EXTRA_COLORS, FORMS, bodyOf, isGreatKilnEffect, tierRank } from './content';
 import type { BodyId, GameState, Tier } from './types';
 
 export interface CollectionEntry { key: string; form: string; body: BodyId; effect: string | null; tier: Tier }
@@ -7,6 +7,9 @@ export const collectionKey = (form: string, body: BodyId, effect: string | null)
 
 let entries: CollectionEntry[] | null = null;
 let keys: Set<string> | null = null;
+/** keys that count towards the percentage (every entry but the great-kiln bonus ones) */
+let counted: Set<string> | null = null;
+let countedPerBody: Map<BodyId, number> | null = null;
 
 function build(): CollectionEntry[] {
   if (entries) return entries;
@@ -22,6 +25,10 @@ function build(): CollectionEntry[] {
   }
   entries = out;
   keys = new Set(out.map((e) => e.key));
+  const plain = out.filter((e) => !isGreatKilnEffect(e.effect));
+  counted = new Set(plain.map((e) => e.key));
+  countedPerBody = new Map();
+  for (const e of plain) countedPerBody.set(e.body, (countedPerBody.get(e.body) ?? 0) + 1);
   return out;
 }
 
@@ -52,17 +59,17 @@ export function recordCollection(s: GameState, form: string, body: BodyId, effec
   const key = collectionKey(form, body, effect);
   if (!keys!.has(key) || s.collection.includes(key)) return;
   s.collection.push(key);
-  award(s, rowId(body, form), all.filter((e) => e.body === body && e.form === form));
+  // great-kiln pieces are a bonus: they never count towards a row, only towards their own column
+  award(s, rowId(body, form), all.filter((e) => e.body === body && e.form === form && !isGreatKilnEffect(e.effect)));
   award(s, colId(body, effect), all.filter((e) => e.body === body && e.effect === effect));
 }
 
+/** Share of the book found, over all bodies or one page. Great-kiln entries are a bonus and never count. */
 export function collectionPercent(s: GameState, body?: BodyId): number {
-  const all = build();
-  if (!body) return Math.floor((100 * s.collection.length) / all.length);
-  let total = 0;
+  build();
+  const total = body ? countedPerBody!.get(body) ?? 0 : counted!.size;
   let found = 0;
-  const have = new Set(s.collection);
-  for (const e of all) if (e.body === body) { total++; if (have.has(e.key)) found++; }
+  for (const k of new Set(s.collection)) if (counted!.has(k) && (!body || k.split('|')[1] === body)) found++;
   return total ? Math.floor((100 * found) / total) : 0;
 }
 

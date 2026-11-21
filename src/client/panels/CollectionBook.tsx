@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { collectionPercent } from '../../shared/collection';
-import { BODIES, bodyAvailable, getTier } from '../../shared/content';
+import { BODIES, bodyAvailable, getTier, isGreatKilnEffect } from '../../shared/content';
 import type { BodyId, GameState } from '../../shared/types';
 import { Pot } from '../art/Pot';
 import { inkStyle } from '../art/ink';
@@ -45,6 +45,8 @@ export function CollectionBook({ s }: { s: GameState }) {
   const grid = collectionGrid(s, body);
   const prizes = groupPrizes(s);
   const note = grid.cells.flat().find((c) => c.key === picked);
+  const kilnFrom = grid.effects.findIndex((e) => isGreatKilnEffect(e));
+  const kilnCols = kilnFrom < 0 ? 0 : grid.effects.length - kilnFrom;
   const pick = (b: BodyId) => { setBody(b); setPicked(null); };
   return (
     <div class="collection">
@@ -59,6 +61,10 @@ export function CollectionBook({ s }: { s: GameState }) {
           <p class="muted coll-total">Ganze Sammlung: {collectionPercent(s)} %</p>
           <div class="coll-scroll">
             <div class="coll-grid" style={{ gridTemplateColumns: `auto repeat(${grid.effects.length}, 58px)` }}>
+              {kilnCols > 0 && <>
+                <span style={{ gridColumn: `span ${1 + kilnFrom}` }} />
+                <span class="coll-kiln-band" style={{ gridColumn: `span ${kilnCols}` }}>Gemeinschaftsofen</span>
+              </>}
               <span />
               {grid.effects.map((e, i) => {
                 const prize = colPrize(prizes, body, e);
@@ -78,7 +84,7 @@ export function CollectionBook({ s }: { s: GameState }) {
                   </span>
                   {grid.cells[r].map((c, i) => (
                     <button
-                      class={`coll-cell ${c.found ? 'found' : 'unfound'} ${prize || colPrize(prizes, body, grid.effects[i]) ? 'won' : ''}`}
+                      class={`coll-cell ${c.found ? 'found' : 'unfound'} ${prize || colPrize(prizes, body, grid.effects[i]) ? 'won' : ''} ${i >= kilnFrom && kilnFrom >= 0 ? 'kiln' : ''}`}
                       title={c.title} aria-label={c.title} aria-pressed={picked === c.key} onClick={() => setPicked(picked === c.key ? null : c.key)}
                     >
                       <Pot design={c.look.design} glazeColor={c.look.glazeColor} effect={c.look.effect} size={46} fit wobble={false} silhouette={!c.found} title={c.title} />

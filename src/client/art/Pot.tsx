@@ -158,6 +158,8 @@ export function Pattern({ s, kind, color, seed }: { s: PotShape; kind: Design['p
 
 export function Effect({ s, effect, seed, base }: { s: PotShape; effect: string; seed: number; base: string }) {
   const top = s.topY, h = BASE_Y - top, w = s.maxHalfWidth;
+  // the outer wall starts below the front lip of a vessel's opening (bowls show a deep opening); flat faces have no body path
+  const lip = s.body ? Math.max(top, s.rim.cy + s.rim.ry * 0.85) : top, lh = BASE_Y - lip;
   switch (effect) {
     case 'craquele': {
       const lines: string[] = [];
@@ -286,6 +288,68 @@ export function Effect({ s, effect, seed, base }: { s: PotShape; effect: string;
           <path d={`M0 ${top} H100 V${(top + h * 0.2).toFixed(1)} Q75 ${(top + h * 0.24).toFixed(1)} 50 ${(top + h * 0.2).toFixed(1)} Q25 ${(top + h * 0.16).toFixed(1)} 0 ${(top + h * 0.2).toFixed(1)} Z`} fill="#ffffff" opacity="0.35" />
         </g>
       );
+    case 'ascheanflug': {
+      // wood ash settled on the shoulder: a fine greenish-gold speckle with a few melted drops
+      const band = lh * 0.36, f = (n: number) => n.toFixed(1);
+      return (
+        <g data-effect="ascheanflug">
+          <path d={`M0 0 H100 V${f(lip + band * 0.7)} Q75 ${f(lip + band)} 50 ${f(lip + band * 0.8)} Q25 ${f(lip + band * 0.95)} 0 ${f(lip + band * 0.75)} Z`} fill="#c9b75a" opacity="0.38" />
+          {Array.from({ length: 22 }, (_, i) => (
+            <circle cx={f(CX - w * 0.95 + rnd(seed, i) * 1.9 * w)} cy={f(lip + 1 + rnd(seed, i + 40) ** 1.4 * band)} r={(0.7 + rnd(seed, i + 80) * 0.8).toFixed(2)} fill={i % 3 ? "#7d7a22" : "#e3c04e"} opacity="0.85" />
+          ))}
+          {Array.from({ length: 4 }, (_, i) => {
+            const x = CX - w * 0.75 + rnd(seed, i + 120) * 1.5 * w, y = lip + band * (0.35 + rnd(seed, i + 140) * 0.45), r = 1.4 + rnd(seed, i + 160) * 0.9;
+            return (
+              <g>
+                <path d={`M${f(x)} ${f(y - r * 1.6)} Q${f(x + r * 1.1)} ${f(y)} ${f(x)} ${f(y + r)} Q${f(x - r * 1.1)} ${f(y)} ${f(x)} ${f(y - r * 1.6)} Z`} fill="#a3a63e" opacity="0.85" />
+                <circle cx={f(x - r * 0.3)} cy={f(y)} r={(r * 0.35).toFixed(2)} fill="#f4ecb0" opacity="0.8" />
+              </g>
+            );
+          })}
+        </g>
+      );
+    }
+    case 'flammenspur': {
+      // the flame's path: two or three broad, soft orange-red swooshes rising across the piece
+      const n = 2 + Math.floor(rnd(seed, 3) * 2), f = (v: number) => v.toFixed(1);
+      return (
+        <g data-effect="flammenspur" fill="none" stroke-linecap="round">
+          {Array.from({ length: n }, (_, i) => {
+            const y0 = lip + lh * (0.55 + i * 0.28 + (rnd(seed, i + 10) - 0.5) * 0.12), rise = lh * (0.35 + rnd(seed, i + 20) * 0.2);
+            const x0 = CX - w * 1.1, x1 = CX + w * 1.1, bend = (rnd(seed, i + 30) - 0.3) * lh * 0.25;
+            const d = `M${f(x0)} ${f(y0)} Q${f(CX)} ${f(y0 - rise * 0.5 + bend)} ${f(x1)} ${f(y0 - rise)}`;
+            const sw = Math.max(4, lh * (0.16 + rnd(seed, i + 40) * 0.08));
+            return (
+              <g>
+                <path d={d} stroke="#c8502e" stroke-width={f(sw * 1.5)} opacity="0.2" />
+                <path d={d} stroke="#e2763e" stroke-width={f(sw)} opacity="0.45" />
+              </g>
+            );
+          })}
+        </g>
+      );
+    }
+    case 'ascheglasur': {
+      // a thick, glassy green ash skin over the top quarter, with runs that end in drops
+      const band = lh * 0.26, f = (n: number) => n.toFixed(1), runs = 5 + Math.floor(rnd(seed, 2) * 3);
+      return (
+        <g data-effect="ascheglasur">
+          <path d={`M0 0 H100 V${f(lip + band * 0.9)} Q80 ${f(lip + band * 1.15)} 62 ${f(lip + band)} Q42 ${f(lip + band * 0.85)} 24 ${f(lip + band * 1.1)} Q12 ${f(lip + band * 1.2)} 0 ${f(lip + band)} Z`} fill="#5f9150" opacity="0.72" />
+          <path d={`M${f(CX - w * 0.7)} ${f(lip + band * 0.45)} Q${f(CX)} ${f(lip + band * 0.3)} ${f(CX + w * 0.55)} ${f(lip + band * 0.5)}`} stroke="#e4f3d2" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.55" />
+          {Array.from({ length: runs }, (_, i) => {
+            const x = CX - w * 0.85 + ((i + 0.5) / runs) * 1.7 * w + (rnd(seed, i + 50) - 0.5) * 3;
+            const y0 = lip + band * 0.9, len = lh * (0.12 + rnd(seed, i + 60) * 0.3), r = 1.5 + rnd(seed, i + 70) * 0.8;
+            return (
+              <g>
+                <path d={`M${f(x - r * 0.75)} ${f(y0)} L${f(x - r * 0.45)} ${f(y0 + len)} L${f(x + r * 0.45)} ${f(y0 + len)} L${f(x + r * 0.75)} ${f(y0)} Z`} fill="#5f9150" opacity="0.72" />
+                <ellipse cx={f(x)} cy={f(y0 + len + r * 0.4)} rx={f(r)} ry={f(r * 1.2)} fill="#4d7d42" opacity="0.85" />
+                <circle cx={f(x - r * 0.35)} cy={f(y0 + len + r * 0.1)} r={(r * 0.35).toFixed(2)} fill="#eef8de" opacity="0.75" />
+              </g>
+            );
+          })}
+        </g>
+      );
+    }
     default:
       return null;
   }
