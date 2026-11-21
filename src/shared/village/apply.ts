@@ -1,12 +1,15 @@
-import { MATERIALS, own } from '../content';
+import { bodyOf, MATERIALS, own } from '../content';
+import { recordCollection } from '../collection';
 import { grantDecor } from './decor';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
 import { lendAHand } from './help';
 import { SUBSTITUTE_FACTOR } from './goods';
+import { loadKiln } from './kiln';
 import { completeJointOrder, contributeTo, ensureJointOrders, isComplete, maxContribution } from './joint';
 import { addNews, validateVillageAction, vid } from './state';
-import type { Delivery, Give, GiveRef, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
+import { tickVillage } from './tick';
+import type { Delivery, Give, GiveRef, KilnReturn, TransferStack, VillageAction, VillageState, WorkshopDelta } from './types';
 
 export const ownDesigns = (s: GameState) => s.designs.filter((d) => !d.origin);
 export const isForeign = (d: Design | undefined) => !!d?.origin;
@@ -77,12 +80,26 @@ export function applyDelta(state: GameState, d: WorkshopDelta): GameState {
   for (const [m, n] of Object.entries(d.materials ?? {})) s.materials[m] = (s.materials[m] ?? 0) + n;
   for (const t of d.goods ?? []) importStack(s, t);
   for (const id of d.decor ?? []) grantDecor(s, id);
+  for (const r of d.kilnGoods ?? []) receiveKilnGoods(s, r);
   if (d.helpBoostUntil !== undefined || d.village) {
     s.village ??= { villageId: d.village?.villageId ?? '', specialty: null, buildings: [], helpBoostUntil: 0, trickleCarry: 0, members: 1 };
     if (d.helpBoostUntil !== undefined) s.village.helpBoostUntil = Math.max(s.village.helpBoostUntil, d.helpBoostUntil);
     if (d.village) Object.assign(s.village, d.village);
   }
   return s;
+}
+
+/** Great-kiln pieces land on their own design; if it was deleted meanwhile they come back as a foreign copy. */
+function receiveKilnGoods(s: GameState, r: KilnReturn): void {
+  const design = s.designs.find((x) => x.id === r.design.id && !x.origin);
+  if (design) {
+    addGoods(s, { designId: design.id, quality: r.quality, effect: r.effect, count: r.count });
+    recordCollection(s, design.form, bodyOf(design), r.effect);
+    s.stats.made += r.count;
+    return;
+  }
+  const copy: Design = { ...structuredClone(r.design), origin: { playerName: r.makerName, makerMark: r.makerMark, glazeColor: r.glazeColor } };
+  importStack(s, { design: copy, quality: r.quality, effect: r.effect, count: r.count, makerName: r.makerName, makerMark: r.makerMark });
 }
 
 export const APPLIED_OPS_KEPT = 200;
@@ -117,7 +134,7 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
   const actor = structuredClone(actor0);
   const me = v.members.find((m) => m.playerId === actorId)!;
   const name = (id: string) => v.members.find((m) => m.playerId === id)?.name ?? 'Jemand';
-  const deliveries: Delivery[] = [];
+  const deliveries: Delivery[] = [...tickVillage(v, now).deliveries];
   const events: string[] = [];
   me.lastSeen = now;
   switch (a.type) {
@@ -193,6 +210,12 @@ export function applyVillageAction(v0: VillageState, actorId: string, actor0: Ga
       if (typeof out === 'string') return out;
       deliveries.push(...out);
       events.push(`Du hast bei ${name(a.target)} mit angepackt – das geht jetzt schneller!`);
+      break;
+    }
+    case 'loadKiln': {
+      const err = loadKiln(v, actor, me, a.designId, a.count, a.wood, now);
+      if (err) return err;
+      events.push('Eingeräumt – jetzt heißt es warten, bis der Ofen brennt.');
       break;
     }
     default:

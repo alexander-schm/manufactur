@@ -8,6 +8,8 @@ export const BUILDINGS: Record<string, BuildingDef> = {
   markthalle: { id: 'markthalle', name: 'Markthalle', description: 'Marktstände verkaufen zu besseren Preisen (90 % statt 80 %).' },
   glasurbibliothek: { id: 'glasurbibliothek', name: 'Glasurbibliothek', description: 'Glasurversuche kosten eine Glasurbasis weniger, und alle Hinweise liegen offen.' },
   gildenhaus: { id: 'gildenhaus', name: 'Gildenhaus', description: 'Großaufträge zahlen 20 % mehr.' },
+  /** not in BUILDING_ORDER: it appears once a member reaches the Manufaktur */
+  gemeinschaftsofen: { id: 'gemeinschaftsofen', name: 'Gemeinschaftsofen', description: 'Ein großer Holzofen für alle: Je mehr Leute mitbrennen und je mehr Holz, desto heißer das Feuer und desto seltener die Effekte.' },
 };
 
 export const hasBuilding = (s: { village: { buildings: string[] } | null }, id: string) => !!s.village?.buildings.includes(id);

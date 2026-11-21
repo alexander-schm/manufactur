@@ -1,5 +1,6 @@
 import { MATERIALS, own } from '../content';
 import { assignSpecialty } from './specialties';
+import { KILN_MEMBER_SHARE, KILN_WOOD_MAX } from './kiln';
 import type { Tier } from '../types';
 import { STICKERS, VILLAGE_ACTION_TYPES, type GiveRef, type GreatKiln, type Member, type VillageAction, type VillageState } from './types';
 
@@ -128,6 +129,9 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
       if (a.source !== 'own' && a.source !== 'store' && a.source !== 'substitute') return 'Woher denn?';
       return isCount(a.count) ? null : 'Ungültige Menge';
     case 'loadKiln':
+      if (typeof a.designId !== 'string') return 'Unbekannter Entwurf';
+      if (!isCount(a.count, KILN_MEMBER_SHARE) || !isCount(a.wood, KILN_MEMBER_SHARE * KILN_WOOD_MAX)) return 'Ungültige Menge';
+      return null;
     case 'loadKilnMasterwork':
     case 'contributeProject':
       return 'Noch nicht verfügbar';

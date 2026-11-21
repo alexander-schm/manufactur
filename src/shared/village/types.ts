@@ -56,13 +56,14 @@ export interface ActiveProject { projectId: string; level: 1 | 2 | 3; stage: num
 /** `levels[id]` = highest completed level, 0-3 */
 export interface ProjectsState { active: ActiveProject | null; offered: string[]; levels: Record<string, number> }
 
-export interface KilnLoad { playerId: string; design: Design; count: number; wood: number; qualityScore: number; makerName: string; makerMark: MakerMark; masterwork?: boolean }
+/** `glazeColor` travels with the load so a piece whose design was deleted meanwhile still renders. */
+export interface KilnLoad { playerId: string; design: Design; glazeColor: string; count: number; wood: number; qualityScore: number; makerName: string; makerMark: MakerMark; masterwork?: boolean }
 export interface GreatKiln { firingId: string; loads: KilnLoad[]; firesAt: number | null; doneAt: number | null; heat: number | null }
 export interface KilnFiringReport { firingId: string; at: number; heat: number; contributors: string[]; pieces: number; best: { playerId: string; designName: string; form: string; effect: string | null; quality: 1 | 2 | 3 } | null }
 
 export type MuseumPiece = Pick<MasterworkRecord, 'id' | 'design' | 'glazeColor' | 'effect' | 'quality' | 'prestige' | 'patronName' | 'finishedAt'>;
 
-export interface KilnReturn { design: Design; quality: 1 | 2 | 3; effect: string | null; count: number; makerName: string; makerMark: MakerMark }
+export interface KilnReturn { design: Design; glazeColor: string; quality: 1 | 2 | 3; effect: string | null; count: number; makerName: string; makerMark: MakerMark }
 export interface KilnMasterworkResult { design: Design; qualityScore: number; effect: string | null; at: number }
 
 export interface JointOrder {
