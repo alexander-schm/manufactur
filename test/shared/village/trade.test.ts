@@ -118,7 +118,7 @@ describe('decor rewards', () => {
     const { ws } = village(2);
     let s = applyDelta(ws.p1, { decor: ['laterne'] });
     expect(s.decorPlaced).toEqual(['laterne']);
-    s = { ...s, decorPlaced: ['a', 'b', 'c', 'd'] };
+    s = { ...s, decorPlaced: ['a', 'b', 'c', 'd', 'e', 'f'] };
     s = applyDelta(s, { decor: ['vogelhaus'] });
     expect(s.decor).toContain('vogelhaus');
     expect(s.decorPlaced).not.toContain('vogelhaus');

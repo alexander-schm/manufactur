@@ -25,3 +25,10 @@ export function hashSeed(seed: number, salt: number): number {
   h = Math.imul(h ^ (h >>> 15), 0x846ca68b) >>> 0;
   return (h ^ (h >>> 16)) >>> 0;
 }
+
+/** FNV-1a 32-bit hash of a string (unsigned). */
+export function hashString(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h >>> 0;
+}

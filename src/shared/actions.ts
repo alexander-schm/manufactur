@@ -7,6 +7,7 @@ import { COMMISSION_SWAP_COST, generateCommission, masterworkBusy, startMasterwo
 import { pieceValue } from './market';
 import { orderReward } from './orders';
 import { kilnCapacity, startNewBatch } from './production';
+import { discoverError, recordCuriosity } from './curiosities';
 import { checkMilestones, touchSeen } from './progression';
 import { rollWorker } from './state';
 import { hasBuilding } from './village/buildings';
@@ -41,14 +42,15 @@ export type Action =
   | { type: 'ackMilestone'; id: string }
   | { type: 'startMasterwork'; designId: string }
   | { type: 'swapCommission' }
-  | { type: 'ackMasterwork'; id: string };
+  | { type: 'ackMasterwork'; id: string }
+  | { type: 'discoverCuriosity'; id: string };
 
 export type ActionType = Action['type'];
 export const ACTION_TYPES: ActionType[] = ['buyMaterial', 'setKeepStock', 'queueBatch', 'setStanding', 'hire', 'assign', 'upgradeStation', 'upgradeTier', 'buildStation', 'saveDesign',
   'deliverOrder', 'declineOrder', 'setStall', 'sellNow', 'experiment', 'handTouch', 'setAvatar', 'setMakerMark', 'placeDecor', 'removeDecor', 'ackAway', 'ackMilestone',
-  'startMasterwork', 'swapCommission', 'ackMasterwork'];
+  'startMasterwork', 'swapCommission', 'ackMasterwork', 'discoverCuriosity'];
 
-export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp'; id: string; text: string };
+export type GameEvent = { kind: 'discovery' | 'glaze' | 'hint' | 'unlock' | 'milestone' | 'orderDone' | 'levelUp' | 'curiosity'; id: string; text: string };
 export type ActionResult = { ok: true; state: GameState; events: GameEvent[] } | { ok: false; error: string };
 
 export const HAND_TOUCH_COOLDOWN_MS = 10 * 60_000;
@@ -294,6 +296,12 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
       if (s.decorPlaced.includes(a.id)) fail('Steht schon in der Werkstatt');
       if (s.decorPlaced.length >= MAX_DECOR_PLACED) fail(`Höchstens ${MAX_DECOR_PLACED} Dekorationen gleichzeitig`);
       s.decorPlaced.push(a.id);
+      return;
+    }
+    case 'discoverCuriosity': {
+      const err = discoverError(s, a.id, now);
+      if (err) fail(err);
+      recordCuriosity(s, a.id, now, events);
       return;
     }
     case 'removeDecor':

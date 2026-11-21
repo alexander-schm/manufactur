@@ -53,7 +53,20 @@ describe('schema 3', () => {
     expect(s.glazes[0].body).toBe('irdenware');
     expect([s.collection, s.collectionRewards, s.masterworks, s.commission, s.keepStock]).toEqual([[], [], [], null, {}]);
   });
-  describe('migrateState v2 to v3', () => {
+  it('newGame starts with an empty album and a thirsty plant', () => {
+    const s = newGame('p', 5, T0);
+    expect([s.curiosities, s.plant]).toEqual([{}, { stage: 0, lastWatered: 0 }]);
+  });
+  it('v3 to v4 fills the album fields', () => {
+    const v3: any = JSON.parse(JSON.stringify(newGame('p', 5, T0)));
+    v3.schemaVersion = 3;
+    delete v3.curiosities;
+    delete v3.plant;
+    const s = migrateState(v3);
+    expect(s.schemaVersion).toBe(4);
+    expect(s).toEqual(newGame('p', 5, T0));
+  });
+  describe('migrateState v2 to v4', () => {
     it('fills tier, bodies and the new fields without touching anything else', () => {
       const v2: any = JSON.parse(JSON.stringify(newGame('p', 5, T0)));
       v2.schemaVersion = 2;
@@ -61,15 +74,15 @@ describe('schema 3', () => {
       for (const d of v2.designs) delete d.body;
       for (const g of v2.glazes) delete g.body;
       const s = migrateState(v2);
-      expect(s.schemaVersion).toBe(3);
+      expect(s.schemaVersion).toBe(4);
       expect(s).toEqual(newGame('p', 5, T0));
     });
-    it('chains v1 to v3', () => {
+    it('chains v1 to v4', () => {
       const v1: any = JSON.parse(JSON.stringify(newGame('p', 5, T0)));
       v1.schemaVersion = 1;
       for (const k of ['village', 'decor', 'decorPlaced', 'tier', 'collection', 'collectionRewards', 'keepStock', 'commission', 'masterworks']) delete v1[k];
       const s = migrateState(v1);
-      expect([s.schemaVersion, s.tier, s.village, s.decor]).toEqual([3, 'werkstatt', null, []]);
+      expect([s.schemaVersion, s.tier, s.village, s.decor]).toEqual([4, 'werkstatt', null, []]);
     });
   });
 });

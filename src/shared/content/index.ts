@@ -21,6 +21,8 @@ export type { StationDef } from './stations';
 export type { TraitDef } from './traits';
 export type { EffectDef, RecipeInput } from './effects';
 export { GREAT_KILN_EFFECTS, isGreatKilnEffect } from './effects';
+export { ALBUM_PRIZES, CURIOSITIES, CURIOSITY_GROUPS, DAY_MS, MOUSE_GAP_MS, RARITY_TALER } from './curiosities';
+export type { CuriosityDef, CuriosityGroup } from './curiosities';
 export { bodyAvailable, bodyOf, getBody } from './bodies';
 export { getTier, nextTier, stationTierGate, tierAtLeast, tierForLevel, tierRank } from './tiers';
 export type { BodyDef } from './bodies';

@@ -84,17 +84,17 @@ describe('village effects in the solo simulation', () => {
 });
 
 describe('decor', () => {
-  it('place only owned decor, at most 4', () => {
+  it('place only owned decor, at most 6', () => {
     const s = newGame('p', 1, T0);
     expect(applyAction(s, { type: 'placeDecor', id: 'laterne' }, T0).ok).toBe(false);
-    s.decor = ['laterne', 'vogelhaus', 'blumenkasten', 'wimpelkette', 'wandteller'];
+    s.decor = ['laterne', 'vogelhaus', 'blumenkasten', 'wimpelkette', 'wandteller', 'haengekorb', 'grosse-vase'];
     let st = s;
-    for (const id of ['laterne', 'vogelhaus', 'blumenkasten', 'wimpelkette']) {
+    for (const id of ['laterne', 'vogelhaus', 'blumenkasten', 'wimpelkette', 'wandteller', 'haengekorb']) {
       const r = applyAction(st, { type: 'placeDecor', id }, T0);
       expect(r.ok).toBe(true);
       if (r.ok) st = r.state;
     }
-    expect(applyAction(st, { type: 'placeDecor', id: 'wandteller' }, T0).ok).toBe(false);
+    expect(applyAction(st, { type: 'placeDecor', id: 'grosse-vase' }, T0).ok).toBe(false);
     const rem = applyAction(st, { type: 'removeDecor', id: 'laterne' }, T0);
     expect(rem.ok && rem.state.decorPlaced).not.toContain('laterne');
   });

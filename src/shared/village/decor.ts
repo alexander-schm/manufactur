@@ -23,9 +23,18 @@ export const DECOR: Record<string, DecorDef> = {
   museumsplakat: { id: 'museumsplakat', name: 'Museumsplakat', spot: 'wall' },
   kaolinbrocken: { id: 'kaolinbrocken', name: 'Kaolinbrocken', spot: 'floor' },
   ratssiegel: { id: 'ratssiegel', name: 'Ratssiegel', spot: 'wall' },
+  // curiosity album rewards (art follows in the surprise art tasks)
+  socke: { id: 'socke', name: 'Einzelne Socke', spot: 'wall' },
+  drachenpluesch: { id: 'drachenpluesch', name: 'Plüschdrache', spot: 'window' },
+  storchenmobile: { id: 'storchenmobile', name: 'Storchen-Mobile', spot: 'ceiling' },
+  gluecksschwein: { id: 'gluecksschwein', name: 'Glücksschwein', spot: 'floor' },
+  kerzenkranz: { id: 'kerzenkranz', name: 'Geburtstagskranz', spot: 'wall' },
+  ohrensessel: { id: 'ohrensessel', name: 'Ohrensessel', spot: 'floor' },
+  goldfischglas: { id: 'goldfischglas', name: 'Goldfischglas', spot: 'window' },
+  drachenteppich: { id: 'drachenteppich', name: 'Drachen-Wandteppich', spot: 'wall' },
 };
 
-export const MAX_DECOR_PLACED = 4;
+export const MAX_DECOR_PLACED = 6;
 
 /** Hands a decor item to the workshop and shows it off right away while there is room. False when already owned. */
 export function grantDecor(s: GameState, id: string): boolean {

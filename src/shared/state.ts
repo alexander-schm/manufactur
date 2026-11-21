@@ -5,7 +5,7 @@ import { addOrder } from './orders';
 import { nextRandom, pick } from './rng';
 import type { Design, GameState, GlazeRecipe, Station, StationKind, Worker } from './types';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export { newId };
 
@@ -38,7 +38,7 @@ export function newGame(playerId: string, seed: number, now: number): GameState 
     makerMark: { shape: 'circle', letter: 'M', color: '#b44c36' }, nextId: 1,
     stats: { made: 0, sold: 0, ordersDone: 0, experiments: 0, designsSaved: 0, effectsFound: 0 },
     lastOrderAt: now, stallCarry: 0, village: null, decor: [], decorPlaced: [],
-    tier: 'werkstatt', collection: [], collectionRewards: [], keepStock: {}, commission: null, masterworks: [],
+    tier: 'werkstatt', collection: [], collectionRewards: [], keepStock: {}, commission: null, masterworks: [], curiosities: {}, plant: { stage: 0, lastWatered: 0 },
   };
   s.stations = ROOM1.map((kind, slot): Station => ({ id: newId(s, 's'), kind, level: 1, slot }));
   const first = rollWorker(s);
@@ -81,6 +81,11 @@ export function migrateState(raw: unknown): GameState {
     s.masterworks = [];
     seedCollection(s);
     s.schemaVersion = 3;
+  }
+  if (s.schemaVersion === 3) {
+    s.curiosities = {};
+    s.plant = { stage: 0, lastWatered: 0 };
+    s.schemaVersion = 4;
   }
   return s;
 }
