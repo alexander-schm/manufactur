@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { GameState } from '../../../shared/types';
 import type { Member } from '../../../shared/village/types';
 import { BUILDINGS } from '../../../shared/village/buildings';
+import { PROJECTS } from '../../../shared/village/projects';
 import { api } from '../../api';
 import { VillageMap } from '../../art/village/VillageMap';
 import { me, now } from '../../store';
@@ -41,7 +42,7 @@ export function VillagePanel({ tab: initial }: { tab?: string }) {
   return (
     <div class="village-panel">
       <VillageMap village={v} meId={meId} now={now.value} onHouse={openHouse} onBoard={() => setTab('trade')}
-        onBuilding={(id) => toast(`${BUILDINGS[id].name}: ${BUILDINGS[id].description}`)} />
+        onBuilding={(id) => { const d = BUILDINGS[id] ?? PROJECTS[id]; if (d) toast(`${d.name}: ${d.description}`); }} />
       {v.members.length < 2 && (
         <div class="invite-hint">
           <strong>Allein ist’s schön – zusammen noch schöner!</strong> Großaufträge gibt es ab zwei Leuten. Schick deinen Freunden diesen Link:

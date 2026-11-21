@@ -2,13 +2,18 @@ import { memo } from 'preact/compat';
 import type { VillageView } from '../../../shared/village/types';
 import { BUILDING_ORDER } from '../../../shared/village/buildings';
 import { COMPLETIONS_PER_BUILDING } from '../../../shared/village/joint';
+import { villageLevel } from '../../../shared/village/level';
+import { PROJECTS } from '../../../shared/village/projects';
 import { inkStyle } from '../ink';
 import { VillageBuilding } from './Buildings';
+import { LevelDecorations } from './Decorations';
+import { GreatKilnArt, kilnFill, kilnPhase } from './GreatKiln';
 import { FreePlot, House } from './House';
+import { ProjectSite } from './ProjectSites';
 import './village.css';
 
 export const MAP_W = 1400;
-export const MAP_H = 880;
+export const MAP_H = 1200;
 /** House plots (front-step centre). 0–5: the ring around the square; 6–9: outer plots for bigger villages. */
 export const PLOTS = [
   { x: 330, y: 360 }, { x: 700, y: 280 }, { x: 1070, y: 360 }, { x: 1080, y: 700 }, { x: 700, y: 810 }, { x: 320, y: 700 },
@@ -16,6 +21,11 @@ export const PLOTS = [
 ];
 export const BUILDING_SPOTS: Record<string, { x: number; y: number }> = {
   tongrube: { x: 150, y: 220 }, markthalle: { x: 1260, y: 230 }, glasurbibliothek: { x: 110, y: 860 }, gildenhaus: { x: 1290, y: 860 },
+  gemeinschaftsofen: { x: 420, y: 880 },
+};
+/** Grand-project plots along the lane south of the square; the Rathaus closes the main street. */
+export const PROJECT_SPOTS: Record<string, { x: number; y: number }> = {
+  dorfbrunnen: { x: 440, y: 1060 }, glockenturm: { x: 960, y: 1050 }, museum: { x: 200, y: 1120 }, kaolingrube: { x: 1220, y: 1110 }, rathaus: { x: 700, y: 1150 },
 };
 const CORE = 6;
 const ACTIVE_MS = 3_600_000;
@@ -54,9 +64,9 @@ function Landscape() {
         return <path d={`M${x} ${y} l3 -8 M${x + 6} ${y} l2 -10 M${x + 11} ${y} l3 -7`} fill="none" stroke="#6f9a4f" stroke-width="1.6" stroke-linecap="round" opacity="0.6" />;
       })}
       {/* paths */}
-      <path d={`M700 ${MAP_H} Q690 700 700 560`} fill="none" stroke="#e8cf9f" stroke-width="44" stroke-linecap="round" />
+      <path d={`M700 1150 Q690 820 700 560`} fill="none" stroke="#e8cf9f" stroke-width="44" stroke-linecap="round" />
       {PLOTS.slice(0, CORE).map((p) => <path d={`M700 470 Q${(700 + p.x) / 2 + 30} ${(470 + p.y) / 2 + 20} ${p.x} ${p.y + 10}`} fill="none" stroke="#e8cf9f" stroke-width="20" stroke-linecap="round" />)}
-      <path d={`M700 ${MAP_H} Q690 700 700 560`} fill="none" style={{ ...T, strokeDasharray: '4 14' }} />
+      <path d={`M700 1150 Q690 820 700 560`} fill="none" style={{ ...T, strokeDasharray: '4 14' }} />
       {/* square */}
       <ellipse cx="700" cy="470" rx="200" ry="105" fill="#e8cf9f" style={S} />
       {Array.from({ length: 34 }, (_, i) => {
@@ -112,6 +122,7 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
   const built = new Set(village.buildings);
   const nextIdx = BUILDING_ORDER.findIndex((b) => !built.has(b));
   const progress = village.completedJoint % COMPLETIONS_PER_BUILDING;
+  const level = villageLevel(village);
   // draw back-to-front by y so houses overlap naturally
   const items: { y: number; el: preact.JSX.Element }[] = [];
   PLOTS.forEach((p, slot) => {
@@ -123,9 +134,18 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
     const p = BUILDING_SPOTS[id];
     if (built.has(id) || i === nextIdx) items.push({ y: p.y, el: <VillageBuilding id={id} x={p.x} y={p.y} built={built.has(id)} progress={progress} onClick={() => onBuilding(id)} /> });
   });
+  if (built.has('gemeinschaftsofen')) {
+    const p = BUILDING_SPOTS.gemeinschaftsofen;
+    items.push({ y: p.y, el: <g class="vbuilding" data-building="gemeinschaftsofen" role="button" aria-label="Gemeinschaftsofen" onClick={() => onBuilding('gemeinschaftsofen')}><GreatKilnArt x={p.x} y={p.y} phase={kilnPhase(village.greatKiln, now)} fill={kilnFill(village.greatKiln)} /></g> });
+  }
+  const { active, offered, levels } = village.projects;
+  for (const [id, p] of Object.entries(PROJECT_SPOTS)) {
+    const building = active?.projectId === id ? { level: active.level, stage: active.stage, stages: PROJECTS[id].stages.length } : null;
+    items.push({ y: p.y, el: <ProjectSite id={id} x={p.x} y={p.y} level={levels[id] ?? 0} building={building} offered={offered.includes(id)} onClick={() => onBuilding(id)} /> });
+  }
   items.push({ y: 470, el: <Well x={700} y={470} /> });
   items.push({ y: 500, el: <g onClick={onBoard} role="button" aria-label="Tauschbrett"><NoticeBoard x={830} y={500} offers={village.offers.length} requests={village.requests.length} /></g> });
-  for (const [x, y, s] of [[40, 420, 1], [1370, 420, 1.1], [560, 620, 0.8], [850, 640, 0.75], [30, 760, 1.2], [1380, 770, 1], [260, 110, 0.9], [1120, 100, 0.85], [700, 120, 0.7]] as const) {
+  for (const [x, y, s] of [[40, 420, 1], [1370, 420, 1.1], [560, 620, 0.8], [880, 680, 0.75], [30, 760, 1.2], [1380, 770, 1], [260, 110, 0.9], [1120, 100, 0.85], [700, 120, 0.7]] as const) {
     items.push({ y, el: <Tree x={x} y={y} s={s} /> });
   }
   items.push({ y: 610, el: <Sheep x={590} y={610} /> }, { y: 600, el: <Sheep x={800} y={600} flip /> });
@@ -135,9 +155,10 @@ export function VillageMap({ village, meId, now, onHouse, onBuilding, onBoard }:
       <svg class="village-map" viewBox={`0 0 ${MAP_W} ${MAP_H}`} role="img" aria-label={`Das Dorf ${village.name}`}>
         <StaticLandscape />
         {items.map((it) => it.el)}
+        <LevelDecorations level={level} />
         <g transform="rotate(-2 700 40)">
-          <rect x="560" y="12" width="280" height="50" rx="8" fill="#fffaf0" style={S} />
-          <text x="700" y="47" text-anchor="middle" font-size="30" font-family="var(--font-hand)" fill="var(--line)">{village.name}</text>
+          <rect x="490" y="12" width="420" height="50" rx="8" fill="#fffaf0" style={S} />
+          <text x="700" y="47" text-anchor="middle" font-size="30" font-family="var(--font-hand)" fill="var(--line)">{`${village.name} · Stufe ${level}`}</text>
         </g>
       </svg>
     </div>

@@ -1,9 +1,15 @@
 .village-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; }
 .village-map { display: block; width: 100%; height: auto; user-select: none; }
-@media (max-width: 899px) { .village-map { width: auto; height: min(62vh, 560px); } }
+@media (max-width: 899px) { .village-map { width: auto; height: min(70vh, 640px); } }
 .village-map .house, .village-map .vbuilding, .village-map .noticeboard { cursor: pointer; }
 .village-map .house:hover > g, .village-map .house:focus-visible > g { filter: brightness(1.05) drop-shadow(0 0 1px var(--line)); }
-.village-map .smoke { animation: puff 2.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.village-map .smoke, .village-art .smoke { animation: puff 2.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 .village-map .tree { animation: sway 7s ease-in-out infinite; }
 .village-map .sheep { animation: bob 2.6s ease-in-out infinite; }
-.village-map .flag { animation: sway 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 0 50%; }
+.village-map .flag, .village-art .flag { animation: sway 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 0 50%; }
+.village-map .kiln-flame, .village-art .kiln-flame { animation: flicker 0.9s ease-in-out infinite; }
+.village-map .kiln-glow, .village-art .kiln-glow { animation: kiln-pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.village-map .jet, .village-art .jet { animation: bob 1.4s ease-in-out infinite; }
+.village-map .ribbon, .village-art .ribbon { animation: sway 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
+.village-map .lantern-glow, .village-art .lantern-glow { animation: kiln-pulse 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes kiln-pulse { 0%, 100% { opacity: 0.45; transform: scale(0.94); } 50% { opacity: 0.85; transform: scale(1.05); } }

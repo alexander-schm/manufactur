@@ -17,6 +17,7 @@ const devPages: Record<string, () => Promise<{ default: () => preact.JSX.Element
   '#game': () => import('./dev/GamePage').then((m) => ({ default: m.GamePage })),
   '#studio': () => import('./dev/StudioPage').then((m) => ({ default: m.StudioPage })),
   '#village': () => import('./dev/VillagePage').then((m) => ({ default: m.VillagePage })),
+  '#village-sites': () => import('./dev/VillageSitesPage').then((m) => ({ default: m.VillageSitesPage })),
 };
 
 type Phase = 'loading' | 'auth' | 'game';
