@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { autoAssignPlan, bestStackForOrder, deliverActionFor, describeTaste } from '../../src/client/panels/logic';
 import { OrderCard } from '../../src/client/panels/OrdersPanel';
 import { advance } from '../../src/shared/advance';
+import { manufakturGame } from '../shared/helpers';
 import { newGame, rollWorker } from '../../src/shared/state';
 
 const T0 = 1_800_000_000_000;
@@ -33,6 +34,19 @@ describe('orders panel', () => {
     expect(deliverActionFor(s, o)).toEqual({ type: 'deliverOrder', orderId: o.id, designId: s.designs[0].id, quality: 3, effect: null });
     const html = render(<OrderCard state={s} order={o} onDeliver={() => {}} onProduce={() => {}} />);
     expect(html).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*Liefern/);
+  });
+  it('orders: body in the wish, and only stoneware is offered for delivery', () => {
+    expect(describeTaste({}, 'teekanne', 4, 'steinzeug')).toBe('Ich hätte gern 4 Teekannen aus Steinzeug!');
+    const s = manufakturGame();
+    const o = { ...game().orders[0], form: 'becher', count: 2, body: 'steinzeug' as const, minQuality: 1 as const };
+    s.designs[0].form = 'becher';
+    s.goods = [{ designId: s.designs[0].id, quality: 3, effect: null, count: 5 }];
+    expect(bestStackForOrder(s, o)).toBeNull();
+    const html = render(<OrderCard state={s} order={o} onDeliver={() => {}} onProduce={() => {}} />);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Liefern/);
+    expect(html).toContain('Steinzeug');
+    s.designs[0].body = 'steinzeug';
+    expect(bestStackForOrder(s, o)).not.toBeNull();
   });
   it('describes tastes in German', () => {
     expect(describeTaste({ form: 'vase', tall: true, colorFamily: 'blau', pattern: 'dots' }, 'vase', 4)).toBe('Ich hätte gern 4 Vasen, schön hoch, in Blau, mit Punkten!');

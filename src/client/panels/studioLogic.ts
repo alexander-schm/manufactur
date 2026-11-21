@@ -1,6 +1,7 @@
 import type { Action } from '../../shared/actions';
 import { appeal } from '../../shared/design';
-import type { Design, FiringSettings, GameState, GlazeRecipe, Order, ProfileParams } from '../../shared/types';
+import { EXTRA_COLORS, bodyOf } from '../../shared/content';
+import type { BodyId, Design, FiringSettings, GameState, GlazeRecipe, Order, ProfileParams } from '../../shared/types';
 import { designDifficulty } from '../../shared/design';
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0.5));
@@ -13,12 +14,12 @@ export function saveActionFor(draft: Design): Extract<Action, { type: 'saveDesig
   return { type: 'saveDesign', design: { ...draft, name: draft.name.trim() || 'Ohne Namen', profile: clampProfile(draft.profile) } };
 }
 
-export type ExperimentForm = { base: GlazeRecipe['base']; colorant: string | null; colorantPct: number; temp: FiringSettings['temp']; atmosphere: FiringSettings['atmosphere']; cooling: FiringSettings['cooling'] };
+export type ExperimentForm = { base: GlazeRecipe['base']; colorant: string | null; colorantPct: number; temp: FiringSettings['temp']; atmosphere: FiringSettings['atmosphere']; cooling: FiringSettings['cooling']; body: BodyId };
 
 export function experimentActionFor(f: ExperimentForm): Extract<Action, { type: 'experiment' }> {
   return {
     type: 'experiment',
-    recipe: { base: f.base, colorant: f.colorant, colorantPct: f.colorant ? Math.round(f.colorantPct) : 0, firing: { temp: f.temp, atmosphere: f.atmosphere, cooling: f.cooling } },
+    recipe: { base: f.base, body: f.body, colorant: f.colorant, colorantPct: f.colorant ? Math.round(f.colorantPct) : 0, firing: { temp: f.temp, atmosphere: f.atmosphere, cooling: f.cooling } },
   };
 }
 
@@ -44,3 +45,16 @@ export const PRESETS: { name: string; profile: (base: ProfileParams) => ProfileP
 ];
 
 export const PATTERN_COLORS = ['#fff8ec', '#2b2420', '#e9708d', '#4f9cc4', '#f2b84b', '#7fb85c', '#9a7ccf', '#d9674c'];
+
+/** Pattern and mark colours: the basic set plus every colour won from the collection book. */
+export function patternColorsFor(s: GameState): string[] {
+  return [...PATTERN_COLORS, ...EXTRA_COLORS.filter((c) => s.unlocks.includes(c.unlock)).map((c) => c.color)];
+}
+
+/** Change the clay body of a draft; the glaze stays if it fits, else the first own glaze of that body. */
+export function switchBody(s: GameState, draft: Design, body: BodyId): Design {
+  const current = s.glazes.find((g) => g.id === draft.glazeId);
+  if (current && bodyOf(current) === body) return { ...draft, body };
+  const fitting = s.glazes.find((g) => bodyOf(g) === body);
+  return { ...draft, body, glazeId: fitting ? fitting.id : draft.glazeId };
+}

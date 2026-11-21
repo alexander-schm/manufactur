@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { characterName, makeCharacter } from '../../shared/character';
-import { FORMS } from '../../shared/content';
+import { FORMS, FRAMES, bodyOf, getBody } from '../../shared/content';
 import { hashSeed } from '../../shared/rng';
 import type { Design, GameState, MakerMark, PatternKind, ProfileParams } from '../../shared/types';
 import { Character } from '../art/character/Character';
@@ -9,21 +9,22 @@ import { dispatch, view } from '../store';
 import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import { ownDesigns } from '../../shared/village/apply';
+import { BodyPicker } from './BodyPicker';
 import { ExperimentPanel } from './ExperimentPanel';
 import { describeTaste } from './logic';
-import { difficultyLabel, PATTERN_COLORS, PRESETS, saveActionFor, topFans } from './studioLogic';
+import { difficultyLabel, patternColorsFor, PRESETS, saveActionFor, switchBody, topFans } from './studioLogic';
 
 export function DesignPreview({ s, draft, size = 220 }: { s: GameState; draft: Design; size?: number }) {
   const glaze = s.glazes.find((g) => g.id === draft.glazeId);
   return (
     <div class="studio-preview">
-      <Pot design={draft} glazeColor={glaze?.color ?? '#e9c9a6'} effect={glaze?.effect} size={size} fit mark={s.makerMark} title={draft.name} />
+      <Pot design={draft} glazeColor={glaze?.color ?? getBody(bodyOf(draft)).clearColor} effect={glaze?.effect} size={size} fit mark={s.makerMark} title={draft.name} />
     </div>
   );
 }
 
 const SLIDERS: [keyof ProfileParams, string][] = [['height', 'Höhe'], ['belly', 'Bauch'], ['neck', 'Hals'], ['foot', 'Fuß'], ['rim', 'Rand']];
-const PATTERNS: [PatternKind, string, string?][] = [['none', 'ohne'], ['stripes', 'Streifen'], ['dots', 'Punkte'], ['waves', 'Wellen', 'patterns2'], ['leaves', 'Blätter', 'patterns2']];
+const PATTERNS: [PatternKind, string, string?][] = [['none', 'ohne'], ['stripes', 'Streifen'], ['dots', 'Punkte'], ['waves', 'Wellen', 'patterns2'], ['leaves', 'Blätter', 'patterns2'], ['ranken', 'Ranken', 'muster-ranken'], ['karo', 'Karo', 'muster-karo']];
 const HANDLES: [Design['handle'], string, string?][] = [['none', 'ohne'], ['round', 'rund'], ['ear', 'Ohr', 'formdetails'], ['loop', 'Schlaufe', 'formdetails']];
 const RIMS: [Design['rim'], string, string?][] = [['plain', 'schlicht'], ['rolled', 'gerollt', 'formdetails'], ['flared', 'ausgestellt', 'formdetails']];
 
@@ -59,7 +60,7 @@ function Designer({ s }: { s: GameState }) {
           <div class="fans">
             <strong>Beliebt bei …</strong>
             {fans.map(({ order, appeal }) => (
-              <div class="card-row" title={describeTaste(order.taste, order.form, order.count)}>
+              <div class="card-row" title={describeTaste(order.taste, order.form, order.count, order.body)}>
                 <Character look={makeCharacter(order.customerSeed)} pose={appeal > 0.75 ? 'wave' : 'idle'} seed={order.customerSeed} size={30} wobble={false} />
                 <span class="grow">{order.customerName}</span>
                 <span>{appeal > 0.75 ? '♥♥♥' : appeal > 0.4 ? '♥♥' : '♥'}</span>
@@ -91,15 +92,17 @@ function Designer({ s }: { s: GameState }) {
         ))}
         {form.handleAllowed && <><h4>Henkel</h4><Chooser s={s} items={HANDLES} value={draft.handle} onPick={(v) => set({ handle: v })} /></>}
         <h4>Rand</h4><Chooser s={s} items={RIMS} value={draft.rim} onPick={(v) => set({ rim: v })} />
+        <h4>Tonsorte</h4>
+        <BodyPicker s={s} value={bodyOf(draft)} onPick={(b) => setDraft((d) => switchBody(s, d, b))} />
         <h4>Glasur</h4>
         <div class="swatches">
-          {s.glazes.map((g) => <button class="swatch" aria-pressed={g.id === draft.glazeId} title={g.name} style={{ background: g.color }} onClick={() => set({ glazeId: g.id })}>{g.effect ? '✦' : ''}</button>)}
+          {s.glazes.filter((g) => bodyOf(g) === bodyOf(draft)).map((g) => <button class="swatch" aria-pressed={g.id === draft.glazeId} title={g.name} style={{ background: g.color }} onClick={() => set({ glazeId: g.id })}>{g.effect ? '✦' : ''}</button>)}
         </div>
         <h4>Muster</h4>
         <Chooser s={s} items={PATTERNS} value={draft.pattern} onPick={(v) => set({ pattern: v })} />
         {draft.pattern !== 'none' && (
           <div class="swatches" style={{ marginTop: '6px' }}>
-            {PATTERN_COLORS.map((c) => <button class="swatch small" aria-pressed={c === draft.patternColor} style={{ background: c }} onClick={() => set({ patternColor: c })} aria-label={c} />)}
+            {patternColorsFor(s).map((c) => <button class="swatch small" aria-pressed={c === draft.patternColor} style={{ background: c }} onClick={() => set({ patternColor: c })} aria-label={c} />)}
           </div>
         )}
       </div>
@@ -117,10 +120,12 @@ function MarkAndAvatar({ s }: { s: GameState }) {
       <div class="studio-left">
         <h4>Dein Meisterzeichen</h4>
         <p class="muted" style={{ fontSize: '.9em' }}>Es steht auf jedem Stück, das du machst.</p>
-        <Pot design={s.designs[0]} glazeColor={s.glazes.find((g) => g.id === s.designs[0].glazeId)?.color ?? '#e9c9a6'} size={150} fit mark={mark} />
+        <Pot design={s.designs[0]} glazeColor={s.glazes.find((g) => g.id === s.designs[0].glazeId)?.color ?? getBody(bodyOf(s.designs[0])).clearColor} size={150} fit mark={mark} />
         <Chooser s={s} items={shapes} value={mark.shape} onPick={(v) => setMark({ ...mark, shape: v })} />
         <label class="field" style={{ marginTop: '8px' }}><span>Buchstabe</span><input value={mark.letter} maxLength={1} onInput={(e) => setMark({ ...mark, letter: e.currentTarget.value.toUpperCase().replace(/[^A-ZÄÖÜ]/g, '') || mark.letter })} /></label>
-        <div class="swatches">{PATTERN_COLORS.slice(1).map((c) => <button class="swatch small" aria-pressed={c === mark.color} style={{ background: c }} onClick={() => setMark({ ...mark, color: c })} aria-label={c} />)}</div>
+        <h4>Rahmen</h4>
+        <Chooser s={s} items={[['', 'ohne'], ...Object.values(FRAMES).map((f): [string, string, string] => [f.id, f.name, f.unlock])]} value={mark.frame ?? ''} onPick={(v) => setMark({ ...mark, frame: v || undefined })} />
+        <div class="swatches">{patternColorsFor(s).slice(1).map((c) => <button class="swatch small" aria-pressed={c === mark.color} style={{ background: c }} onClick={() => setMark({ ...mark, color: c })} aria-label={c} />)}</div>
         <Button variant="primary" onClick={() => dispatch({ type: 'setMakerMark', mark })}>Zeichen übernehmen</Button>
       </div>
       <div class="studio-right">

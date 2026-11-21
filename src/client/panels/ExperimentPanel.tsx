@@ -1,11 +1,12 @@
 import { useState } from 'preact/hooks';
 import type { GameEvent } from '../../shared/actions';
-import { MATERIALS } from "../../shared/content";
+import { BODIES, MATERIALS, getBody } from "../../shared/content";
 import { glazeColor, matchEffect } from '../../shared/discovery';
-import type { GameState } from '../../shared/types';
+import type { BodyId, GameState } from '../../shared/types';
 import { inkStyle } from '../art/ink';
 import { dispatch } from '../store';
 import { Button } from '../ui/Button';
+import { BodyPicker } from './BodyPicker';
 import { experimentActionFor, type ExperimentForm } from './studioLogic';
 
 function Tile({ color, effect }: { color: string; effect: string | null }) {
@@ -23,14 +24,16 @@ function Tile({ color, effect }: { color: string; effect: string | null }) {
 const opt = <T extends string>(v: T, label: string) => ({ v, label });
 
 export function ExperimentPanel({ s }: { s: GameState }) {
-  const [f, setF] = useState<ExperimentForm>({ base: 'transparent', colorant: null, colorantPct: 2, temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' });
+  const [f, setF] = useState<ExperimentForm>({ base: 'transparent', colorant: null, colorantPct: 2, temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam', body: 'irdenware' });
   const [firing, setFiring] = useState(false);
   const [result, setResult] = useState<{ color: string; effect: string | null; events: GameEvent[] } | null>(null);
   const set = (p: Partial<ExperimentForm>) => { setF({ ...f, ...p }); setResult(null); };
+  const pickBody = (b: BodyId) => set({ body: b, ...(BODIES[b].mustFireHot ? { temp: 'hoch' as const } : {}) });
   const colorants = Object.values(MATERIALS).filter((m) => m.kind === 'colorant' && !m.locked && (!m.unlock || s.unlocks.includes(m.unlock)));
+  const body = getBody(f.body);
   const kiln = s.stations.find((x) => x.kind === 'kiln')!;
   const action = experimentActionFor(f);
-  const canAfford = (s.materials.glasurbasis ?? 0) >= 2 && (!f.colorant || (s.materials[f.colorant] ?? 0) >= 1);
+  const canAfford = (s.materials.glasurbasis ?? 0) >= 2 && (s.materials[body.material] ?? 0) >= 1 && (!f.colorant || (s.materials[f.colorant] ?? 0) >= 1);
 
   async function fire() {
     setFiring(true);
@@ -49,7 +52,9 @@ export function ExperimentPanel({ s }: { s: GameState }) {
 
   return (
     <div class="experiment">
-      <p class="muted">Brenne eine kleine Probekachel – kostet 2 Glasurbasis{f.colorant ? ` und 1 ${MATERIALS[f.colorant].name}` : ''}. Wer weiß, was dabei herauskommt?</p>
+      <p class="muted">Brenne eine kleine Probekachel – kostet 2 Glasurbasis{f.colorant ? `, 1 ${MATERIALS[f.colorant].name}` : ''} und 1 {MATERIALS[body.material].name}. Wer weiß, was dabei herauskommt?</p>
+      <h4>Tonsorte</h4>
+      <BodyPicker s={s} value={f.body} onPick={pickBody} />
       <h4>Basis</h4>
       <Radio name="Basis" items={[opt('transparent', 'transparent'), opt('matt', 'matt'), opt('opak', 'deckend')]} value={f.base} onPick={(v) => set({ base: v })} />
       <h4>Farbkörper</h4>
@@ -57,7 +62,7 @@ export function ExperimentPanel({ s }: { s: GameState }) {
       {colorants.length === 0 && <p class="muted" style={{ fontSize: '.9em' }}>Farbkörper bringt der Händler nach fünf erledigten Aufträgen.</p>}
       {f.colorant && <label class="slider"><span>Anteil: {f.colorantPct} %</span><input type="range" min={0} max={10} step={1} value={f.colorantPct} onInput={(e) => set({ colorantPct: Number(e.currentTarget.value) })} /></label>}
       <h4>Brand</h4>
-      <Radio name="Temperatur" items={[opt('niedrig', 'niedrig'), opt('mittel', 'mittel'), { v: 'hoch' as const, label: 'hoch', lock: kiln.level < 2 }]} value={f.temp} onPick={(v) => set({ temp: v })} />
+      <Radio name="Temperatur" items={[{ v: 'niedrig' as const, label: 'niedrig', lock: body.mustFireHot }, { v: 'mittel' as const, label: 'mittel', lock: body.mustFireHot }, { v: 'hoch' as const, label: 'hoch', lock: kiln.level < 2 }]} value={f.temp} onPick={(v) => set({ temp: v })} />
       <Radio name="Luft" items={[opt('oxidierend', 'viel Luft'), { v: 'reduzierend' as const, label: 'wenig Luft (Reduktion)', lock: !s.unlocks.includes('reduktion') }]} value={f.atmosphere} onPick={(v) => set({ atmosphere: v })} />
       <Radio name="Abkühlen" items={[opt('schnell', 'schnell abkühlen'), opt('langsam', 'langsam abkühlen')]} value={f.cooling} onPick={(v) => set({ cooling: v })} />
       <div class="bench">

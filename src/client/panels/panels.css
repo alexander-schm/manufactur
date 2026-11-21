@@ -104,3 +104,8 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .joint-actions { margin-top: 6px; }
 .contributors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .contrib { display: inline-flex; align-items: center; gap: 2px; font-size: .9em; }
+
+.body-lump { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 132px; padding: 6px 8px; border: 2px solid var(--line); border-radius: 14px; background: #fff; cursor: pointer; text-align: center; font: inherit; }
+.body-lump[aria-pressed='true'] { background: var(--g5); }
+.body-lump:disabled { opacity: .55; cursor: not-allowed; }
+.body-lump .muted { font-size: .8em; }

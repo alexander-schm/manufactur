@@ -1,4 +1,4 @@
-import { EFFECTS, MATERIALS } from '../../shared/content';
+import { BODIES, EFFECTS, MATERIALS, bodyAvailable, bodyOf, getBody, getTier } from '../../shared/content';
 import { discoveredEffects } from '../../shared/discovery';
 import type { GameState, GlazeRecipe } from '../../shared/types';
 import { inkStyle } from '../art/ink';
@@ -16,12 +16,18 @@ function Swatch({ color, effect }: { color: string; effect: string | null }) {
 
 export function RecipeBook({ s }: { s: GameState }) {
   const found = discoveredEffects(s);
-  const missing = Object.values(EFFECTS).filter((e) => !found.includes(e.id));
+  const undiscovered = Object.values(EFFECTS).filter((e) => !found.includes(e.id));
+  const missing = undiscovered.filter((e) => !e.body || bodyAvailable(s, e.body));
+  const hidden = undiscovered.filter((e) => e.body && !bodyAvailable(s, e.body));
+  const hiddenTiers = [...new Set(hidden.map((e) => getBody(e.body!).tier))];
+  const groups = Object.values(BODIES).map((b) => ({ body: b, glazes: s.glazes.filter((g) => bodyOf(g) === b.id) })).filter((x) => x.glazes.length > 0);
   return (
     <div class="book">
       <div class="book-page">
         <h3>Meine Glasuren ({s.glazes.length})</h3>
-        {s.glazes.map((g) => (
+        {groups.map(({ body, glazes }) => <>
+          <h4>{body.name}</h4>
+          {glazes.map((g) => (
           <div class="recipe">
             <Swatch color={g.color} effect={g.effect} />
             <div>
@@ -30,7 +36,8 @@ export function RecipeBook({ s }: { s: GameState }) {
               {g.effect && <div class="hand-note">✦ {EFFECTS[g.effect].description}</div>}
             </div>
           </div>
-        ))}
+          ))}
+        </>)}
       </div>
       <div class="book-page">
         <h3>Noch zu entdecken ({missing.length})</h3>
@@ -40,7 +47,8 @@ export function RecipeBook({ s }: { s: GameState }) {
             <div><strong>{s.stats.experiments > 0 ? e.name : '???'}</strong><div class="hand-note">{e.hint}</div></div>
           </div>
         ))}
-        {missing.length === 0 && <p>Du hast alle Effekte entdeckt! Meisterlich.</p>}
+        {hiddenTiers.map((t) => <p class="muted">{`+${hidden.filter((e) => getBody(e.body!).tier === t).length} weitere Effekte ab der ${getTier(t).name}`}</p>)}
+        {missing.length === 0 && hidden.length === 0 && <p>Du hast alle Effekte entdeckt! Meisterlich.</p>}
       </div>
     </div>
   );

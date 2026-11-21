@@ -1,12 +1,12 @@
 import type { Action } from '../../shared/actions';
 import { COLOR_FAMILY_NAMES, PATTERN_TEXT, appeal, glazeForDesign, type ColorFamily } from '../../shared/design';
 import { ownDesigns } from '../../shared/village/apply';
-import { FORMS, getStationDef, getTrait } from '../../shared/content';
+import { FORMS, bodyOf, getBody, getStationDef, getTrait } from '../../shared/content';
 import { orderReward } from '../../shared/orders';
-import type { Design, GameState, GoodsStack, Order, Taste } from '../../shared/types';
+import type { BodyId, Design, GameState, GoodsStack, Order, Taste } from '../../shared/types';
 
-export function describeTaste(taste: Taste, form: string, count: number): string {
-  const parts = [`${count} ${count === 1 ? FORMS[form].name : FORMS[form].plural}`];
+export function describeTaste(taste: Taste, form: string, count: number, body?: BodyId): string {
+  const parts = [`${count} ${count === 1 ? FORMS[form].name : FORMS[form].plural}${body ? ` aus ${getBody(body).name}` : ''}`];
   if (taste.tall !== undefined) parts.push(taste.tall ? 'schön hoch' : 'eher niedrig');
   if (taste.colorFamily) parts.push(`in ${COLOR_FAMILY_NAMES[taste.colorFamily as ColorFamily]}`);
   if (taste.pattern) parts.push(PATTERN_TEXT[taste.pattern]);
@@ -23,6 +23,7 @@ export function bestStackForOrder(s: GameState, o: Order): GoodsStack | null {
   for (const g of s.goods) {
     const d = s.designs.find((x) => x.id === g.designId);
     if (!d || d.form !== o.form || g.quality < o.minQuality || g.count < o.count) continue;
+    if (o.body && bodyOf(d) !== o.body) continue;
     const r = orderReward(o, g, d, glazeOf(s, d)).taler;
     if (r > bestReward) { best = g; bestReward = r; }
   }
@@ -38,7 +39,7 @@ export function deliverActionFor(s: GameState, o: Order): Action | null {
 export function bestDesignForOrder(s: GameState, o: Order): Design | null {
   let best: Design | null = null, score = -1;
   for (const d of ownDesigns(s)) {
-    if (d.form !== o.form) continue;
+    if (d.form !== o.form || (o.body && bodyOf(d) !== o.body)) continue;
     const a = appeal(d, glazeOf(s, d), o.taste);
     if (a > score) { best = d; score = a; }
   }

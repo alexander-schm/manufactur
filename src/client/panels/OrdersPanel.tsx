@@ -1,4 +1,5 @@
 import type { Action } from '../../shared/actions';
+import { getBody } from '../../shared/content';
 import { makeCharacter } from '../../shared/character';
 import type { GameState, Order } from '../../shared/types';
 import { Character } from '../art/character/Character';
@@ -18,17 +19,18 @@ export function OrderCard({ state: s, order: o, onDeliver, onProduce, onDecline 
         <Character look={makeCharacter(o.customerSeed)} pose={deliver ? 'wave' : 'idle'} seed={o.customerSeed} size={64} wobble={false} />
         <div class="grow">
           <strong>{o.customerName}</strong> <span class="muted">· {o.customerJob}</span>
-          <div class="bubble">{describeTaste(o.taste, o.form, o.count)}</div>
+          <div class="bubble">{describeTaste(o.taste, o.form, o.count, o.body)}</div>
           <div class="reward">
             <span class="counter"><CoinIcon />≈ {o.rewardTaler}+</span>
             <span class="counter"><StarIcon />{o.rewardRuf}+</span>
+            {o.body && <span class="chip small" data-body-badge>{getBody(o.body).name}</span>}
             {o.minQuality > 1 && <span>mind. <Stars n={o.minQuality} /></span>}
           </div>
         </div>
       </div>
       <div class="card-row" style={{ marginTop: '8px' }}>
         {best ? <DesignPot s={s} d={best} size={46} /> : null}
-        <div class="grow muted" style={{ fontSize: '.9em' }}>{best ? `Passt am besten: ${best.name}` : 'Du hast noch keinen Entwurf in dieser Form.'}</div>
+        <div class="grow muted" style={{ fontSize: '.9em' }}>{best ? `Passt am besten: ${best.name}` : (o.body ? `Du hast noch keinen Entwurf in dieser Form aus ${getBody(o.body).name}.` : 'Du hast noch keinen Entwurf in dieser Form.')}</div>
         {best && !deliver && <Button small variant="quiet" disabled={!!producing} onClick={() => onProduce(best.id)}>{producing ? 'Läuft' : 'Herstellen'}</Button>}
         <Button small variant="good" disabled={!deliver} onClick={() => deliver && onDeliver(deliver)}>Liefern</Button>
       </div>
