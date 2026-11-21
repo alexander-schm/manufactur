@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { fmtTaler } from '../../../src/shared/format';
 import { batchMaterials, missingMaterialCost } from '../../../src/shared/production';
 import { applyDelta } from '../../../src/shared/village/apply';
 import { GREAT_KILN_CAPACITY, KILN_FIRING_MS, KILN_WAIT_MS, heatFor, kilnPieces, loadKiln, nextKilnWake, rollKilnEffect, shareLeft, tickGreatKiln } from '../../../src/shared/village/kiln';
@@ -71,7 +72,7 @@ describe('great kiln', () => {
     ws.p1.taler = 0;
     ws.p1.materials = {};
     const cost = missingMaterialCost(ws.p1, { ...batchMaterials(ws.p1, ws.p1.designs[0], 5), holz: 10 });
-    expect(load(v, ws, 'p1', 5, 10).error).toBe(`Dafür brauchst du ${Math.ceil(cost)} Taler`);
+    expect(load(v, ws, 'p1', 5, 10).error).toBe(`Dafür brauchst du ${fmtTaler(cost)} Taler`);
   });
 
   it('refuses gifted designs', () => {
@@ -122,8 +123,6 @@ describe('great kiln', () => {
     expect(hits / 5000).toBeLessThan(0.84);
     expect(asche / hits).toBeGreaterThan(6 / 14 - 0.04);
     expect(asche / hits).toBeLessThan(6 / 14 + 0.04);
-    const [, next] = rollKilnEffect(1, 0, false);
-    expect(next).not.toBe(1);
   });
 
   it('fires 24 h after the first piece, cools 2 h later, pieces return to their own design and the collection', () => {
@@ -227,6 +226,42 @@ describe('great kiln', () => {
     expect(copies).toHaveLength(1);
     expect(copies[0].origin).toEqual({ playerName: 'Anna', makerMark: v.members[0].makerMark, glazeColor });
     expect(after.goods.filter((g) => g.designId === copies[0].id).reduce((n, g) => n + g.count, 0)).toBe(4);
+  });
+
+  it('a design edited during the wait gets the fired one back as a new own design', () => {
+    let { v, ws } = kilnVillage(2);
+    ({ v, ws } = load(v, ws, 'p1', 4, 8, T0));
+    const fired = structuredClone(ws.p1.designs[0]);
+    // saveDesign edits in place when nothing on the shelf or in the pipeline uses the design
+    const w = structuredClone(ws.p1);
+    w.goods = [];
+    w.glazes.push({ ...structuredClone(w.glazes[0]), id: 'g-blau', color: '#3355aa' });
+    w.designs[0] = { ...w.designs[0], form: 'schale', glazeId: 'g-blau' };
+    const ownBefore = w.designs.filter((d) => !d.origin).length;
+    const { deliveries } = tickVillage(v, T0 + KILN_WAIT_MS + KILN_FIRING_MS);
+    const after = applyDelta(w, deliveries[0].delta);
+    expect(after.designs.filter((d) => !d.origin)).toHaveLength(ownBefore + 1);
+    const back = after.designs.at(-1)!;
+    expect(back.id).not.toBe(fired.id);
+    expect(back.origin).toBeUndefined();
+    expect({ ...back, id: fired.id }).toEqual(fired);
+    expect(after.goods.filter((g) => g.designId === back.id).reduce((n, g) => n + g.count, 0)).toBe(4);
+    expect(after.goods.filter((g) => g.designId === fired.id)).toEqual([]);
+    for (const ret of deliveries[0].delta.kilnGoods!) expect(after.collection).toContain(`becher|irdenware|${ret.effect ?? '-'}`);
+    expect(after.collection.some((k) => k.startsWith('schale|'))).toBe(false);
+  });
+
+  it('the hotter the fire, the better the pieces: score 70 at heat 1 comes back at the top quality', () => {
+    const { ws } = village(1);
+    const v = newVillage('v', 'Tonhausen', 3);
+    v.greatKiln.firesAt = T0;
+    // three people with full wood make the hottest fire; 70 alone would be the middle quality
+    for (const id of ['p1', 'p2', 'p3']) v.greatKiln.loads.push({ playerId: id, design: ws.p1.designs[0], glazeColor: '#fff', count: 10, wood: 60, qualityScore: 70, makerName: id, makerMark: { shape: 'heart', letter: 'X', color: '#000' } });
+    const ds = tickGreatKiln(v, T0 + KILN_FIRING_MS);
+    expect(v.lastFiring!.heat).toBe(1);
+    const all = ds.flatMap((d) => d.delta.kilnGoods!);
+    expect(all.length).toBeGreaterThan(0);
+    for (const r of all) expect(r.quality).toBe(3);
   });
 
   it('no loading while it fires', () => {

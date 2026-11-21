@@ -1,6 +1,6 @@
 import { MATERIALS, own } from '../content';
 import { assignSpecialty } from './specialties';
-import { KILN_MEMBER_SHARE, KILN_WOOD_MAX } from './kiln';
+import { KILN_MEMBER_SHARE, KILN_WOOD_MAX } from './kilnRules';
 import type { Tier } from '../types';
 import { STICKERS, VILLAGE_ACTION_TYPES, type GiveRef, type GreatKiln, type Member, type VillageAction, type VillageState } from './types';
 

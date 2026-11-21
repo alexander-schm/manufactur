@@ -1,5 +1,7 @@
 import { bodyOf, MATERIALS, own } from '../content';
 import { recordCollection } from '../collection';
+import { MAX_DESIGNS } from '../actions';
+import { newId } from '../ids';
 import { grantDecor } from './decor';
 import { addGoods } from '../market';
 import type { Design, GameState, MakerMark } from '../types';
@@ -89,9 +91,24 @@ export function applyDelta(state: GameState, d: WorkshopDelta): GameState {
   return s;
 }
 
-/** Great-kiln pieces land on their own design; if it was deleted meanwhile they come back as a foreign copy. */
+/** The fields a saved design is made of (what saveDesign keeps), without its id. */
+function sameDesign(a: Design, b: Design): boolean {
+  const content = (d: Design) => JSON.stringify([d.name, d.form, d.profile.height, d.profile.belly, d.profile.neck, d.profile.foot, d.profile.rim, d.handle, d.rim, d.glazeId, d.pattern, d.patternColor, bodyOf(d), d.variant ?? null]);
+  return content(a) === content(b);
+}
+
+/**
+ * Great-kiln pieces land on their own design if it is still the one that was fired. A design edited meanwhile
+ * gets the fired one back as a new own design; a deleted one (or no room for another design) comes back as a foreign copy.
+ */
 function receiveKilnGoods(s: GameState, r: KilnReturn): void {
-  const design = s.designs.find((x) => x.id === r.design.id && !x.origin);
+  const own = ownDesigns(s);
+  let design = own.find((x) => x.id === r.design.id && sameDesign(x, r.design)) ?? own.find((x) => sameDesign(x, r.design));
+  if (!design && own.some((x) => x.id === r.design.id) && own.length < MAX_DESIGNS) {
+    design = { ...structuredClone(r.design), id: newId(s, 'd') };
+    s.designs.push(design);
+    s.stallDesignIds.push(design.id);
+  }
   if (design) {
     addGoods(s, { designId: design.id, quality: r.quality, effect: r.effect, count: r.count });
     recordCollection(s, design.form, bodyOf(design), r.effect);
