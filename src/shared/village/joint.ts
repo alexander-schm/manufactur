@@ -1,14 +1,17 @@
 import { CUSTOMERS, MATERIALS, own } from '../content';
-import { colorFamily } from '../design';
-import { pieceValue } from '../market';
+import { tierAtLeast } from '../content';
+import { fmtTaler } from '../format';
 import { nextRandom, pick } from '../rng';
-import type { GameState } from '../types';
+import type { GameState, Tier } from '../types';
+import { RATHAUS_COUNT_MUL, RATHAUS_REWARD_MUL, levelOf } from './benefits';
+import { SUBSTITUTE_FACTOR, takeGoods } from './goods';
+import { levelBonus, noteLevelUp, villageLevel } from './level';
 import { BUILDING_ORDER, BUILDINGS } from './buildings';
-import { DESIGN_MEMBERS, addNews, vid } from './state';
+import { DESIGN_MEMBERS, addNews, maxMemberTier, vid } from './state';
 import { villageStorePrice } from './specialties';
 import type { Delivery, JointOrder, JointPart, VillageState } from './types';
 
-export interface JointTemplate { id: string; title: string; client: string; parts: JointPart[]; reward: { taler: number; ruf: number; decor: string }; /** 1 = doable by brand-new players (cups + raw materials) */ tier?: 1 }
+export interface JointTemplate { id: string; title: string; client: string; parts: JointPart[]; reward: { taler: number; ruf: number; decor: string }; /** 1 = doable by brand-new players (cups + raw materials) */ tier?: 1; /** only offered once a member can make it / the village has the building */ needs?: { tier?: Tier; building?: string } }
 
 /** Base sizes are for a village of ~3; scaled by member count (balanced up to 6). */
 export const JOINT_TEMPLATES: JointTemplate[] = [
@@ -45,6 +48,21 @@ export const JOINT_TEMPLATES: JointTemplate[] = [
   { id: 'seemann', title: 'Blaue Becher für die Seemannsrunde', client: 'Käpt’n Seegras',
     parts: [{ kind: 'goods', form: 'becher', count: 30, minQuality: 1, colorFamily: 'blau' }, { kind: 'material', material: 'kobalt', count: 25 }, { kind: 'material', material: 'holz', count: 30 }],
     reward: { taler: 700, ruf: 45, decor: 'teppich-blau' } },
+  { id: 'bierkeller', title: 'Steinzeugkrüge für den Bierkeller', client: 'Braumeister Hopfinger', needs: { tier: 'manufaktur' },
+    parts: [{ kind: 'goods', form: 'krug', count: 12, minQuality: 1, body: 'steinzeug' }, { kind: 'material', material: 'holz', count: 80 }, { kind: 'material', material: 'salz', count: 20 }],
+    reward: { taler: 4000, ruf: 80, decor: 'steinzeugtopf' } },
+  { id: 'teestube', title: 'Teeservice für die Teestube', client: 'Frau Kamille', needs: { tier: 'manufaktur' },
+    parts: [{ kind: 'goods', form: 'teekanne', count: 6, minQuality: 1, body: 'steinzeug' }, { kind: 'goods', form: 'becher', count: 24, minQuality: 1, body: 'steinzeug' }, { kind: 'material', material: 'kobalt', count: 20 }],
+    reward: { taler: 6000, ruf: 100, decor: 'glasurproben' } },
+  { id: 'kurhaus', title: 'Porzellan fürs Kurhaus', client: 'Kurdirektor Sprudel', needs: { tier: 'hofmanufaktur' },
+    parts: [{ kind: 'goods', form: 'teller', count: 24, minQuality: 2, body: 'porzellan' }, { kind: 'goods', form: 'schale', count: 12, minQuality: 1, body: 'porzellan' }, { kind: 'material', material: 'kaolin', count: 40 }],
+    reward: { taler: 15000, ruf: 160, decor: 'porzellanvoegel' } },
+  { id: 'badehaus', title: 'Fliesen fürs Badehaus', client: 'Bademeisterin Welle', needs: { tier: 'hofmanufaktur' },
+    parts: [{ kind: 'goods', form: 'fliese', count: 160, minQuality: 1 }, { kind: 'material', material: 'kobalt', count: 30 }, { kind: 'material', material: 'holz', count: 100 }],
+    reward: { taler: 12000, ruf: 140, decor: 'teppich-blau' } },
+  { id: 'herbstmarkt', title: 'Aschekrüge für den Herbstmarkt', client: 'Marktmeister Korb', needs: { building: 'gemeinschaftsofen' },
+    parts: [{ kind: 'goods', form: 'krug', count: 6, minQuality: 1, effect: 'ascheanflug' }, { kind: 'goods', form: 'becher', count: 20, minQuality: 1 }, { kind: 'material', material: 'holz', count: 120 }],
+    reward: { taler: 8000, ruf: 120, decor: 'laterne' } },
 ];
 
 export const BASE_SHARE = 0.4;
@@ -53,20 +71,25 @@ export const COMPLETIONS_PER_BUILDING = 2;
 
 const scale = (members: number) => 0.6 + 0.2 * Math.min(members, DESIGN_MEMBERS);
 
+const needsMet = (t: JointTemplate, v: VillageState): boolean =>
+  (!t.needs?.tier || tierAtLeast({ tier: maxMemberTier(v) }, t.needs.tier)) && (!t.needs?.building || v.buildings.includes(t.needs.building));
+
 export function generateJointOrder(v: VillageState, now: number): JointOrder {
   const open = v.jointOrders.map((o) => o.templateId);
   // the first ones must be doable right after founding: cups and raw materials only
-  const pool = v.completedJoint < COMPLETIONS_PER_BUILDING ? JOINT_TEMPLATES.filter((t) => t.tier === 1) : JOINT_TEMPLATES.filter((t) => !t.tier);
+  const pool = v.completedJoint < COMPLETIONS_PER_BUILDING ? JOINT_TEMPLATES.filter((t) => t.tier === 1) : JOINT_TEMPLATES.filter((t) => !t.tier && needsMet(t, v));
   const choices = pool.filter((t) => !open.includes(t.id));
   let r = v.rng;
   let t: JointTemplate; [t, r] = pick(r, choices.length ? choices : pool);
   let seedV; [seedV, r] = nextRandom(r);
   v.rng = r;
   const f = scale(v.members.length);
+  const rathaus = levelOf(v.projects.levels, 'rathaus');
+  const countMul = rathaus ? RATHAUS_COUNT_MUL[rathaus - 1] : 1, rewardMul = rathaus ? RATHAUS_REWARD_MUL[rathaus - 1] : 1;
   return {
     id: vid(v, 'j'), templateId: t.id, title: t.title, client: t.client, clientSeed: Math.floor(seedV * 0xffffffff) >>> 0,
-    parts: t.parts.map((p) => ({ ...p, count: Math.max(1, Math.ceil(p.count * f)), filled: 0 })),
-    contributions: {}, reward: { taler: Math.round(t.reward.taler * f), ruf: Math.round(t.reward.ruf * f), decor: t.reward.decor }, createdAt: now,
+    parts: t.parts.map((p) => ({ ...p, count: Math.max(1, Math.ceil(Math.max(1, Math.ceil(p.count * f)) * countMul)), filled: 0 })),
+    contributions: {}, reward: { taler: Math.round(t.reward.taler * f * rewardMul), ruf: Math.round(t.reward.ruf * f * rewardMul), decor: t.reward.decor }, createdAt: now,
   };
 }
 
@@ -77,7 +100,7 @@ export function ensureJointOrders(v: VillageState, now: number): VillageState {
   return v;
 }
 
-/** How many units of this part the actor may give without finishing the whole order alone. */
+/** How many units of this part the actor may give without finishing the whole order alone (substitutes count 3 pieces per unit). */
 export function maxContribution(o: JointOrder, partIndex: number, actorId: string): number {
   const p = o.parts[partIndex];
   if (!p) return 0;
@@ -92,7 +115,7 @@ export const isComplete = (o: JointOrder) => o.parts.every((p) => p.filled >= p.
 
 /** Everyone gets the base share; the rest by contribution. Absent members are never left out. */
 export function payout(v: VillageState, o: JointOrder): Delivery[] {
-  const bonus = v.buildings.includes('gildenhaus') ? 1.2 : 1;
+  const bonus = (v.buildings.includes('gildenhaus') ? 1.2 : 1) * levelBonus(v);
   const taler = o.reward.taler * bonus, ruf = o.reward.ruf * bonus;
   const totalPts = Object.values(o.contributions).reduce((a, b) => a + b, 0) || 1;
   const n = v.members.length;
@@ -103,17 +126,19 @@ export function payout(v: VillageState, o: JointOrder): Delivery[] {
 }
 
 /** Take a contribution from the actor (mutates actor + order). Returns value points or a German error. */
-export function contributeTo(o: JointOrder, partIndex: number, actor: GameState, count: number, source: 'own' | 'store', ref: { designId?: string; quality?: 1 | 2 | 3; effect?: string | null }): number | string {
+export function contributeTo(o: JointOrder, partIndex: number, actor: GameState, count: number, source: 'own' | 'store' | 'substitute', ref: { designId?: string; quality?: 1 | 2 | 3; effect?: string | null }): number | string {
   const p = o.parts[partIndex];
   if (!p) return 'Diesen Teil gibt es nicht';
   const left = p.count - p.filled;
   if (left <= 0) return 'Dieser Teil ist schon fertig';
-  if (count > left) return `Es fehlen nur noch ${left}`;
+  const units = source === 'substitute' ? Math.floor(count / SUBSTITUTE_FACTOR) : count;
+  if (units > left) return `Es fehlen nur noch ${left}`;
   if (p.kind === 'material') {
+    if (source === 'substitute') return 'Dafür gibt es keinen Ersatz';
     const base = own(MATERIALS, p.material)!.price;
     if (source === 'store') {
       const cost = villageStorePrice(p.material) * count;
-      if (actor.taler < cost) return `Im Dorfladen kostet das ${cost} Taler – so viel hast du nicht`;
+      if (actor.taler < cost) return `Im Dorfladen kostet das ${fmtTaler(cost)} Taler – so viel hast du nicht`;
       actor.taler = Math.round((actor.taler - cost) * 100) / 100;
     } else {
       if ((actor.materials[p.material] ?? 0) < count) return `Du hast nicht genug ${own(MATERIALS, p.material)!.name}`;
@@ -123,27 +148,19 @@ export function contributeTo(o: JointOrder, partIndex: number, actor: GameState,
     return base * count;
   }
   if (source === 'store') return 'Ware gibt es nicht im Dorfladen – die musst du selbst töpfern';
-  const d = actor.designs.find((x) => x.id === ref.designId);
-  const stack = actor.goods.find((g) => g.designId === ref.designId && g.quality === ref.quality && g.effect === (ref.effect ?? null));
-  if (!d || !stack || stack.count < count) return 'Davon hast du nicht genug im Regal';
-  if (d.form !== p.form) return 'Das ist die falsche Form';
-  if (stack.quality < p.minQuality) return 'Die Qualität reicht nicht';
-  if (p.colorFamily) {
-    const color = d.origin?.glazeColor ?? actor.glazes.find((g) => g.id === d.glazeId)?.color ?? '#e9c9a6';
-    if (colorFamily(color) !== p.colorFamily) return 'Die Farbe passt nicht';
-  }
-  const points = pieceValue(actor, stack) * count;
-  stack.count -= count;
-  actor.goods = actor.goods.filter((g) => g.count > 0);
-  p.filled += count;
-  return points;
+  const taken = takeGoods(actor, p, ref, count, source === 'substitute');
+  if (typeof taken === 'string') return taken;
+  p.filled += taken.units;
+  return taken.points;
 }
 
 /** Finish a complete order: payouts, buildings, news. Mutates v; returns deliveries. */
 export function completeJointOrder(v: VillageState, o: JointOrder, now: number): Delivery[] {
   const out = payout(v, o);
   v.jointOrders = v.jointOrders.filter((x) => x !== o);
+  const levelBefore = villageLevel(v);
   v.completedJoint += 1;
+  noteLevelUp(v, levelBefore, now);
   addNews(v, `Großauftrag geschafft: „${o.title}“! Alle bekommen ihren Anteil.`, null, now);
   if (v.completedJoint % COMPLETIONS_PER_BUILDING === 0) {
     const next = BUILDING_ORDER.find((b) => !v.buildings.includes(b));

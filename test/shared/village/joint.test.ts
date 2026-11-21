@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '../../../src/shared/types';
 import { applyDelta, applyVillageAction } from '../../../src/shared/village/apply';
-import { ensureJointOrders, isComplete, JOINT_TEMPLATES, payout } from '../../../src/shared/village/joint';
+import { ensureJointOrders, generateJointOrder, isComplete, JOINT_TEMPLATES, payout } from '../../../src/shared/village/joint';
 import { SPECIALTIES } from '../../../src/shared/village/specialties';
 import type { JointOrder, VillageAction, VillageState } from '../../../src/shared/village/types';
-import { runAction, T0, village } from './helpers';
+import { villageLevel } from '../../../src/shared/village/level';
+import { runAction, setTier, T0, village } from './helpers';
 
 const run = runAction;
 
@@ -160,5 +161,115 @@ describe('[Final review #1] one player can never lock a joint order', () => {
     const fin = run(st.v, st.ws, 'p2', a);
     expect(fin.error).toBeNull();
     expect(fin.v.jointOrders.find((x) => x.id === o.id)).toBeUndefined();
+  });
+});
+
+const BRANCH = ['bierkeller', 'teestube', 'kurhaus', 'badehaus', 'herbstmarkt'];
+
+function seen(v: VillageState): Set<string> {
+  const ids = new Set<string>();
+  for (let seed = 0; seed < 200; seed++) {
+    v.rng = seed * 7919 + 1;
+    ids.add(generateJointOrder(v, T0).templateId);
+  }
+  return ids;
+}
+
+describe('branch joint orders', () => {
+  it('appear only once a member can make them', () => {
+    const { v, ws } = village(2);
+    v.completedJoint = 4;
+    expect(BRANCH.filter((id) => seen(v).has(id))).toEqual([]);
+    setTier(v, ws, 'p1', 'manufaktur');
+    const s1 = seen(v);
+    expect(s1.has('bierkeller') && s1.has('teestube')).toBe(true);
+    for (const id of ['kurhaus', 'badehaus', 'herbstmarkt']) expect(s1.has(id)).toBe(false);
+    setTier(v, ws, 'p2', 'hofmanufaktur');
+    const s2 = seen(v);
+    expect(s2.has('kurhaus') && s2.has('badehaus')).toBe(true);
+    expect(s2.has('herbstmarkt')).toBe(false);
+    v.buildings.push('gemeinschaftsofen');
+    expect(seen(v).has('herbstmarkt')).toBe(true);
+  });
+});
+
+function partOrder(v: VillageState, part: JointOrder['parts'][number]): JointOrder {
+  return { id: 'jx', templateId: 'x', title: 'x', client: 'x', clientSeed: 1, parts: [part], contributions: { p2: 1 }, reward: { taler: 100, ruf: 10, decor: 'laterne' }, createdAt: T0 };
+}
+
+describe('substitutes and body/effect parts', () => {
+  it('a stoneware part refuses earthenware, accepts 3x earthenware as substitute in packs of three', () => {
+    const { v, ws } = village(2);
+    const g = ws.p1;
+    const d = { ...g.designs[0], id: 'dk', form: 'krug' };
+    g.designs.push(d);
+    g.goods.push({ designId: 'dk', quality: 2, effect: null, count: 10 });
+    const o = partOrder(v, { kind: 'goods', form: 'krug', body: 'steinzeug', count: 4, minQuality: 1, filled: 0 });
+    v.jointOrders = [o];
+    const ref = { designId: 'dk', quality: 2 as const, effect: null };
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 1, source: 'own', ...ref }).error).toBe('Das ist der falsche Ton');
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 4, source: 'substitute', ...ref }).error).toBe('Ersatz aus Irdenware geht nur in Dreierpacks');
+    // 4 left, 6 substitutes = 2 units: accepted
+    const r = run(v, ws, 'p1', { type: 'contribute', jointId: 'jx', part: 0, count: 6, source: 'substitute', ...ref });
+    expect(r.error).toBeNull();
+    expect(r.v.jointOrders[0].parts[0].filled).toBe(2);
+    expect(r.ws.p1.goods.find((x) => x.designId === 'dk')!.count).toBe(4);
+  });
+  it('a tile part takes plates as substitute; an effect part takes plain pieces of the form x3', () => {
+    const { v, ws } = village(2);
+    const g = ws.p1;
+    g.designs.push({ ...g.designs[0], id: 'dt', form: 'teller' }, { ...g.designs[0], id: 'dkr', form: 'krug' }, { ...g.designs[0], id: 'dst', form: 'teller', body: 'steinzeug' });
+    g.goods.push({ designId: 'dt', quality: 1, effect: null, count: 9 }, { designId: 'dkr', quality: 1, effect: 'sprenkel', count: 6 }, { designId: 'dst', quality: 1, effect: null, count: 3 });
+    v.jointOrders = [
+      partOrder(v, { kind: 'goods', form: 'fliese', count: 10, minQuality: 1, filled: 0 }),
+      partOrder(v, { kind: 'goods', form: 'krug', effect: 'ascheanflug', count: 6, minQuality: 1, filled: 0 }),
+      partOrder(v, { kind: 'goods', form: 'becher', count: 6, minQuality: 1, filled: 0 }),
+    ].map((x, i) => ({ ...x, id: `j${i}` }));
+    const tiles = run(v, ws, 'p1', { type: 'contribute', jointId: 'j0', part: 0, count: 9, source: 'substitute', designId: 'dt', quality: 1, effect: null });
+    expect(tiles.error).toBeNull();
+    expect(tiles.v.jointOrders[0].parts[0].filled).toBe(3);
+    // stoneware plates are no earthenware
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'j0', part: 0, count: 3, source: 'substitute', designId: 'dst', quality: 1, effect: null }).error).toBe('Ersatz geht nur aus Irdenware');
+    // any effect is fine on the substitute pieces
+    const fx = run(v, ws, 'p1', { type: 'contribute', jointId: 'j1', part: 0, count: 6, source: 'substitute', designId: 'dkr', quality: 1, effect: 'sprenkel' });
+    expect(fx.error).toBeNull();
+    expect(fx.v.jointOrders[1].parts[0].filled).toBe(2);
+    // exact mode still wants the effect
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'j1', part: 0, count: 1, source: 'own', designId: 'dkr', quality: 1, effect: 'sprenkel' }).error).toBe('Da fehlt der Effekt');
+    // a plain part has no substitute
+    expect(run(v, ws, 'p1', { type: 'contribute', jointId: 'j2', part: 0, count: 3, source: 'substitute', designId: 'dt', quality: 1, effect: null }).error).toBe('Für diesen Teil gibt es keinen Ersatz');
+  });
+});
+
+describe('orders keep coming', () => {
+  it('after the four buildings they continue and raise the village level', () => {
+    let { v, ws } = village(2);
+    v.completedJoint = 8;
+    v.buildings = ['tongrube', 'markthalle', 'glasurbibliothek', 'gildenhaus'];
+    v = ensureJointOrders(v, T0);
+    const o = v.jointOrders[0];
+    for (const id of ['p1', 'p2']) stock(ws[id], o);
+    const r = fill(v, ws, ['p1', 'p2'], o)!;
+    expect(r.v.completedJoint).toBe(9);
+    expect(r.v.jointOrders).toHaveLength(2);
+    expect(villageLevel(r.v)).toBe(9);
+    expect(r.v.buildings).toHaveLength(4);
+  });
+  it('payouts grow 2 % per village level, at most 40 %', () => {
+    const { v } = village(2);
+    const o: JointOrder = { ...ensureJointOrders(structuredClone(v), T0).jointOrders[0], contributions: { p1: 10, p2: 10 }, reward: { taler: 1000, ruf: 100, decor: 'laterne' } };
+    const total = (x: VillageState) => payout(x, o).reduce((n, d) => n + (d.delta.taler ?? 0), 0);
+    expect(total(v)).toBe(1000);
+    expect(Math.abs(total({ ...v, completedJoint: 10 }) - 1200)).toBeLessThanOrEqual(1);
+    expect(Math.abs(total({ ...v, completedJoint: 30 }) - 1400)).toBeLessThanOrEqual(1);
+    expect(Math.abs(total({ ...v, completedJoint: 60 }) - 1400)).toBeLessThanOrEqual(1);
+  });
+  it('a Rathaus makes joint orders larger and better paying', () => {
+    const a = village(2).v, b = village(2).v;
+    b.projects.levels.rathaus = 2;
+    const base = generateJointOrder(a, T0), big = generateJointOrder(b, T0);
+    expect(big.templateId).toBe(base.templateId);
+    big.parts.forEach((p, i) => expect(p.count).toBe(Math.ceil(base.parts[i].count * 1.5)));
+    expect(Math.abs(big.reward.taler - base.reward.taler * 2.2)).toBeLessThanOrEqual(1.5);
   });
 });

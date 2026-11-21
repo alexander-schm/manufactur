@@ -116,7 +116,7 @@ export type VillageAction =
   | { type: 'gift'; to: string; give: GiveRef }
   | { type: 'postRequest'; material: string; count: number }
   | { type: 'removeRequest'; requestId: string }
-  | { type: 'contribute'; jointId: string; part: number; count: number; source: 'own' | 'store'; designId?: string; quality?: 1 | 2 | 3; effect?: string | null }
+  | { type: 'contribute'; jointId: string; part: number; count: number; source: 'own' | 'store' | 'substitute'; designId?: string; quality?: 1 | 2 | 3; effect?: string | null }
   | { type: 'help'; target: string; sticker: string }
   | { type: 'loadKiln'; designId: string; count: number; wood: number }
   | { type: 'loadKilnMasterwork'; designId: string; wood: number }

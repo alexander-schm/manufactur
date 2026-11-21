@@ -125,7 +125,7 @@ export function validateVillageAction(v: VillageState, actorId: string, a: Villa
       return typeof a.requestId === 'string' ? null : 'Unbekannter Wunsch';
     case 'contribute':
       if (typeof a.jointId !== 'string' || !Number.isInteger(a.part) || a.part < 0) return 'Unbekannter Großauftrag';
-      if (a.source !== 'own' && a.source !== 'store') return 'Woher denn?';
+      if (a.source !== 'own' && a.source !== 'store' && a.source !== 'substitute') return 'Woher denn?';
       return isCount(a.count) ? null : 'Ungültige Menge';
     case 'loadKiln':
     case 'loadKilnMasterwork':
