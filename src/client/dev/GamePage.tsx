@@ -1,6 +1,6 @@
 import { me, serverState, startClock } from '../store';
 import { GameScreen } from '../screens/GameScreen';
-import { mockEndgame } from './mockEndgame';
+import { mockEndgame, VILLAGE_DECOR } from './mockEndgame';
 import { mockWorkshop } from './ScenePage';
 import { MILESTONES } from '../../shared/progression';
 import { addOrder } from '../../shared/orders';
@@ -38,6 +38,8 @@ export function GamePage() {
       const mw = s.batches.find((b) => b.masterwork);
       if (mw) { s.batches = s.batches.filter((b) => b !== mw); s.kilnMasterwork = { designId: mw.designId, firingId: 'k-dev' }; }
     }
+    // dev-only: #game&endgame&vdecor — the five grand-project decor items are on show instead
+    if (location.hash.includes('vdecor')) { s.decor = [...new Set([...s.decor, ...VILLAGE_DECOR])]; s.decorPlaced = [...VILLAGE_DECOR]; }
     serverState.value = s;
     me.value = { playerId: 'dev', name: 'Alex', villageName: 'Tonhausen', inviteCode: 'TON234' };
     startClock();

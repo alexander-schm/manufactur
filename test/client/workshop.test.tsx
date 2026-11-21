@@ -1,6 +1,8 @@
 import { render } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
+import { Room } from '../../src/client/art/workshop/Room';
 import { StationPanel } from '../../src/client/panels/StationPanel';
+import { DECOR } from '../../src/shared/village/decor';
 import { hofGame, manufakturGame, plainGame } from '../shared/helpers';
 
 describe('station panel', () => {
@@ -24,5 +26,15 @@ describe('station panel', () => {
     const top = render(<StationPanel s={h} stationId={hw.id} onOpen={() => {}} />);
     expect(top).toContain('ganz ausgebaut');
     expect(top).toContain('Arbeitsplätze: 3');
+  });
+});
+
+describe('workshop decor', () => {
+  it('every DECOR id draws in the room', () => {
+    for (const id of Object.keys(DECOR)) {
+      const html = render(<svg><Room pins={[]} room2={false} tier="werkstatt" decor={[id]} /></svg>);
+      expect(html, id).toMatch(new RegExp(`data-decor="${id}"`));
+      expect(html, id).not.toMatch(/NaN|undefined/);
+    }
   });
 });

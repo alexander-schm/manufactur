@@ -183,6 +183,80 @@ const DRAW: Record<string, () => preact.JSX.Element> = {
       <path d="M905 221 l3 -3 l3 3 l-3 3 Z" fill="var(--sun)" />
     </g>
   ),
+  // grand projects ---------------------------------------------------------
+  // wall above the kiln dome, right of the chimney: a Delft tile with the village fountain
+  brunnenfliese: () => (
+    <g transform="rotate(-2 1138 126)">
+      <path d="M1116 98 L1138 84 L1160 98" fill="none" style={T} />
+      <circle cx="1138" cy="84" r="2.8" fill="var(--line)" />
+      <rect x="1108" y="96" width="60" height="60" rx="3" fill="var(--woodDark)" style={S} />
+      <rect x="1114" y="102" width="48" height="48" rx="2" fill={PORCELAIN} style={inkStyle(1.3)} />
+      {[[1114, 102, 0], [1162, 102, 90], [1162, 150, 180], [1114, 150, 270]].map(([cx, cy, a]) => (
+        <path d={`M${cx} ${cy} m0 7 a7 7 0 0 0 7 -7`} transform={`rotate(${a} ${cx} ${cy})`} fill="none" stroke={COBALT} stroke-width="1.8" />
+      ))}
+      <path d="M1124 138 L1152 138 Q1150 146 1138 146 Q1126 146 1124 138 Z" fill="#a9c6e4" stroke={COBALT} stroke-width="1.8" stroke-linejoin="round" />
+      <path d="M1136 138 L1136 126 M1140 138 L1140 126" stroke={COBALT} stroke-width="1.8" />
+      <path d="M1130 125 L1146 125 Q1144 129 1138 129 Q1132 129 1130 125 Z" fill="#a9c6e4" stroke={COBALT} stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M1138 124 L1138 112 M1138 113 Q1129 110 1127 135 M1138 113 Q1147 110 1149 135" fill="none" stroke="#6f9fd0" stroke-width="1.6" stroke-linecap="round" />
+      <circle cx="1138" cy="109" r="1.7" fill="#6f9fd0" />
+      <path d="M1126 141 q2 -2 4 0 M1146 141 q2 -2 4 0" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />
+    </g>
+  ),
+  // on the window sill between the porcelain birds and the flower pot
+  tischglocke: () => (
+    <g>
+      <ellipse cx="539" cy="266" rx="14" ry="2.4" fill="url(#hatch)" opacity="0.45" />
+      <path d="M537 238 L537 230 L541 230 L541 238 Z" fill="var(--woodDark)" style={inkStyle(1.3)} />
+      <circle cx="539" cy="227" r="4.4" fill="var(--wood)" style={inkStyle(1.4)} />
+      <path d="M539 235 l-6 -3 l0 6 Z M539 235 l6 -3 l0 6 Z" fill="var(--g3)" style={inkStyle(1)} />
+      <circle cx="539" cy="235" r="1.6" fill="var(--g3)" style={inkStyle(0.9)} />
+      <path d="M527 262 Q530 258 531 249 Q533 237 539 237 Q545 237 547 249 Q548 258 551 262 Z" fill={GOLD} style={inkStyle(1.6)} />
+      <ellipse cx="539" cy="262" rx="12.5" ry="3" fill="#c58f22" style={inkStyle(1.4)} />
+      <circle cx="539" cy="265" r="2.4" fill="#c58f22" style={inkStyle(1)} />
+      <path d="M534 243 Q532 250 532 257" fill="none" stroke="#fff3c8" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+      <path d="M554 236 l3 -3 M556 243 l4 0 M523 236 l-3 -3" fill="none" style={{ ...T, opacity: 0.55 }} />
+    </g>
+  ),
+  // wall between the shelf and the window, under the hanging plant
+  museumsplakat: () => (
+    <g transform="rotate(2 354 233)">
+      <rect x="328" y="196" width="52" height="74" rx="1.5" fill="#f7ecd6" style={inkStyle(1.8)} />
+      <path d="M333 248 L333 214 Q333 202 354 202 Q375 202 375 214 L375 248 Z" fill="#cfe1ee" style={inkStyle(1.1)} />
+      <path d="M347 216 L361 216 L359 221 Q368 228 365 238 Q362 245 354 245 Q346 245 343 238 Q340 228 349 221 Z" fill={COBALT} style={inkStyle(1.4)} />
+      <path d="M346 231 Q354 235 362 231" fill="none" stroke={PORCELAIN} stroke-width="1.6" stroke-linecap="round" />
+      <circle cx="354" cy="227" r="1.6" fill={PORCELAIN} />
+      <path d="M339 248 L369 248" style={inkStyle(1.2)} />
+      <text x="354" y="262" text-anchor="middle" font-size="12" font-family="var(--font-hand)" fill="var(--line)">Museum</text>
+      <path d="M340 207 l1 2 l2 .3 l-1.5 1.4 l.4 2 l-1.9 -1 l-1.9 1 l.4 -2 l-1.5 -1.4 l2 -.3 Z" fill="var(--sun)" />
+      <rect x="324" y="192" width="14" height="6" fill="#efe2b8" opacity="0.85" transform="rotate(-20 331 195)" />
+      <rect x="370" y="192" width="14" height="6" fill="#efe2b8" opacity="0.85" transform="rotate(20 377 195)" />
+    </g>
+  ),
+  // back floor between the broom and the drying rack
+  kaolinbrocken: () => (
+    <g>
+      <ellipse cx="346" cy="484" rx="26" ry="4.5" fill="url(#hatch)" opacity="0.5" />
+      <path d="M332 465 L330 484 M360 465 L362 484" stroke="var(--woodDark)" stroke-width="4" stroke-linecap="round" />
+      <path d="M332 465 L330 484 M360 465 L362 484" fill="none" style={inkStyle(1.2)} />
+      <path d="M326 459 L366 459 L364 466 L328 466 Z" fill="var(--wood)" style={inkStyle(1.8)} />
+      <path d="M332 459 Q328 448 336 442 Q338 432 349 434 Q359 430 362 440 Q368 447 361 459 Z" fill="#f6f3ee" style={inkStyle(1.8)} />
+      <path d="M352 456 Q360 452 358 444 M339 455 q-3 -4 0 -8" fill="none" stroke="#d6d0c7" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M341 440 q4 -3 8 -1" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+      <path d="M369 436 l0 6 M366 439 l6 0" stroke={GOLD} stroke-width="1.6" stroke-linecap="round" />
+    </g>
+  ),
+  // wall between the glaze sample board and the wall plate
+  ratssiegel: () => (
+    <g>
+      <circle cx="213" cy="80" r="2.8" fill="var(--line)" />
+      <path d="M211 81 L201 112 L207 113 L213 87 L219 113 L225 112 L215 81 Z" fill="var(--g1)" style={inkStyle(1.3)} />
+      <path d="M206 122 L200 150 L204 146 L208 151 L214 126 Z M220 122 L226 150 L222 146 L218 151 L212 126 Z" fill="var(--g1)" style={inkStyle(1.3)} />
+      <path d="M213 101 q6 -1 9 4 q6 3 4 10 q4 6 -1 11 q-1 7 -8 7 q-5 4 -10 0 q-7 0 -8 -7 q-5 -5 -1 -11 q-2 -7 4 -10 q3 -5 11 -4 Z" fill="#c4473c" style={inkStyle(1.6)} />
+      <circle cx="213" cy="118" r="10" fill="none" stroke="#9c3129" stroke-width="1.6" />
+      <path d="M207 122 L207 116 L213 111 L219 116 L219 122 Z M211 122 L211 118 L215 118 L215 122" fill="none" stroke="#9c3129" stroke-width="1.4" stroke-linejoin="round" />
+      <path d="M205 109 q3 -3 6 -3" fill="none" stroke="#f0a59a" stroke-width="1.6" stroke-linecap="round" />
+    </g>
+  ),
 };
 
 export function DecorLayer({ placed }: { placed: string[] }) {

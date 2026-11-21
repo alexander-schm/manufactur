@@ -9,6 +9,8 @@ import { mockWorkshop } from './ScenePage';
 const MIN = 60_000;
 export const ENDGAME_DECOR = ['steinzeugtopf', 'glasurproben', 'papierlampions', 'meisterbrief'];
 export const HOF_DECOR = ['porzellanvoegel', 'kronleuchter', 'glasurproben', 'meisterbrief'];
+/** The five grand-project rewards, for the dev scene (#game&endgame&vdecor). */
+export const VILLAGE_DECOR = ['brunnenfliese', 'tischglocke', 'museumsplakat', 'kaolinbrocken', 'ratssiegel'];
 
 /**
  * Dev state for a player deep into the Manufaktur: bays, stoneware, masterworks, collection and the new decor.
