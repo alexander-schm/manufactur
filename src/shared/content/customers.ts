@@ -27,4 +27,8 @@ export const CUSTOMERS: readonly CustomerDef[] = [
   { name: 'Herr Bierhals', job: 'Braumeister', body: 'steinzeug', tastes: [{ form: 'krug', tall: true }, { form: 'krug', colorFamily: 'braun' }] },
   { name: 'Frau Dr. Salbei', job: 'Kräuterhändlerin', body: 'steinzeug', tastes: [{ form: 'vase', colorFamily: 'gruen' }, { form: 'schale', pattern: 'leaves' }] },
   { name: 'Frau von Scherbenfeld', job: 'Sammlerin', unlock: 'kunde-sammlerin', tastes: [{ form: 'vase', tall: true }, { colorFamily: 'lila' }] },
+  { name: 'Hofkonditor Zuckerbäck', job: 'Hofkonditor', body: 'porzellan', tastes: [{ form: 'teller', colorFamily: 'weiss' }, { form: 'teller', pattern: 'waves' }] },
+  { name: 'Herzogin Amalie von Taubenstein', job: 'Herzogin', body: 'porzellan', tastes: [{ form: 'figur' }, { form: 'vase', tall: true, colorFamily: 'blau' }] },
+  { name: 'Hofbaumeister Kachelmann', job: 'Hofbaumeister', body: 'porzellan', tastes: [{ form: 'fliese', colorFamily: 'blau' }, { form: 'fliese', pattern: 'leaves' }] },
+  { name: 'Hofgärtnerin Rosalind', job: 'Hofgärtnerin', unlock: 'kunde-hofgaertnerin', tastes: [{ form: 'vase', pattern: 'leaves' }, { form: 'schale', colorFamily: 'gruen' }] },
 ];

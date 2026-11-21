@@ -35,6 +35,7 @@ export const UNLOCKS: Record<string, UnlockDef> = {
   'muster-karo': { id: 'muster-karo', kind: 'pattern', title: 'Karo', text: 'Ein neues Muster für deine Entwürfe.' },
   mangan: { id: 'mangan', kind: 'feature', title: 'Mangan', text: 'Ein neuer Farbkörper: violett bis tiefbraun.' },
   'kunde-sammlerin': { id: 'kunde-sammlerin', kind: 'customer', title: 'Frau von Scherbenfeld', text: 'Eine Sammlerin aus der Stadt schaut jetzt öfter vorbei.' },
+  'kunde-hofgaertnerin': { id: 'kunde-hofgaertnerin', kind: 'customer', title: 'Hofgärtnerin Rosalind', text: 'Die Hofgärtnerin bestellt jetzt bei dir.' },
   room2: { id: 'room2', kind: 'room', title: 'Zweiter Raum', text: 'Die Werkstatt wächst! Ein neuer Raum mit Platz für mehr.' },
 };
 

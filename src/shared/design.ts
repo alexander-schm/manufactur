@@ -91,6 +91,7 @@ export function validateDesign(d: Design, state: GameState): string | null {
   const form = own(FORMS, d.form);
   if (!form) return 'Unbekannte Form';
   if (!state.unlocks.includes(form.unlock)) return `${form.plural} sind noch nicht freigeschaltet`;
+  if (form.variants && !form.variants.some((v) => v.id === d.variant)) return 'Welches Tier soll es werden?';
   if (!d.profile) return 'Profil fehlt';
   for (const k of PROFILE_KEYS) {
     const v = d.profile[k];

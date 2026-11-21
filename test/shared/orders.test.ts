@@ -3,7 +3,7 @@ import { advance } from '../../src/shared/advance';
 import { applyAction } from '../../src/shared/actions';
 import { getForm } from '../../src/shared/content';
 import { generateOrder } from '../../src/shared/orders';
-import { manufakturGame, plainGame, T0 } from './helpers';
+import { hofGame, manufakturGame, plainGame, T0 } from './helpers';
 
 describe('orders', () => {
   it('new games start with open orders for unlocked forms only', () => {
@@ -59,5 +59,30 @@ describe('orders', () => {
     s.orders = [{ ...s.orders[0], id: 'ox', form: 'becher', count: 2, minQuality: 1 }];
     s.goods = [{ designId: 'sc', quality: 2, effect: null, count: 5 }];
     expect(applyAction(s, { type: 'deliverOrder', orderId: 'ox', designId: 'sc', quality: 2, effect: null }, T0).ok).toBe(true);
+  });
+  it('tile orders are four times the cup range', () => {
+    let s = hofGame(); s.ruf = 0;
+    let seen = 0;
+    for (let i = 0; i < 300; i++) {
+      const [o, r] = generateOrder(s);
+      if (o.form === 'fliese') { seen++; expect(o.count).toBeGreaterThanOrEqual(12); expect(o.count).toBeLessThanOrEqual(32); }
+      s = { ...s, rng: r };
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+  it('noble customers order porcelain at the Hofmanufaktur', () => {
+    let s = hofGame();
+    const bodies = new Set<string>(); const names = new Set<string>();
+    let plain = 0;
+    for (let i = 0; i < 300; i++) {
+      const [o, r] = generateOrder(s);
+      if (o.body) bodies.add(o.body); else plain++;
+      names.add(o.customerName);
+      s = { ...s, rng: r };
+    }
+    expect([...bodies].sort()).toEqual(['porzellan', 'steinzeug']);
+    expect(plain).toBeGreaterThan(0);
+    expect(names.has('Herzogin Amalie von Taubenstein')).toBe(true);
+    expect(names.has('Hofgärtnerin Rosalind')).toBe(false);
   });
 });

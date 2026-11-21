@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advance } from '../../src/shared/advance';
 import { COLLECTION_FALLBACK_TALER, collectionEntries, collectionPercent, recordCollection } from '../../src/shared/collection';
-import { EXTRA_COLORS } from '../../src/shared/content';
+import { BODIES, EXTRA_COLORS, FORMS } from '../../src/shared/content';
 import { migrateState, newGame } from '../../src/shared/state';
 import { T0, manufakturGame, withStanding } from './helpers';
 
@@ -15,6 +15,9 @@ describe('collection book', () => {
     expect(e.some((x) => x.key === 'becher|irdenware|ochsenblut')).toBe(false);
     expect(e.find((x) => x.key === 'teekanne|irdenware|-')!.tier).toBe('manufaktur');
     expect(e.find((x) => x.key === 'becher|irdenware|-')!.tier).toBe('werkstatt');
+    expect(e.find((x) => x.key === 'figur|porzellan|-')!.tier).toBe('hofmanufaktur');
+    expect(e.filter((x) => x.form === 'fliese').length).toBe(e.filter((x) => x.form === 'becher').length);
+    expect(Object.keys(FORMS).length * Object.keys(BODIES).length).toBeLessThanOrEqual(e.length);
   });
   it('a finished batch records its combination once', () => {
     const s = advance(withStanding(1), T0 + 3_600_000);

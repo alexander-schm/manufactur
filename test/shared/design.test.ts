@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { appeal, colorFamily, designDifficulty, validateDesign } from '../../src/shared/design';
 import type { Design, GlazeRecipe } from '../../src/shared/types';
-import { plainGame } from './helpers';
+import { applyAction } from '../../src/shared/actions';
+import { FORMS } from '../../src/shared/content';
+import { hofGame, plainGame, T0 } from './helpers';
 
 const blueGlaze: GlazeRecipe = { id: 'g', name: 'Blau', base: 'opak', colorant: 'kobalt', colorantPct: 2,
   firing: { temp: 'mittel', atmosphere: 'oxidierend', cooling: 'langsam' }, color: '#3f6fb5', effect: null, body: 'irdenware' };
@@ -38,5 +40,24 @@ describe('design', () => {
     expect(validateDesign(bad, s)).toMatch(/.+/);
     expect(validateDesign({ ...s.designs[0], form: 'vase' }, s)).toMatch(/.+/);
     expect(validateDesign(s.designs[0], s)).toBeNull();
+  });
+  it('figurines need an animal; tiles are flat', () => {
+    const s = hofGame();
+    const glaze = s.glazes.find((g) => g.body === 'porzellan')!;
+    const fig: Design = { id: 'new', name: 'Katzi', form: 'figur', profile: { height: 0.5, belly: 0.6, neck: 0.5, foot: 0.5, rim: 0.5 },
+      handle: 'none', rim: 'plain', glazeId: glaze.id, pattern: 'none', patternColor: '#ffffff', body: 'porzellan' };
+    expect(validateDesign(fig, s)).toMatch(/Welches Tier/);
+    expect(validateDesign({ ...fig, variant: 'drache' }, s)).toMatch(/Welches Tier/);
+    expect(validateDesign({ ...fig, variant: 'eule' }, s)).toBeNull();
+    const r1 = applyAction(s, { type: 'saveDesign', design: { ...fig, variant: 'eule' } }, T0);
+    if (!r1.ok) throw new Error(r1.error);
+    const saved = r1.state;
+    expect(saved.designs.find((d) => d.name === 'Katzi')!.variant).toBe('eule');
+    const cup: Design = { ...fig, name: 'Tasse', form: 'becher', variant: 'eule', handle: 'round' };
+    const r2 = applyAction(s, { type: 'saveDesign', design: cup }, T0);
+    if (!r2.ok) throw new Error(r2.error);
+    const saved2 = r2.state;
+    expect(saved2.designs.find((d) => d.name === 'Tasse')!.variant).toBeUndefined();
+    expect(FORMS.fliese.flat).toBe(true);
   });
 });

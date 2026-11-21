@@ -24,6 +24,8 @@ export interface Design {
   pattern: PatternKind;
   /** css colour */
   patternColor: string;
+  /** the animal of a figurine (forms with variants only) */
+  variant?: string;
   /** set on designs that arrived as gifts: drawn with the giver's mark, never produced here */
   origin?: { playerName: string; makerMark: MakerMark; glazeColor: string };
 }

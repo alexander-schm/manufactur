@@ -1,5 +1,5 @@
 import { advance } from './advance';
-import { BODIES, EFFECTS, FRAMES, bodyOf, getBody, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, tierAtLeast, type RecipeInput } from './content';
+import { BODIES, EFFECTS, FRAMES, bodyOf, getBody, getForm, getStationDef, MATERIALS, nextTier, own, STATIONS, stationTierGate, tierAtLeast, type RecipeInput } from './content';
 import { EXPERIMENT_COST, runExperiment, validateRecipe } from './discovery';
 import { glazeForDesign, validateDesign } from './design';
 import { newId } from './ids';
@@ -199,6 +199,7 @@ function run(s: GameState, a: Action, now: number, events: GameEvent[]): void {
         id: d.id, name: d.name.trim(), form: d.form, profile: { height: d.profile.height, belly: d.profile.belly, neck: d.profile.neck, foot: d.profile.foot, rim: d.profile.rim },
         handle: d.handle, rim: d.rim, glazeId: d.glazeId, pattern: d.pattern, patternColor: d.patternColor, body: bodyOf(d),
       };
+      if (getForm(d.form).variants) clean.variant = d.variant;
       const idx = s.designs.findIndex((x) => x.id === d.id);
       // pieces on the shelf or in the pipeline keep the design they were made with
       const inUse = idx >= 0 && (s.goods.some((g) => g.designId === d.id) || s.batches.some((b) => b.designId === d.id));

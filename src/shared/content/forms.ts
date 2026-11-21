@@ -16,6 +16,8 @@ export interface FormDef {
   tier?: Tier;
   /** multiplies the pieces an order of this form asks for */
   orderCountMul?: number;
+  /** forms that need one of these chosen on the design (Design.variant) */
+  variants?: { id: string; name: string }[];
 }
 
 export const FORMS: Record<string, FormDef> = {
@@ -31,4 +33,9 @@ export const FORMS: Record<string, FormDef> = {
     profileDefaults: { height: 0.65, belly: 0.6, neck: 0.45, foot: 0.5, rim: 0.55 } },
   teekanne: { id: 'teekanne', name: 'Teekanne', plural: 'Teekannen', clayPerPiece: 3, baseValue: 40, baseDifficulty: 1.8, unlock: 'teekanne', tier: 'manufaktur', flat: false, handleAllowed: true,
     profileDefaults: { height: 0.5, belly: 0.75, neck: 0.35, foot: 0.45, rim: 0.3 } },
+  figur: { id: 'figur', name: 'Figur', plural: 'Figuren', clayPerPiece: 1, baseValue: 30, baseDifficulty: 1.7, unlock: 'figur', tier: 'hofmanufaktur', flat: false, handleAllowed: false,
+    variants: [{ id: 'katze', name: 'Katze' }, { id: 'eule', name: 'Eule' }, { id: 'igel', name: 'Igel' }],
+    profileDefaults: { height: 0.5, belly: 0.6, neck: 0.5, foot: 0.5, rim: 0.5 } },
+  fliese: { id: 'fliese', name: 'Fliese', plural: 'Fliesen', clayPerPiece: 0.5, baseValue: 4, baseDifficulty: 0.8, unlock: 'fliese', tier: 'hofmanufaktur', flat: true, handleAllowed: false, orderCountMul: 4,
+    profileDefaults: { height: 0.05, belly: 0.5, neck: 0.5, foot: 0.5, rim: 0.5 } },
 };
