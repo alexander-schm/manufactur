@@ -24,5 +24,8 @@ export const T = {
   village: 'Dorf',
   taler: 'Taler',
   ruf: 'Ruf',
+  unlocked: 'Freigeschaltet!',
+  newTier: 'Neuer Rang!',
+  newDecor: (name: string) => `Neue Dekoration: ${name}`,
   kilnTooCold: (body: string) => `${body} muss heiß gebrannt werden – dein Ofen braucht dafür Stufe 2`,
 };

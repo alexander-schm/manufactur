@@ -73,6 +73,7 @@ select.pick { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8
 .inline-icon svg { width: 22px; height: 22px; vertical-align: middle; }
 .boost-note { background: var(--sun); border: 2px solid var(--line); border-radius: 10px; padding: 6px 10px; }
 .celebrate { text-align: center; }
+.celebrate-sign { display: block; width: min(220px, 100%); height: auto; margin: 4px auto 0; }
 .kicker { font-size: 1.4em; color: var(--kiln); margin: 0; transform: rotate(-3deg); }
 .unlock-line { background: #fff; border: 2px dashed rgba(43,36,32,.3); border-radius: 12px; padding: 8px; margin: 8px 0 14px; }
 .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }

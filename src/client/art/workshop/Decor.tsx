@@ -68,6 +68,66 @@ const DRAW: Record<string, () => preact.JSX.Element> = {
       {[0, 1, 2].map((i) => <circle cx={910 + i * 14} cy={556} r="7" fill={['var(--g3)', 'var(--sun)', 'var(--g3)'][i]} style={inkStyle(1.2)} />)}
     </g>
   ),
+  // back floor between the glaze table and the firewood
+  steinzeugtopf: () => (
+    <g>
+      <ellipse cx="866" cy="480" rx="28" ry="5" fill="url(#hatch)" opacity="0.5" />
+      <path d="M846 478 Q836 450 846 428 L886 428 Q896 450 886 478 Z" fill="#cfc8bb" style={S} />
+      {[[852, 440], [878, 446], [858, 466], [883, 468], [869, 455], [848, 454]].map(([sx, sy]) => <circle cx={sx} cy={sy} r="1.3" fill="#6b5a4c" opacity="0.6" />)}
+      <path d="M842 446 Q866 452 890 446 M843 462 Q866 468 889 462" fill="none" stroke="#3f5e8c" stroke-width="2.4" />
+      <path d="M852 455 q4 -5 8 0 q4 5 8 0 q4 -5 8 0 q4 5 8 0" fill="none" stroke="#3f5e8c" stroke-width="1.8" />
+      <path d="M842 428 Q866 420 890 428 L888 422 Q866 414 844 422 Z" fill="#cfc8bb" style={inkStyle(1.8)} />
+      <path d="M860 416 q6 -8 12 0" fill="#3f5e8c" style={inkStyle(1.6)} />
+      <path d="M843 434 q-8 2 -6 10 M889 434 q8 2 6 10" fill="none" style={inkStyle(1.8)} />
+    </g>
+  ),
+  // wall above the shelf
+  glasurproben: () => (
+    <g>
+      <path d="M44 106 L74 90 L104 106" fill="none" style={T} />
+      <circle cx="74" cy="90" r="2.8" fill="var(--line)" />
+      <path d="M30 104 L118 106 L117 164 L31 162 Z" fill="var(--wood)" style={S} />
+      {['#4f78b5', '#7fb48c', '#2f2a28', '#c96f4a', '#a8c8b8', '#f1e3c8', '#8a5a3c', '#e2b64c'].map((c, i) => {
+        const tx = 38 + (i % 4) * 20, ty = 112 + Math.floor(i / 4) * 25;
+        return (
+          <g>
+            <rect x={tx} y={ty} width="15" height="19" rx="2" fill={c} style={inkStyle(1.3)} />
+            <path d={`M${tx + 2} ${ty + 13} L${tx + 13} ${ty + 13}`} stroke="#e8d9c4" stroke-width="3" opacity="0.8" />
+            {i === 2 && [0, 1, 2].map((k) => <circle cx={tx + 4 + k * 4} cy={ty + 5 + (k % 2) * 4} r="1.2" fill="#d9dde2" />)}
+          </g>
+        );
+      })}
+    </g>
+  ),
+  // ceiling, left of the hanging plant
+  papierlampions: () => (
+    <g>
+      {([[198, 40, 'var(--g3)'], [238, 46, 'var(--sun)'], [278, 38, 'var(--g1)']] as [number, number, string][]).map(([lx, ly, c], i) => (
+        <g class="hanging" style={{ transformOrigin: `${lx}px 22px`, animationDelay: `${i * 1.3}s` }}>
+          <path d={`M${lx} 22 L${lx} ${ly - 13}`} style={T} />
+          <circle cx={lx} cy={ly} r="18" fill={c} opacity="0.18" />
+          <ellipse cx={lx} cy={ly} rx="13" ry="12" fill={c} style={inkStyle(1.8)} />
+          <path d={`M${lx - 7} ${ly - 10} Q${lx - 11} ${ly} ${lx - 7} ${ly + 10} M${lx} ${ly - 12} L${lx} ${ly + 12} M${lx + 7} ${ly - 10} Q${lx + 11} ${ly} ${lx + 7} ${ly + 10}`} fill="none" style={{ ...T, opacity: 0.45 }} />
+          <path d={`M${lx - 6} ${ly - 12} L${lx + 6} ${ly - 12} M${lx - 6} ${ly + 12} L${lx + 6} ${ly + 12}`} stroke="var(--woodDark)" stroke-width="3" stroke-linecap="round" />
+          <path d={`M${lx} ${ly + 13} l0 6`} stroke="var(--kiln)" stroke-width="2" stroke-linecap="round" />
+        </g>
+      ))}
+    </g>
+  ),
+  // wall between the clock and the kiln
+  meisterbrief: () => (
+    <g transform="rotate(2 899 200)">
+      <path d="M884 164 L899 152 L914 164" fill="none" style={T} />
+      <circle cx="899" cy="152" r="2.8" fill="var(--line)" />
+      <rect x="870" y="164" width="58" height="74" fill="var(--woodDark)" style={S} />
+      <rect x="876" y="170" width="46" height="62" fill="#fdf6e8" style={inkStyle(1.2)} />
+      <path d="M884 180 L914 180" stroke="var(--line)" stroke-width="2.4" stroke-linecap="round" />
+      <path d="M882 190 L916 190 M882 197 L912 197 M882 204 L916 204 M882 211 L906 211" fill="none" style={{ ...T, opacity: 0.45 }} />
+      <path d="M905 220 l-5 14 l5 -3 l4 4 Z M911 220 l5 14 l-5 -3 l-4 4 Z" fill="var(--g1)" style={inkStyle(1)} />
+      <circle cx="908" cy="221" r="6.5" fill="var(--kiln)" style={inkStyle(1.3)} />
+      <path d="M905 221 l3 -3 l3 3 l-3 3 Z" fill="var(--sun)" />
+    </g>
+  ),
 };
 
 export function DecorLayer({ placed }: { placed: string[] }) {

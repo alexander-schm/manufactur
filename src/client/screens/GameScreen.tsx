@@ -48,7 +48,7 @@ export function GameScreen({ onLogout }: { onLogout: () => void }) {
       </header>
       <div class="scene-frame">
         <Paper seed={21}>
-          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} highlight={highlight} />
+          <WorkshopScene state={s} now={now.value} onStation={(id) => open('station', id)} onWorker={(id) => open('people', id)} onMasterwork={() => open('workshop')} highlight={highlight} />
         </Paper>
       </div>
       <nav class="toolbar" aria-label="Werkzeuge">

@@ -30,7 +30,7 @@ describe('village panels', () => {
     expect(html).toContain('Nur gemeinsam');
   });
   it('placed decor is drawn in the room', () => {
-    const html = render(<svg><Room pins={[]} room2={false} decor={['laterne', 'blumenkasten']} /></svg>);
+    const html = render(<svg><Room pins={[]} room2={false} tier="werkstatt" decor={['laterne', 'blumenkasten']} /></svg>);
     expect(html).toContain('data-decor="laterne"');
     expect(html).toContain('data-decor="blumenkasten"');
   });

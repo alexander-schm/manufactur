@@ -2,6 +2,7 @@
  * Workshop stations. Each is drawn around (x, y) = centre of its footprint on the floor.
  */
 import type { ComponentChildren } from 'preact';
+import { bodyOf } from '../../../../shared/content';
 import type { Batch, Design, GameState, GoodsStack, Station } from '../../../../shared/types';
 import { inkStyle } from '../../ink';
 import { Pot } from '../../Pot';
@@ -13,6 +14,13 @@ const T = { ...inkStyle(1.2), opacity: 0.7 };
 const CLAY = '#c8784c';
 const GREEN = '#dcc2a6';
 const BISQUE = '#efd6bc';
+const COPPER = '#c27a48';
+const BRASS = '#d9a93a';
+
+const STONE_CLAY = '#b9b1a5';
+const STONE_GREEN = '#dad5cc';
+/** Raw clay colour of a design's body on the wheel. */
+const rawClay = (d: Design) => (bodyOf(d) === 'steinzeug' ? STONE_CLAY : CLAY);
 
 export const designOf = (s: GameState, id: string): Design | undefined => s.designs.find((d) => d.id === id);
 export const glazeColorOf = (s: GameState, d?: Design) => d?.origin?.glazeColor ?? ((d && s.glazes.find((g) => g.id === d.glazeId)?.color) || '#e9c9a6');
@@ -38,6 +46,20 @@ function Progress({ x, y, batch, now }: { x: number; y: number; batch?: Batch; n
       <circle cx={x} cy={y} r={r} fill="none" stroke="rgba(43,36,32,.12)" stroke-width="6" />
       <circle cx={x} cy={y} r={r} fill="none" stroke={batch.blocked ? 'var(--kiln)' : 'var(--g2Dark)'} stroke-width="6" stroke-dasharray={`${(c * p).toFixed(1)} ${c.toFixed(1)}`} transform={`rotate(-90 ${x} ${y})`} stroke-linecap="round" />
       <text x={x} y={y + 6} text-anchor="middle" font-size="17" font-family="var(--font-hand)" fill="var(--line)">{batch.blocked ? '!' : `×${batch.count}`}</text>
+    </g>
+  );
+}
+
+/** A little gold star ribbon on a masterwork in progress. */
+function MasterworkTag({ x, y }: { x: number; y: number }) {
+  const pts = Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 4 : 9;
+    return `${(x + r * Math.cos(a)).toFixed(1)} ${(y + r * Math.sin(a)).toFixed(1)}`;
+  });
+  return (
+    <g class="masterwork-tag" data-masterwork="">
+      <path d={`M${x - 4} ${y + 4} L${x - 9} ${y + 20} L${x - 4} ${y + 16} L${x - 1} ${y + 21} Z M${x + 4} ${y + 4} L${x + 9} ${y + 20} L${x + 4} ${y + 16} L${x + 1} ${y + 21} Z`} fill="var(--kiln)" style={inkStyle(1.1)} />
+      <path d={`M${pts.join(' L')} Z`} fill="var(--sun)" style={inkStyle(1.5)} />
     </g>
   );
 }
@@ -88,7 +110,7 @@ export function DryingRack({ x, y, state, running, waiting }: StationProps) {
       <path d={`M${left + 8} ${top} L${left + 8} ${y} M${left + w - 8} ${top} L${left + w - 8} ${y}`} stroke="var(--woodDark)" stroke-width="9" />
       <path d={`M${left + 8} ${top} L${left + 8} ${y} M${left + w - 8} ${top} L${left + w - 8} ${y}`} fill="none" style={S} />
       {[top + 70, top + 150].map((by) => <path d={`M${left} ${by} L${left + w} ${by} L${left + w} ${by + 9} L${left} ${by + 9} Z`} fill="var(--wood)" style={S} />)}
-      {pots.map((p, i) => <ScenePot x={left + 24 + (i % 5) * 31} y={i < 5 ? top + 70 : top + 150} size={42} design={p.d} color={GREEN} />)}
+      {pots.map((p, i) => <ScenePot x={left + 24 + (i % 5) * 31} y={i < 5 ? top + 70 : top + 150} size={42} design={p.d} color={bodyOf(p.d) === 'steinzeug' ? STONE_GREEN : GREEN} />)}
       <path d={`M${left + 20} ${top + 12} q10 -8 20 0 q10 -8 20 0`} fill="none" style={T} class="steam" />
       <Label x={x} y={y + 22}>Trocknen</Label>
     </g>
@@ -107,12 +129,30 @@ export function Kiln({ x, y, station, running, now }: StationProps) {
     }
   }
   const doorTop = y - 128;
-  return (
+  const door = (o: number) => `M${x - 58 - o} ${y} L${x - 58 - o} ${doorTop + 40} Q${x - 58 - o} ${doorTop - o} ${x} ${doorTop - o} Q${x + 58 + o} ${doorTop - o} ${x + 58 + o} ${doorTop + 40} L${x + 58 + o} ${y}`;
+  const doorGap = station.level >= 7 ? 72 : 62;
+  const band = (bx0: number, bx1: number, by: number) => (
     <g>
+      <path d={`M${bx0} ${by} L${bx1} ${by} L${bx1} ${by + 12} L${bx0} ${by + 12} Z`} fill={COPPER} style={inkStyle(1.8)} />
+      <path d={`M${bx0 + 3} ${by + 3.5} L${bx1 - 3} ${by + 3.5}`} stroke="#eab48a" stroke-width="2" opacity="0.8" />
+      {Array.from({ length: Math.max(1, Math.floor((bx1 - bx0) / 30)) }, (_, i) => <circle cx={bx0 + 10 + i * 30} cy={by + 7.5} r="1.8" fill="var(--line)" opacity="0.6" />)}
+    </g>
+  );
+  return (
+    <g data-kiln-level={station.level}>
       <path d={`M${x0 - 16} ${y} L${x0 - 16} ${top + 60} Q${x0 - 10} ${top - 14} ${x} ${top - 16} L${x1 + 16} ${top + 30} L${x1 + 16} ${y} Z`} fill="url(#hatch)" opacity="0.3" />
       <path d={`M${x0} ${y} L${x0} ${top + 70} Q${x0} ${top} ${x} ${top - 2} Q${x1} ${top} ${x1} ${top + 70} L${x1} ${y} Z`} fill="var(--kiln)" style={S} />
       {bricks}
       <path d={`M${x0 + 30} ${top + 66} Q${x} ${top + 4} ${x1 - 30} ${top + 66}`} fill="none" style={T} />
+      {station.level >= 6 && (
+        <g class="kiln-bands">
+          {band(x0, x1, top + 70)}
+          {band(x0, x - doorGap, y - 46)}
+          {band(x + doorGap, x1, y - 46)}
+        </g>
+      )}
+      {station.level >= 7 && <path d={door(7)} fill="none" stroke={BRASS} stroke-width="11" />}
+      {station.level >= 7 && <path d={door(12)} fill="none" style={inkStyle(1.8)} />}
       {/* chimney + smoke */}
       <path d={`M${x - 18} ${top + 2} L${x - 20} ${top - 64} L${x + 20} ${top - 64} L${x + 18} ${top + 2} Z`} fill="var(--kilnDark)" style={S} />
       <path d={`M${x - 26} ${top - 64} L${x + 26} ${top - 64} L${x + 26} ${top - 74} L${x - 26} ${top - 74} Z`} fill="var(--kiln)" style={S} />
@@ -135,6 +175,14 @@ export function Kiln({ x, y, station, running, now }: StationProps) {
       <circle cx={x1 - 30} cy={top + 92} r="18" fill="var(--paper)" style={S} />
       <path d={`M${x1 - 45} ${top + 95} A15 15 0 0 1 ${x1 - 15} ${top + 95}`} stroke="var(--g3)" stroke-width="4" fill="none" />
       <path d={`M${x1 - 30} ${top + 94} L${firing ? x1 - 18 : x1 - 40} ${top + 82}`} fill="none" style={S} />
+      {station.level >= 7 && (
+        <g class="kiln-gauge2">
+          <circle cx={x0 + 30} cy={top + 96} r="14" fill="var(--paper)" style={{ ...S, stroke: 'var(--line)' }} />
+          <circle cx={x0 + 30} cy={top + 96} r="17" fill="none" stroke={BRASS} stroke-width="3" />
+          <path d={`M${x0 + 19} ${top + 99} A11 11 0 0 1 ${x0 + 41} ${top + 99}`} stroke="var(--g1)" stroke-width="3" fill="none" />
+          <path d={`M${x0 + 30} ${top + 98} L${firing ? x0 + 38 : x0 + 22} ${top + 89}`} fill="none" style={inkStyle(1.8)} />
+        </g>
+      )}
       {/* firewood */}
       {[[x0 - 34, y - 12], [x0 - 10, y - 12], [x0 - 22, y - 34], [x0 - 46, y - 34], [x0 - 34, y - 56]].map(([lx, ly]) => (
         <g><circle cx={lx} cy={ly} r="12" fill="var(--wood)" style={S} /><circle cx={lx} cy={ly} r="6" fill="none" style={T} /></g>
@@ -144,11 +192,10 @@ export function Kiln({ x, y, station, running, now }: StationProps) {
   );
 }
 
-export function GlazeTable({ x, y, state, running, waiting, now, station }: StationProps) {
+export function GlazeTable({ x, y, state, running, waiting, now }: StationProps) {
   const w = 200, left = x - w / 2, top = y - 92;
-  const glazes = state.glazes.slice(-3);
-  const b = running[0] ?? waiting[0];
-  const d = b && designOf(state, b.designId);
+  const items: { b: Batch; on: boolean }[] = running.length > 0 ? running.map((b) => ({ b, on: true })) : waiting.slice(0, 1).map((b) => ({ b, on: false }));
+  const glazes = state.glazes.slice(items.length > 1 ? -2 : -3);
   return (
     <g>
       {glazes.map((g, i) => {
@@ -161,43 +208,72 @@ export function GlazeTable({ x, y, state, running, waiting, now, station }: Stat
           </g>
         );
       })}
-      {d && <ScenePot x={left + w - 28} y={top} size={52} design={d} color={running.length ? glazeColorOf(state, d) : BISQUE} cls={running.length ? 'dip' : undefined} />}
+      {items.map(({ b, on }, i) => {
+        const d = designOf(state, b.designId);
+        const px = items.length > 1 ? left + 124 + i * 52 : left + w - 28;
+        return d ? (
+          <g>
+            <g style={{ animationDelay: `${i * 0.4}s` }} class={on ? 'dip' : undefined}>
+              <ScenePot x={px} y={top} size={items.length > 1 ? 46 : 52} design={d} color={on ? glazeColorOf(state, d) : BISQUE} />
+            </g>
+            {b.masterwork && <MasterworkTag x={px} y={top - 62} />}
+          </g>
+        ) : null;
+      })}
       <path d={`M${left} ${top} L${left + w} ${top} L${left + w} ${top + 12} L${left} ${top + 12} Z`} fill="var(--wood)" style={S} />
       <path d={`M${left + 10} ${top + 12} L${left + 8} ${y} M${left + w - 10} ${top + 12} L${left + w - 8} ${y} M${left + 10} ${top + 56} L${left + w - 10} ${top + 56}`} fill="none" style={S} />
       <path d={`M${left + 20} ${top + 18} L${left + 60} ${top + 17}`} fill="none" style={T} />
-      <Progress x={left + w + 10} y={top - 70} batch={running[0]} now={now} />
+      {running.length > 1
+        ? running.map((b, i) => <Progress x={left + w + 14} y={top - 22 - i * 50} batch={b} now={now} />)
+        : <Progress x={left + w + 10} y={top - 70} batch={running[0]} now={now} />}
     </g>
   );
 }
 
-export function Wheel({ x, y, state, running, waiting, now, station }: StationProps) {
-  const b = running[0];
-  const d = b ? designOf(state, b.designId) : waiting[0] && designOf(state, waiting[0].designId);
+export function Wheel({ x, y, state, running, waiting, now }: StationProps) {
   const top = y - 70;
+  // one wheel head per running batch: two bays share one wider bench
+  const heads: { b?: Batch; d?: Design }[] = running.length > 0
+    ? running.map((b) => ({ b, d: designOf(state, b.designId) }))
+    : [{ d: waiting[0] && designOf(state, waiting[0].designId) }];
+  const n = heads.length;
+  const half = n > 1 ? 70 + n * 20 : 70; // bench half-width
+  const gap = n > 1 ? (2 * half - 40) / n : 0;
+  const potSize = n > 1 ? 72 : 86;
   return (
     <g>
-      <path d={`M${x - 90} ${y + 10} Q${x} ${y + 24} ${x + 90} ${y + 10} Q${x + 90} ${y + 30} ${x} ${y + 32} Q${x - 90} ${y + 30} ${x - 90} ${y + 10} Z`} fill="url(#hatch)" opacity="0.45" />
-      <path d={`M${x - 70} ${top + 10} L${x + 70} ${top + 10} L${x + 62} ${y} L${x - 62} ${y} Z`} fill="var(--wood)" style={S} />
-      <path d={`M${x - 52} ${top + 26} L${x - 6} ${top + 25} M${x + 14} ${top + 40} L${x + 54} ${top + 39}`} fill="none" style={T} />
-      <path d={`M${x - 78} ${top} Q${x} ${top - 16} ${x + 78} ${top} L${x + 78} ${top + 14} Q${x} ${top + 26} ${x - 78} ${top + 14} Z`} fill="var(--wheelTray)" style={S} />
-      <ellipse cx={x} cy={top - 2} rx="50" ry="11" fill="var(--woodDark)" style={S} />
-      {d ? (
-        <g class={b ? 'spinning' : undefined} style={{ transformOrigin: `${x}px ${top}px` }}>
-          <ScenePot x={x} y={top + 2} size={86} design={{ ...d, pattern: 'none', handle: 'none' }} color={CLAY} />
-        </g>
-      ) : (
-        <path d={`M${x - 22} ${top - 2} Q${x - 24} ${top - 30} ${x} ${top - 32} Q${x + 24} ${top - 30} ${x + 22} ${top - 2} Z`} fill={CLAY} style={S} />
-      )}
-      {b && <path d={`M${x - 62} ${top - 30} Q${x - 72} ${top - 14} ${x - 60} ${top} M${x + 62} ${top - 30} Q${x + 72} ${top - 14} ${x + 60} ${top}`} fill="none" style={T} class="whoosh" />}
-      <Progress x={x + 86} y={top - 60} batch={b} now={now} />
+      <path d={`M${x - half - 20} ${y + 10} Q${x} ${y + 24} ${x + half + 20} ${y + 10} Q${x + half + 20} ${y + 30} ${x} ${y + 32} Q${x - half - 20} ${y + 30} ${x - half - 20} ${y + 10} Z`} fill="url(#hatch)" opacity="0.45" />
+      <path d={`M${x - half} ${top + 10} L${x + half} ${top + 10} L${x + half - 8} ${y} L${x - half + 8} ${y} Z`} fill="var(--wood)" style={S} />
+      <path d={`M${x - half + 18} ${top + 26} L${x - 6} ${top + 25} M${x + 14} ${top + 40} L${x + half - 16} ${top + 39}`} fill="none" style={T} />
+      <path d={`M${x - half - 8} ${top} Q${x} ${top - 16} ${x + half + 8} ${top} L${x + half + 8} ${top + 14} Q${x} ${top + 26} ${x - half - 8} ${top + 14} Z`} fill="var(--wheelTray)" style={S} />
+      {heads.map(({ b, d }, i) => {
+        const hx = n > 1 ? x - half + 20 + gap * (i + 0.5) : x;
+        return (
+          <g>
+            <ellipse cx={hx} cy={top - 2} rx={n > 1 ? 40 : 50} ry={n > 1 ? 9 : 11} fill="var(--woodDark)" style={S} />
+            {d ? (
+              <g class={b ? 'spinning' : undefined} style={{ transformOrigin: `${hx}px ${top}px`, animationDelay: `${i * 0.17}s` }}>
+                <ScenePot x={hx} y={top + 2} size={potSize} design={{ ...d, pattern: 'none', handle: 'none' }} color={rawClay(d)} />
+              </g>
+            ) : (
+              <path d={`M${hx - 22} ${top - 2} Q${hx - 24} ${top - 30} ${hx} ${top - 32} Q${hx + 24} ${top - 30} ${hx + 22} ${top - 2} Z`} fill={CLAY} style={S} />
+            )}
+            {b && <path d={`M${hx - 50} ${top - 30} Q${hx - 60} ${top - 14} ${hx - 48} ${top} M${hx + 50} ${top - 30} Q${hx + 60} ${top - 14} ${hx + 48} ${top}`} fill="none" style={T} class="whoosh" />}
+            {b?.masterwork && <MasterworkTag x={hx + 30} y={top - 58} />}
+            {/* with several bays each gauge hangs on the bench front, right under its own pot */}
+            <Progress x={n > 1 ? hx : x + 86} y={n > 1 ? top + 38 : top - 60} batch={b} now={now} />
+          </g>
+        );
+      })}
     </g>
   );
 }
 
-export function PrepBench({ x, y, state, running, now, station }: StationProps) {
+export function PrepBench({ x, y, state, running, now }: StationProps) {
   const w = 190, left = x - w / 2, top = y - 88;
   const ton = Math.floor(state.materials.ton ?? 0);
   const glaze = Math.floor(state.materials.glasurbasis ?? 0);
+  const lumps: (Batch | undefined)[] = running.length > 0 ? running.slice(0, 2) : [undefined];
   const sack = (sx: number, sy: number, s: number, label: string, n: number) => (
     <g>
       <path d={`M${sx - 26 * s} ${sy} Q${sx - 33 * s} ${sy - 36 * s} ${sx - 21 * s} ${sy - 60 * s} L${sx - 12 * s} ${sy - 67 * s} Q${sx} ${sy - 60 * s} ${sx + 12 * s} ${sy - 69 * s} L${sx + 21 * s} ${sy - 60 * s} Q${sx + 33 * s} ${sy - 36 * s} ${sx + 26 * s} ${sy} Z`} fill="var(--sack)" style={S} />
@@ -210,12 +286,27 @@ export function PrepBench({ x, y, state, running, now, station }: StationProps) 
     <g>
       <path d={`M${left} ${top} L${left + w} ${top} L${left + w} ${top + 12} L${left} ${top + 12} Z`} fill="var(--wood)" style={S} />
       <path d={`M${left + 10} ${top + 12} L${left + 8} ${y} M${left + w - 10} ${top + 12} L${left + w - 8} ${y} M${left + 10} ${top + 56} L${left + w - 10} ${top + 56}`} fill="none" style={S} />
-      <path d={`M${left + 28} ${top} Q${left + 30} ${top - 30} ${left + 58} ${top - 32} Q${left + 86} ${top - 30} ${left + 88} ${top} Z`} fill={CLAY} style={S} class={running.length ? 'knead' : undefined} />
-      <path d={`M${left + 100} ${top - 4} L${left + 170} ${top - 12} L${left + 171} ${top - 2} L${left + 101} ${top + 6} Z`} fill="var(--wood)" style={S} />
-      <path d={`M${left + 170} ${top - 8} L${left + 184} ${top - 9}`} fill="none" style={S} />
+      {lumps.map((b, i) => {
+        const lx = left + 58 + i * 80;
+        const d = b && designOf(state, b.designId);
+        return (
+          <g>
+            <path d={`M${lx - 30} ${top} Q${lx - 28} ${top - 30} ${lx} ${top - 32} Q${lx + 28} ${top - 30} ${lx + 30} ${top} Z`} fill={d ? rawClay(d) : CLAY} style={{ ...S, animationDelay: `${i * 0.3}s` }} class={b ? 'knead' : undefined} />
+            {b?.masterwork && <MasterworkTag x={lx + 22} y={top - 40} />}
+          </g>
+        );
+      })}
+      {lumps.length < 2 && (
+        <g>
+          <path d={`M${left + 100} ${top - 4} L${left + 170} ${top - 12} L${left + 171} ${top - 2} L${left + 101} ${top + 6} Z`} fill="var(--wood)" style={S} />
+          <path d={`M${left + 170} ${top - 8} L${left + 184} ${top - 9}`} fill="none" style={S} />
+        </g>
+      )}
       {sack(left - 28, y + 6, 1, 'TON', ton)}
       {sack(left + w + 30, y + 10, 0.85, 'Glasur', glaze)}
-      <Progress x={left + w - 10} y={top - 52} batch={running[0]} now={now} />
+      {running.length > 1
+        ? running.map((b, i) => <Progress x={i % 2 ? left + w - 10 : left + 4} y={top - 52 - Math.floor(i / 2) * 48} batch={b} now={now} />)
+        : <Progress x={left + w - 10} y={top - 52} batch={running[0]} now={now} />}
     </g>
   );
 }

@@ -1,6 +1,7 @@
 import { makeCharacter } from '../../../shared/character';
 import type { GameState, Station, StationKind, Worker } from '../../../shared/types';
 import { Character, type Pose } from '../character/Character';
+import { Plinths } from './Plinth';
 import { Cat, Room } from './Room';
 import { DryingRack, GlazeTable, Kiln, MarketStall, PrepBench, Shelf, SHELF_VISIBLE_MAX, Wheel, type StationProps } from './stations/Stations';
 import './scene.css';
@@ -32,7 +33,7 @@ const WORKER_SPOT: Partial<Record<StationKind, { dx: number; dy: number; behind:
 const IDLE_SPOTS = [{ x: 640, y: 712 }, { x: 900, y: 712 }, { x: 340, y: 712 }];
 
 /** Without onStation the scene is read-only (visiting a friend). */
-type Props = { state: GameState; now: number; onStation?: (id: string) => void; onWorker?: (id: string) => void; highlight?: StationKind };
+type Props = { state: GameState; now: number; onStation?: (id: string) => void; onWorker?: (id: string) => void; onMasterwork?: () => void; highlight?: StationKind };
 
 function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: number; pose: Pose; onWorker: (id: string) => void; i: number }) {
   const size = 100;
@@ -44,7 +45,7 @@ function Person({ w, x, y, pose, onWorker, i }: { w: Worker; x: number; y: numbe
   );
 }
 
-export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, highlight }: Props) {
+export function WorkshopScene({ state, now, onStation, onWorker = () => undefined, onMasterwork, highlight }: Props) {
   const readOnly = !onStation;
   const room2 = state.unlocks.includes('room2');
   const width = room2 ? 1800 : 1200;
@@ -59,7 +60,8 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
       <svg class="scene" viewBox={`0 0 ${width} 720`} data-width={width} role="img" aria-label="Deine Werkstatt">
-        <Room pins={pins} room2={room2} decor={state.decorPlaced} />
+        <Room pins={pins} room2={room2} tier={state.tier} decor={state.decorPlaced} />
+        <Plinths records={state.masterworks} onClick={readOnly ? undefined : onMasterwork} />
         <Cat x={760} y={652} sleeping={!catAwake} />
         {ordered.map((st) => {
           const pos = SLOTS[st.slot];

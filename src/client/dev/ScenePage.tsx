@@ -4,6 +4,7 @@ import { glazeColor } from '../../shared/discovery';
 import { newGame, rollWorker } from '../../shared/state';
 import type { GameState } from '../../shared/types';
 import { WorkshopScene } from '../art/workshop/WorkshopScene';
+import { mockEndgame } from './mockEndgame';
 
 export function mockWorkshop(now: number): GameState {
   const t0 = now - 7 * 60_000;
@@ -33,12 +34,12 @@ export function mockWorkshop(now: number): GameState {
 
 export function ScenePage() {
   const [now, setNow] = useState(Date.now());
-  const [state] = useState(() => mockWorkshop(Date.now()));
+  const [state] = useState(() => (location.hash.includes('endgame') ? mockEndgame(Date.now()) : mockWorkshop(Date.now())));
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
   const view = advance(state, now);
   return (
     <div style={{ padding: '12px' }}>
-      <WorkshopScene state={view} now={now} onStation={(id) => console.log('station', id)} onWorker={(id) => console.log('worker', id)} />
+      <WorkshopScene state={view} now={now} onStation={(id) => console.log('station', id)} onWorker={(id) => console.log('worker', id)} onMasterwork={() => console.log('masterwork')} />
     </div>
   );
 }
