@@ -4,7 +4,9 @@ import { WorkshopScene } from '../../src/client/art/workshop/WorkshopScene';
 import { mockWorkshop } from '../../src/client/dev/ScenePage';
 import { browserEnv, memoryStore, readDevFlags } from '../../src/client/surprises/env';
 import { SURPRISES } from '../../src/client/surprises/defs';
-import { CAKE_BOX, DECOR_BOXES, HIT_RECTS, SPOTS, TREE_BOXES, VILLAGE_SPOTS, catSpot, stationRect, xmasStallRect, type Rect } from '../../src/client/surprises/spots';
+import { CAKE_BOX, CAT_HITS, DECOR_BOXES, HIT_RECTS, SPOTS, TREE_BOXES, VILLAGE_SPOTS, catHitRect, catSpot, stationRect, xmasStallRect, type Rect } from '../../src/client/surprises/spots';
+import { GIFT_NAMES } from '../../src/client/surprises/texts';
+import { catcherOf } from '../../src/client/art/surprises/SurpriseLayer';
 import { BUILDING_SPOTS, PLOTS, PROJECT_SPOTS, VillageMap } from '../../src/client/art/village/VillageMap';
 import { mockVillage } from '../../src/client/dev/mockVillage';
 import type { LocalTime, Mood, Play, SurpriseView } from '../../src/client/surprises/types';
@@ -402,11 +404,13 @@ describe('Time of day', () => {
     blockers.push(['wandteller', { x: 256, y: 76, w: 68, h: 68 }], ['museumsplakat', { x: 322, y: 190, w: 64, h: 82 }], ['ratssiegel', { x: 200, y: 78, w: 27, h: 74 }], ['hanging plant', { x: 318, y: 20, w: 44, h: 176 }]);
     blockers.push(['teppich-blau', { x: 24, y: 680, w: 232, h: 40 }], ['grosse-vase', { x: 900, y: 546, w: 60, h: 174 }], ['rug', { x: 360, y: 582, w: 442, h: 100 }]);
     blockers.push(['gift', { x: SPOTS.gift.x - 30, y: SPOTS.gift.y - 40, w: 60, h: 44 }]);
-    for (const id of ['gluecksschwein', 'kerzenkranz'] as const) {
+    for (const id of ['gluecksschwein', 'kerzenkranz', 'socke'] as const) {
       for (const [name, b] of blockers) expect(intersects(DECOR_BOXES[id], b), `${id} vs ${name}`).toBe(false);
     }
     expect(intersects(DECOR_BOXES.gluecksschwein, DECOR_BOXES.kerzenkranz)).toBe(false);
-    const html = render(<svg><DecorLayer placed={['gluecksschwein', 'kerzenkranz']} /></svg>);
+    expect(intersects(DECOR_BOXES.socke, DECOR_BOXES.kerzenkranz)).toBe(false);
+    const html = render(<svg><DecorLayer placed={['gluecksschwein', 'kerzenkranz', 'socke']} /></svg>);
+    expect(html).toContain('data-decor="socke"');
     expect(html).toContain('data-decor="gluecksschwein"');
     expect(html).toContain('data-decor="kerzenkranz"');
     expect(html).not.toMatch(/NaN|undefined/);
@@ -435,6 +439,127 @@ describe('Time of day', () => {
       const Art = CARD_ART[id];
       expect(Art, id).toBeDefined();
       expect(render(<svg>{Art!()}</svg>), id).not.toMatch(/NaN|undefined/);
+    }
+  });
+});
+
+describe('The cat about the workshop', () => {
+  const scene = (sx: SurpriseView, s = mockWorkshop(T0)) => render(<WorkshopScene state={s} now={T0} onStation={() => {}} surprises={sx} />);
+  const IDS = ['katze-ofen', 'katze-topf', 'katze-geschenk', 'katze-schubs'];
+  const running = (s: ReturnType<typeof mockWorkshop>, kind: StationKind) => {
+    const st = s.stations.find((x) => x.kind === kind)!;
+    s.batches = [{ id: 'b-test', designId: s.designs[0]!.id, count: 1, stage: kind === 'kiln' ? 'bisque' : 'form', stationId: st.id, startedAt: T0 - 1000, durationMs: 60_000, quality: 1 }];
+    return s;
+  };
+  const ctx = (s: ReturnType<typeof mockWorkshop>) => ({ s, now: T0, local: LOCAL, mood: DAY_MOOD, readOnly: false, touch: false, reducedMotion: false });
+
+  it('each cat play renders with its data-surprise, in a still pose', () => {
+    for (const id of IDS) {
+      const html = scene(still([play(id)]));
+      expect(html, id).toContain(`data-surprise="${id}"`);
+      expect(html, id).toContain('class="cat still"');
+      expect(html, id).not.toMatch(/NaN|undefined/);
+    }
+  });
+
+  it('katze-ofen: the cat naps on top of the kiln, drawn after it, and is not at home', () => {
+    const html = scene(still([play('katze-ofen')]));
+    expect(poseOf(html)).toBe('kiln');
+    expect((html.match(/data-cat-pose=/g) ?? []).length).toBe(1);
+    expect(html.indexOf('data-cat-pose="kiln"')).toBeGreaterThan(html.lastIndexOf('data-station="kiln"'));
+    expect(catSpot([play('katze-ofen')])).toEqual(SPOTS.catKiln);
+  });
+
+  it('katze-topf: the cat’s hit area follows it to the pot on the wheel', () => {
+    const at = catSpot([play('katze-topf')]);
+    expect(at).toEqual(SPOTS.catPot);
+    const html = scene(still([play('katze-topf')]));
+    expect(poseOf(html)).toBe('pot');
+    const hit = /<ellipse[^>]*cx="([\d.]+)" cy="([\d.]+)"[^>]*data-hit="cat"/.exec(html);
+    expect(hit?.slice(1).map(Number)).toEqual([at.x + CAT_HITS.pot.dx, at.y + CAT_HITS.pot.dy]);
+    expect(CAT_HITS.pot.dx).toBe(0);
+  });
+
+  it('the cat’s hit area on a station is only its own shape: smaller than at home, still at least 60×60', () => {
+    const home = catHitRect([]);
+    for (const id of ['katze-ofen', 'katze-topf']) {
+      const r = catHitRect([play(id)]);
+      expect(r.w >= 60 && r.h >= 60, id).toBe(true);
+      expect(r.w * r.h, id).toBeLessThan(home.w * home.h);
+    }
+    // napping on the kiln: on the dome left of the chimney (x 1040–1080), above the door and the dial
+    const k = catHitRect([play('katze-ofen')]);
+    expect(k.x + k.w).toBeLessThanOrEqual(1040);
+    expect(k.y + k.h).toBeLessThanOrEqual(250);
+    // the actors that are not the cat never catch a click
+    expect(scene(still([play('katze-schubs')]))).toMatch(/<g[^>]*data-surprise="katze-schubs"[^>]*pointer-events="none"/);
+    expect(scene(still([play('katze-geschenk')]))).toMatch(/<g[^>]*data-gift[^>]*pointer-events="none"/);
+    for (const id of IDS) expect(scene(still([play(id)])), id).toMatch(/<g[^>]*data-cat-pose="\w+"[^>]*pointer-events="none"/);
+  });
+
+  it('katze-geschenk: the first gift is always the sock, later the seed picks', () => {
+    expect(GIFT_NAMES).toEqual(['Knopf', 'Feder', 'Socke']);
+    const s = mockWorkshop(T0);
+    delete s.curiosities['katze-geschenk'];
+    expect(scene(still([play('katze-geschenk')]), s)).toContain('aria-label="Socke"');
+    // recorded by this very play (the record arrives while it plays): still the sock
+    s.curiosities['katze-geschenk'] = T0 + 2000;
+    expect(scene(still([play('katze-geschenk')]), s)).toContain('aria-label="Socke"');
+    // recorded long before: seed 7 → 7 % 3 = 1 → the feather
+    s.curiosities['katze-geschenk'] = T0 - 86_400_000;
+    const html = scene(still([play('katze-geschenk')]), s);
+    expect(html).toContain('aria-label="Feder"');
+    expect(poseOf(html)).toBe('gift');
+    expect(catSpot([play('katze-geschenk')])).toEqual(SPOTS.gift);
+  });
+
+  it('katze-schubs: one worker catches the pot in pose catch; their usual figure is hidden', () => {
+    const s = mockWorkshop(T0);
+    const catcher = catcherOf(s)!;
+    expect(catcher.id).toBe(s.workers.find((w) => !w.stationId)!.id);
+    const html = scene(still([play('katze-schubs')]), s);
+    expect((html.match(/data-pose="catch"/g) ?? []).length).toBe(1);
+    expect(html).not.toContain(`data-worker="${catcher.id}"`);
+    for (const w of s.workers.filter((w) => w.id !== catcher.id)) expect(html).toContain(`data-worker="${w.id}"`);
+    expect(poseOf(html)).toBe('shelf');
+    expect(catSpot([play('katze-schubs')])).toEqual(SPOTS.catShelf);
+    // with everyone busy, the first worker comes over
+    s.workers.forEach((w) => { w.stationId = s.stations[0]!.id; });
+    expect(catcherOf(s)!.id).toBe(s.workers[0]!.id);
+    const busy = scene(still([play('katze-schubs')]), s);
+    expect(busy).not.toContain(`data-worker="${s.workers[0]!.id}"`);
+    expect((busy.match(/data-pose="catch"/g) ?? []).length).toBe(1);
+    // without the play everyone stands where they always do
+    expect(scene(still([]))).not.toContain('data-pose="catch"');
+  });
+
+  it('the cat defs: ambient, in the workshop, with their conditions', () => {
+    const def = (id: string) => SURPRISES.find((d) => d.id === id)!;
+    expect(def('katze-ofen')).toMatchObject({ where: 'workshop', trigger: { kind: 'ambient' }, rarity: 'C', durationMs: 4 * 60_000, album: ['katze-ofen'] });
+    expect(def('katze-topf')).toMatchObject({ where: 'workshop', trigger: { kind: 'ambient' }, rarity: 'R', durationMs: 90_000, album: ['katze-topf'] });
+    expect(def('katze-geschenk')).toMatchObject({ where: 'workshop', trigger: { kind: 'ambient' }, rarity: 'R', durationMs: 60_000, album: ['katze-geschenk'] });
+    expect(def('katze-schubs')).toMatchObject({ where: 'workshop', trigger: { kind: 'ambient' }, rarity: 'R', durationMs: 4000, album: ['katze-schubs'] });
+    const kiln = running(mockWorkshop(T0), 'kiln');
+    expect(def('katze-ofen').when!(ctx(kiln))).toBe(true);
+    expect(def('katze-topf').when!(ctx(kiln))).toBe(false);
+    const wheel = running(mockWorkshop(T0), 'wheel');
+    expect(def('katze-topf').when!(ctx(wheel))).toBe(true);
+    expect(def('katze-ofen').when!(ctx(wheel))).toBe(false);
+    const empty = mockWorkshop(T0);
+    expect(def('katze-schubs').when!(ctx(empty))).toBe(true);
+    empty.goods = [];
+    expect(def('katze-schubs').when!(ctx(empty))).toBe(false);
+    const alone = mockWorkshop(T0);
+    alone.workers = [];
+    expect(def('katze-schubs').when!(ctx(alone))).toBe(false);
+    expect(def('katze-geschenk').when).toBeUndefined();
+    for (const id of IDS) {
+      expect(CURIOSITIES[id], id).toBeDefined();
+      const Art = CARD_ART[id];
+      expect(Art, id).toBeDefined();
+      const html = render(<svg>{Art!()}</svg>);
+      expect(html, id).toContain('data-cat-pose');
+      expect(html, id).not.toMatch(/NaN|undefined/);
     }
   });
 });

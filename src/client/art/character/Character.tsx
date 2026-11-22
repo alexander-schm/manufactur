@@ -2,7 +2,7 @@ import type { CharacterLook } from '../../../shared/character';
 import { Arms, BackHair, Brows, Cheeks, Eyes, Facial, FrontHair, Head, Legs, Mouth, Nose, Quirk, Torso } from './parts';
 import './character.css';
 
-export type Pose = 'idle' | 'work' | 'wave' | 'sleep';
+export type Pose = 'idle' | 'work' | 'wave' | 'sleep' | 'cheer' | 'catch';
 
 type Props = { look: CharacterLook; pose?: Pose; seed?: number; size?: number | string; title?: string; class?: string; wobble?: boolean };
 

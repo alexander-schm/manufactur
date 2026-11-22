@@ -3,7 +3,7 @@ import type { GameState, Station, StationKind, Worker } from '../../../shared/ty
 import { Character, type Pose } from '../character/Character';
 import { WorkshopCat } from '../surprises/Cat';
 import { ChristmasTree, MoodLight } from '../surprises/Seasonal';
-import { SurpriseLayer, catPlay, showing } from '../surprises/SurpriseLayer';
+import { SurpriseLayer, catPlay, catcherOf, showing } from '../surprises/SurpriseLayer';
 import { WindowLayer } from '../surprises/WindowLayer';
 import { SPOTS } from '../../surprises/spots';
 import type { SurpriseView } from '../../surprises/types';
@@ -64,6 +64,8 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
   const idle = state.workers.filter((w) => !w.stationId);
   const catAwake = state.batches.length === 0;
   const catPosed = catPlay(sx.plays) !== null;
+  // the worker who catches the cat's nudged pot is drawn by the surprise layer while it plays
+  const catcher = sx.plays.some((p) => p.id === 'katze-schubs') ? catcherOf(state)?.id : undefined;
   const december = sx.calendar.includes('dezember');
   return (
     <div class={`scene-scroll ${readOnly ? 'readonly' : ''}`} data-readonly={readOnly ? '' : undefined}>
@@ -81,7 +83,7 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
           const Draw = DRAW[st.kind];
           const spot = WORKER_SPOT[st.kind];
           const workers = state.workers.filter((w) => w.stationId === st.id);
-          const people = spot ? workers.map((w, i) => <Person w={w} i={i} x={pos.x + spot.dx + i * 70} y={pos.y + spot.dy} pose={running.length ? 'work' : 'idle'} onWorker={onWorker} />) : null;
+          const people = spot ? workers.map((w, i) => w.id === catcher ? null : <Person w={w} i={i} x={pos.x + spot.dx + i * 70} y={pos.y + spot.dy} pose={running.length ? 'work' : 'idle'} onWorker={onWorker} />) : null;
           return (
             <g class="station" data-station={st.kind} onClick={readOnly ? undefined : () => onStation(st.id)} tabIndex={readOnly ? undefined : 0} role={readOnly ? undefined : 'button'} aria-label={st.kind}
               onKeyDown={readOnly ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') onStation(st.id); }}>
@@ -91,7 +93,7 @@ export function WorkshopScene({ state, now, onStation, onWorker = () => undefine
             </g>
           );
         })}
-        {idle.map((w, i) => <Person w={w} i={i} x={IDLE_SPOTS[i % 3].x + Math.floor(i / 3) * 40} y={IDLE_SPOTS[i % 3].y} pose="sleep" onWorker={onWorker} />)}
+        {idle.map((w, i) => w.id === catcher ? null : <Person w={w} i={i} x={IDLE_SPOTS[i % 3].x + Math.floor(i / 3) * 40} y={IDLE_SPOTS[i % 3].y} pose="sleep" onWorker={onWorker} />)}
         <SurpriseLayer state={state} sx={readOnly && !sx.readOnly ? { ...sx, readOnly } : sx} onCabinet={readOnly ? undefined : onCabinet} albumSeen={albumSeen} />
         {highlight && (() => {
           const st = state.stations.find((x) => x.kind === highlight);

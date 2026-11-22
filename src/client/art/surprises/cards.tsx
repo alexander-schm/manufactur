@@ -1,6 +1,6 @@
 import { inkStyle } from '../ink';
 import type { AlbumCard } from '../../panels/albumLogic';
-import { WorkshopCat, type CatPose } from './Cat';
+import { CatGift, WorkshopCat, type CatPose } from './Cat';
 import { BirthdayCake, ChristmasTree } from './Seasonal';
 import { Burst, Owl, SillBird } from './WindowLayer';
 import './surprises.css';
@@ -12,6 +12,16 @@ const D = inkStyle(1.2);
 export const CARD_ART: Record<string, () => preact.JSX.Element> = {
   'katze-streicheln': () => <CatCard pose="purr" />,
   'katze-beleidigt': () => <CatCard pose="swat" />,
+  'katze-ofen': () => <KilnNapCard />,
+  'katze-topf': () => <PotCatCard />,
+  'katze-geschenk': () => (
+    <g>
+      <path d="M14 108 Q80 100 146 108 Q150 114 144 118 Q80 122 16 118 Q10 114 14 108 Z" fill="var(--rug)" style={inkStyle(1.6)} />
+      <g transform="translate(100 108) scale(0.86)"><WorkshopCat x={0} y={0} pose="gift" still /></g>
+      <CatGift x={30} y={108} kind={2} still />
+    </g>
+  ),
+  'katze-schubs': () => <NudgeCard />,
   dezember: () => <DecemberCard />,
   abendlicht: () => <EveningCard />,
   eule: () => <WindowCard sky="#33457a" tint={['#1d2748', 0.35]}><Moon x={118} y={30} /><g transform="translate(64 91) scale(1.15) translate(-64 -91)"><Owl x={64} y={91} still /></g></WindowCard>,
@@ -136,6 +146,52 @@ function CatCard({ pose }: { pose: CatPose }) {
     <g>
       <path d="M14 108 Q80 100 146 108 Q150 114 144 118 Q80 122 16 118 Q10 114 14 108 Z" fill="var(--rug)" style={inkStyle(1.6)} />
       <g transform="translate(70 108) scale(0.86)"><WorkshopCat x={0} y={0} pose={pose} still /></g>
+    </g>
+  );
+}
+
+/** The cat curled up on the warm kiln dome, the chimney beside it. */
+function KilnNapCard() {
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M96 66 L94 20 L120 20 L118 66 Z" fill="var(--kilnDark)" style={S} />
+      <path d="M90 20 L124 20 L124 13 L90 13 Z" fill="var(--kiln)" style={S} />
+      <path d="M6 120 L6 104 Q10 62 80 60 Q150 62 154 104 L154 120 Z" fill="var(--kiln)" style={S} />
+      <path d="M24 100 Q80 70 136 100" fill="none" style={D} />
+      {[[30, 108], [62, 104], [94, 104], [126, 108]].map(([x, y]) => <rect x={x - 12} y={y} width="24" height="10" rx="2" fill="var(--kilnDark)" style={D} />)}
+      <ellipse cx="62" cy="62" rx="44" ry="10" fill="url(#glow)" opacity="0.7" />
+      <g transform="translate(62 66) scale(1.05) translate(-996 -222)"><WorkshopCat x={996} y={222} pose="kiln" still /></g>
+    </g>
+  );
+}
+
+/** The cat peeking out of a fresh pot on the wheel head. */
+function PotCatCard() {
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M10 120 L18 104 L142 104 L150 120 Z" fill="var(--wood)" style={S} />
+      <ellipse cx="80" cy="104" rx="52" ry="9" fill="var(--woodDark)" style={S} />
+      <g transform="translate(80 104) scale(0.95) translate(-520 -578)"><WorkshopCat x={520} y={578} pose="pot" still /></g>
+    </g>
+  );
+}
+
+/** The cat on the shelf top, a pot tumbling over the edge (it will be caught). */
+function NudgeCard() {
+  return (
+    <g>
+      <rect x="0" y="0" width="160" height="120" fill="var(--wall)" />
+      <path d="M0 62 L108 62 L108 120 L0 120 Z" fill="var(--wood)" style={S} />
+      <rect x="8" y="70" width="92" height="50" fill="var(--woodDark)" opacity="0.5" />
+      <g transform="translate(52 62) scale(0.62)"><WorkshopCat x={0} y={0} pose="shelf" still /></g>
+      <g transform="rotate(32 128 80)">
+        <path d="M118 66 Q114 80 120 92 L136 92 Q142 80 138 66 Z" fill="var(--g1)" style={S} />
+        <ellipse cx="128" cy="66" rx="11" ry="3.5" fill="var(--g1)" style={D} />
+      </g>
+      <path d="M140 52 q6 8 2 16 M148 58 q5 6 2 12" fill="none" style={{ ...D, opacity: 0.6 }} />
+      <text x="134" y="114" text-anchor="middle" font-size="22" font-family="var(--font-hand)" fill="var(--kiln)">!</text>
     </g>
   );
 }

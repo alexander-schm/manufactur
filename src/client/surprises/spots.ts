@@ -12,10 +12,16 @@ type Spot = { x: number; y: number };
 export const SPOTS = {
   /** Where the cat has always slept, in front of the glaze table. */
   catHome: { x: 760, y: 652 },
-  catKiln: { x: 1010, y: 224 },
+  /** Curled up on the kiln dome, left of the chimney. */
+  catKiln: { x: 996, y: 222 },
+  /** The pot's foot on the wheel head. */
   catPot: { x: 520, y: 578 },
-  catShelf: { x: 90, y: 180 },
-  gift: { x: 860, y: 690 },
+  /** On top of the shelf, facing right towards the pot at its corner. */
+  catShelf: { x: 140, y: 180 },
+  /** Where the cat sits with its gift (the gift lies in front of its nose): the front floor between idle workers 0 and 1. */
+  gift: { x: 800, y: 692 },
+  /** Where the worker who catches the nudged pot stands (feet), right of the shelf's foot. */
+  catcher: { x: 292, y: 486 },
   radio: { x: 205, y: 178 },
   kettle: { x: 1112, y: 228 },
   plant: { x: 614, y: 266 },
@@ -46,6 +52,8 @@ export const DECOR_BOXES = {
   gluecksschwein: { x: 446, y: 690, w: 50, h: 28 },
   /** Wall between the shelf and the hanging plant, on a little bracket. */
   kerzenkranz: { x: 250, y: 194, w: 60, h: 64 },
+  /** Wall between the window and the pinboard, on a nail. */
+  socke: { x: 658, y: 112, w: 36, h: 80 },
 } satisfies Record<string, Rect>;
 
 /**
@@ -59,9 +67,36 @@ export const VILLAGE_SPOTS = {
 /** The Christmas stall's drawn box around its spot (base centre): 100 wide, star on the roof 112 up, shadow 4 below. */
 export const xmasStallRect = (p: Spot): Rect => ({ x: p.x - 50, y: p.y - 112, w: 100, h: 116 });
 
+/** Where the cat can be: at home, or away for one of its ambient plays. */
+export type CatPlace = 'home' | 'kiln' | 'pot' | 'gift' | 'shelf';
+type CatHitShape = { dx: number; dy: number; rx: number; ry: number };
+
 /** The cat's clickable ellipse around its anchor (bottom centre of the loaf). */
-export const CAT_HIT = { dx: -6, dy: -26, rx: 58, ry: 40 };
-const catRect = (p: Spot): Rect => ({ x: p.x + CAT_HIT.dx - CAT_HIT.rx, y: p.y + CAT_HIT.dy - CAT_HIT.ry, w: 2 * CAT_HIT.rx, h: 2 * CAT_HIT.ry });
+export const CAT_HIT: CatHitShape = { dx: -6, dy: -26, rx: 58, ry: 40 };
+/**
+ * The cat's clickable ellipse per place. On a station (curled on the kiln, peeking from the pot) it hugs the cat's own shape,
+ * so the station stays clickable around it; each stays at least 60×60.
+ */
+export const CAT_HITS: Record<CatPlace, CatHitShape> = {
+  home: CAT_HIT,
+  kiln: { dx: -4, dy: -18, rx: 40, ry: 30 },
+  pot: { dx: 0, dy: -74, rx: 34, ry: 32 },
+  gift: CAT_HIT,
+  // the loaf is mirrored up there (it faces the pot on the right)
+  shelf: { dx: 6, dy: -26, rx: 58, ry: 40 },
+};
+const hitRect = (p: Spot, h: CatHitShape): Rect => ({ x: p.x + h.dx - h.rx, y: p.y + h.dy - h.ry, w: 2 * h.rx, h: 2 * h.ry });
+const catRect = (p: Spot): Rect => hitRect(p, CAT_HIT);
+
+/** The plays that take the cat away from home, strongest first (a nudge beats a nap). */
+export const CAT_PLACES: [string, Exclude<CatPlace, 'home'>][] = [['katze-schubs', 'shelf'], ['katze-topf', 'pot'], ['katze-geschenk', 'gift'], ['katze-ofen', 'kiln']];
+const PLACE_SPOT: Record<CatPlace, Spot> = { home: SPOTS.catHome, kiln: SPOTS.catKiln, pot: SPOTS.catPot, gift: SPOTS.gift, shelf: SPOTS.catShelf };
+
+/** Where the cat is for these plays (home unless one of them takes it away). */
+export function catPlace(plays: Play[]): { place: CatPlace; id?: string } {
+  for (const [id, place] of CAT_PLACES) if (plays.some((p) => p.id === id)) return { place, id };
+  return { place: 'home' };
+}
 
 /**
  * Every surprise hit area in room 1. Only the cat's may overlap a station (it is drawn above them and catches only its own clicks);
@@ -72,9 +107,14 @@ export const HIT_RECTS: Partial<Record<ClickTarget | 'cabinet' | 'plant' | 'fog'
   cabinet: { x: SPOTS.cabinet.x - 34, y: SPOTS.cabinet.y - 14, w: 68, h: 118 },
 };
 
-/** Where the cat is drawn for these plays. Later tasks add the kiln, the pot and the shelf. */
-export function catSpot(_plays: Play[]): Spot {
-  return SPOTS.catHome;
+/** Where the cat is drawn for these plays. */
+export function catSpot(plays: Play[]): Spot {
+  return PLACE_SPOT[catPlace(plays).place];
+}
+
+/** The cat's clickable box for these plays. */
+export function catHitRect(plays: Play[]): Rect {
+  return hitRect(catSpot(plays), CAT_HITS[catPlace(plays).place]);
 }
 
 /** The full drawn box of a station in its slot (see `STATION_BOX`). */
@@ -85,7 +125,7 @@ export function stationRect(kind: StationKind, slot: number): Rect {
 
 /** The spot a dev `&surprise=` shot centres on. */
 export function anchorOf(id: string): Spot {
-  if (id.startsWith('katze-')) return SPOTS.catHome;
+  if (id.startsWith('katze-')) return catSpot([{ id, startedAt: 0, until: 0, seed: 0, held: true }]);
   if (id === 'geburtstag') return { x: SPOTS.cake.x, y: SPOTS.cake.y - 50 };
   if (id === 'dezember' || id === 'eule' || id === 'morgenvoegel' || id === 'silvester') return { x: SPOTS.window.x + SPOTS.window.w / 2, y: SPOTS.window.y + SPOTS.window.h / 2 };
   return { x: 600, y: 360 };

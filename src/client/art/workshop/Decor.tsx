@@ -1,4 +1,5 @@
 import { inkStyle } from '../ink';
+import { Sock } from '../surprises/Cat';
 
 const S = inkStyle(2.2);
 const T = { ...inkStyle(1.2), opacity: 0.7 };
@@ -300,6 +301,16 @@ const DRAW: Record<string, () => preact.JSX.Element> = {
         return <ellipse cx={(280 - 22 * Math.cos(a)).toFixed(1)} cy={(239 + 5.6 * Math.sin(a)).toFixed(1)} rx="4" ry="2.2" fill="var(--g2)" style={inkStyle(0.9)} transform={`rotate(${(i - 4) * 10} ${(280 - 22 * Math.cos(a)).toFixed(1)} ${(239 + 5.6 * Math.sin(a)).toFixed(1)})`} />;
       })}
       {[[262, 241], [276, 245], [291, 244], [301, 239]].map(([bx, by]) => <circle cx={bx} cy={by} r="1.9" fill="var(--g3)" style={inkStyle(0.8)} />)}
+    </g>
+  ),
+  // the cat's first gift: a single striped sock hung on a nail with a wooden clothes peg, between the window and the pinboard
+  socke: () => (
+    <g transform="rotate(4 674 118)">
+      <circle cx="674" cy="116" r="2.8" fill="var(--line)" />
+      <Sock x={672} y={126} />
+      <path d="M669 114 L671 134 L677 134 L679 114 Z" fill="var(--wood)" style={inkStyle(1.4)} />
+      <path d="M674 116 L674 132" fill="none" style={T} />
+      <circle cx="674" cy="124" r="1.6" fill="var(--woodDark)" />
     </g>
   ),
 };

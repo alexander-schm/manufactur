@@ -1,7 +1,7 @@
 import { characterName, makeCharacter, personality } from '../../shared/character';
 import { Character, type Pose } from '../art/character/Character';
 
-const POSES: Pose[] = ['idle', 'work', 'wave', 'sleep'];
+const POSES: Pose[] = ['idle', 'work', 'wave', 'sleep', 'cheer', 'catch'];
 
 export function PeoplePage() {
   return (
@@ -12,7 +12,7 @@ export function PeoplePage() {
           const seed = i * 7919 + 17;
           return (
             <figure style={{ margin: '0', textAlign: 'center' }}>
-              <Character look={makeCharacter(seed)} pose={POSES[i % 4]} seed={seed} size={110} />
+              <Character look={makeCharacter(seed)} pose={POSES[i % POSES.length]} seed={seed} size={110} />
               <figcaption><strong>{characterName(seed)}</strong><br /><small class="muted">{personality(seed, [])}</small></figcaption>
             </figure>
           );

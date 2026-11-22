@@ -59,7 +59,7 @@ export function Legs({ look }: { look: CharacterLook }) {
   );
 }
 
-export function Arms({ look, pose }: { look: CharacterLook; pose: 'idle' | 'work' | 'wave' | 'sleep' }) {
+export function Arms({ look, pose }: { look: CharacterLook; pose: 'idle' | 'work' | 'wave' | 'sleep' | 'cheer' | 'catch' }) {
   const sx = look.body === 'broad' ? 34 : look.body === 'round' ? 38 : 42;
   const L = { x: sx, y: 106 }, R = { x: 120 - sx, y: 106 };
   let left: string, right: string, lh: [number, number], rh: [number, number];
@@ -71,6 +71,16 @@ export function Arms({ look, pose }: { look: CharacterLook; pose: 'idle' | 'work
     case 'wave':
       left = `M${L.x} ${L.y} Q${L.x - 8} 128 ${L.x - 4} 150`; lh = [L.x - 4, 151];
       right = `M${R.x} ${R.y} Q${R.x + 22} 100 ${R.x + 30} 76`; rh = [R.x + 31, 73];
+      break;
+    case 'cheer':
+      // right arm raised high with a little cup, the left one relaxed
+      left = `M${L.x} ${L.y} Q${L.x - 8} 128 ${L.x - 4} 150`; lh = [L.x - 4, 151];
+      right = `M${R.x} ${R.y} Q${R.x + 26} 96 ${R.x + 30} 58`; rh = [R.x + 30, 55];
+      break;
+    case 'catch':
+      // both hands up in front of the chest, holding something
+      left = `M${L.x} ${L.y} Q${L.x - 10} 128 ${48} 120`; lh = [49, 118];
+      right = `M${R.x} ${R.y} Q${R.x + 10} 128 ${72} 120`; rh = [71, 118];
       break;
     case 'sleep':
       left = `M${L.x} ${L.y} Q${L.x - 2} 128 ${54} 138`; lh = [56, 138];
@@ -84,6 +94,13 @@ export function Arms({ look, pose }: { look: CharacterLook; pose: 'idle' | 'work
     <g>
       <Limb d={left} color={look.outfit} />
       <Limb d={right} color={look.outfit} />
+      {pose === 'cheer' && (
+        <g data-cup>
+          <path d={`M${rh[0] - 8} ${rh[1] - 20} L${rh[0] + 8} ${rh[1] - 20} L${rh[0] + 6} ${rh[1] - 2} L${rh[0] - 6} ${rh[1] - 2} Z`} fill="var(--g1)" style={thin} />
+          <path d={`M${rh[0] + 7} ${rh[1] - 16} q7 1 5 8 q-1 3 -6 3`} fill="none" style={thin} />
+          <path d={`M${rh[0] - 4} ${rh[1] - 26} q-3 -4 0 -8 M${rh[0] + 3} ${rh[1] - 27} q3 -4 0 -8`} fill="none" style={{ ...thin, opacity: 0.5 }} />
+        </g>
+      )}
       <circle cx={lh[0]} cy={lh[1]} r="6" fill={look.skin} style={ink} />
       <circle cx={rh[0]} cy={rh[1]} r="6" fill={look.skin} style={ink} />
       {pose === 'wave' && <path d={`M${rh[0] + 10} ${rh[1] - 8} q4 6 0 12 M${rh[0] + 15} ${rh[1] - 12} q6 9 0 18`} fill="none" style={thin} />}
